@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "declaration": true,
+        "outDir": "lib",
+        "module": "none",
+        "target": "es2017",
+        "sourceMap": true,
+        "moduleResolution": "node",
+        "lib": [ "es2015" ]
+    },
+    "include":[
+        "src", "test"
+    ]
+}
