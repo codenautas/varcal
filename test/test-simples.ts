@@ -12,7 +12,7 @@ var config = {
         database: 'test_db',
         schema: 'varcal',
         user: 'test_user',
-        passwordx: 'test_pass',
+        password: 'test_pass',
     }
 }
 
@@ -21,7 +21,7 @@ describe("única unidad de análisis",function(){
     before(async function(){
         this.timeout(50000);
         config = await MiniTools.readConfig(
-            ['test/def-config','test/local-config'],
+            [config,'test/local-config'],
             {whenNotExist:'ignore'}
         ) as typeof config;
         client = await pg.connect(config.db);
@@ -30,10 +30,11 @@ describe("única unidad de análisis",function(){
     });
     it("primer test", async function(){
         var dato = await client.query("select dato from datos where id=1").fetchUniqueValue()
-        discrepances.showAndThrow(dato, 42);
+        discrepances.showAndThrow(dato.value, 42);
         this.timeout(50000);
     });
     after(async function(){
+        client.done();
     });
 });
 
