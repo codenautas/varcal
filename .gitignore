@@ -60,6 +60,5 @@ typings/
 # Local configs
 local-*
 *-local.*
-.vscode/launch.json
 
 package-lock.json

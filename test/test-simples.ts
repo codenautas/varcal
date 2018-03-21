@@ -16,12 +16,12 @@ var config = {
     }
 }
 
-describe("única unidad de análisis",function(){
+describe("varcal", function(){
     var client:pg.Client;
     before(async function(){
         this.timeout(50000);
         config = await MiniTools.readConfig(
-            [config,'test/local-config'],
+            [config, 'test/local-config'],
             {whenNotExist:'ignore'}
         ) as typeof config;
         client = await pg.connect(config.db);
