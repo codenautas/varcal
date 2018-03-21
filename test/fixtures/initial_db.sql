@@ -5,7 +5,12 @@ set search_path = test_varcal;
 
 create table datos(
     id integer primary key,
-    dato integer
+    dato1 integer,
+    dato2 integer,
+    doble_y_suma integer
 );
 
-insert into datos (id, dato) values (1,42);
+insert into datos (id, dato1, dato2) values
+  (1,42,1),
+  (2,43,3);
+

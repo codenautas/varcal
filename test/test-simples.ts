@@ -1,8 +1,11 @@
 import * as MiniTools  from 'mini-tools';
 import * as discrepances from 'discrepances';
 import * as pg from 'pg-promise-strict';
+import * as fs from 'fs-extra';
 
 import 'mocha';
+
+import * as VarCal from '../src/var-cal';
 
 pg.easy = true;
 
@@ -28,10 +31,17 @@ describe("varcal", function(){
         await client.executeSqlScript('test/fixtures/initial_db.sql');
         console.log('system ready');
     });
-    it("primer test", async function(){
-        var dato = await client.query("select dato from datos where id=1").fetchUniqueValue()
-        discrepances.showAndThrow(dato.value, 42);
-        this.timeout(50000);
+    describe("funcionGeneradora", function(){
+        it("genera función simple", async function(){
+            var funcionGenerada = VarCal.funcionGeneradora([
+                {nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'}
+            ], {
+                nombreFuncionGeneradora:'gen_fun'
+            });
+            var funcionEsperada = await fs.readFile('./test/fixtures/first-generated-fun.sql', {encoding:'UTF8'});
+            discrepances.showAndThrow(funcionGenerada, funcionEsperada);
+            this.timeout(50000);
+        });
     });
     after(async function(){
         client.done();
