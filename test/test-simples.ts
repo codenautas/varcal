@@ -7,7 +7,7 @@ import 'mocha';
 
 import * as VarCal from '../src/var-cal';
 
-pg.easy = true;
+(pg as {easy:boolean}).easy = true;
 
 var config = {
     db:{
@@ -34,8 +34,9 @@ describe("varcal", function(){
     describe("funcionGeneradora", function(){
         it("genera función simple", async function(){
             var funcionGenerada = VarCal.funcionGeneradora([
-                {nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'}
+                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'}
             ], {
+                esquema:'test_varcal',
                 nombreFuncionGeneradora:'gen_fun'
             });
             var funcionEsperada = await fs.readFile('./test/fixtures/first-generated-fun.sql', {encoding:'UTF8'});
