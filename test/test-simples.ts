@@ -36,8 +36,8 @@ describe("varcal", function(){
             var funcionGenerada = VarCal.funcionGeneradora([
                 {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'}
             ], {
-                esquema:'test_varcal',
-                nombreFuncionGeneradora:'gen_fun'
+                nombreFuncionGeneradora:'gen_fun',
+                esquema:'test_varcal'
             });
             var funcionEsperada = await fs.readFile('./test/fixtures/first-generated-fun.sql', {encoding:'UTF8'});
             discrepances.showAndThrow(funcionGenerada, funcionEsperada);
