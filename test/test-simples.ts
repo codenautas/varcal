@@ -31,11 +31,39 @@ describe("varcal", function(){
         await client.executeSqlScript('test/fixtures/initial_db.sql');
         console.log('system ready');
     });
+    describe("sentenciaUpdate", function(){
+        it("genera un update basado en 2 variables", async function(){
+            var sqlGenerado = VarCal.sentenciaUpdate({
+                tabla:'t1',
+                variables:[{
+                    nombreVariable:'x', 
+                    expresionValidada:'dato1 * 2 + dato2'
+                },{
+                    nombreVariable:'pepe', 
+                    expresionValidada:'f(j)'
+                }]
+            }, 2)
+            var sentenciaEsperada = '  UPDATE t1\n    SET x = dato1 * 2 + dato2,\n        pepe = f(j)';
+            discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
+            this.timeout(50000);
+        });
+    });
     describe("funcionGeneradora", function(){
         it("genera función simple", async function(){
-            var funcionGenerada = VarCal.funcionGeneradora([
-                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'}
-            ], {
+            var funcionGenerada = VarCal.funcionGeneradora([{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'
+                }],
+            },{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1'
+                },{
+                    nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2'
+                }],
+            }], 
+            {
                 nombreFuncionGeneradora:'gen_fun',
                 esquema:'test_varcal'
             });
