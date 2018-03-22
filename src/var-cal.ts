@@ -1,10 +1,25 @@
 "use strict";
 
-export type DefinicionVariable={
+export interface DefinicionVariable{
     tabla:string
     nombreVariable:string
-    expresionValidada:string
+    expresion:string
 };
+
+export interface DefinicionVariableAnalizada extends DefinicionVariable{
+    insumos:{
+        variables:string[],
+        funciones:string[],
+    }
+}
+
+export interface BloqueVariablesGenerables{
+    tabla:string
+    variables:[{
+        nombreVariable:string
+        expresionValidada:string
+    }]
+}
 
 export type ParametrosGeneracion={
     nombreFuncionGeneradora:string, 
@@ -15,7 +30,10 @@ export type DefinicionVariables=DefinicionVariable[];
 
 export type TextoSQL=string;
 
-export function funcionGeneradora(definiciones:DefinicionVariables, parametros:ParametrosGeneracion):TextoSQL{
+export function sentenciaUpdate(definicion:BloqueVariablesGenerables, parametros:ParametrosGeneracion):TextoSQL{
+}
+
+export function funcionGeneradora(definiciones:BloqueVariablesGenerables[], parametros:ParametrosGeneracion):TextoSQL{
     return `create or replace function ${parametros.esquema}.${parametros.nombreFuncionGeneradora}() returns text
   language plpgsql
 as
