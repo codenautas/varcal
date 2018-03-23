@@ -30,6 +30,10 @@ export type DefinicionVariables=DefinicionVariable[];
 
 export type TextoSQL=string;
 
+export type  ListaVariablesAnalizadas=DefinicionVariableAnalizada[];
+
+export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
+
 export function sentenciaUpdate(definicion:BloqueVariablesGenerables, margen:number):TextoSQL{
     var txtMargen=Array(margen+1).join(' ');
     return `${txtMargen}UPDATE ${definicion.tabla}\n${txtMargen}  SET `+
@@ -51,4 +55,25 @@ definiciones.map(function(definicion){
   RETURN 'OK';
 END;
 $BODY$;`;
+}
+
+export function calcularNiveles(definiciones:ListaVariablesAnalizadas):ListaVariablesAnalizadasOut{
+    /*versión preliminar es sólo una idea y falta terminarla*/
+    var listaOut: ListaVariablesAnalizadasOut;
+    listaOut=[];
+    definiciones.forEach(function(varAnalizada) {
+        if (listaOut===[]){
+            listaOut.push([varAnalizada]);    
+        }else{
+            listaOut.forEach(function(listaNivel,i){
+                /*var estanivel=*/listaNivel.filter(function(velem){
+                    //velem.nombreVariable==varAnalizada.nombreVariable
+                    varAnalizada.insumos.variables.find(function(vvar){
+                         return velem.nombreVariable==vvar;
+                    });        
+                });    
+            });
+        }    
+    });
+return listaOut;
 }
