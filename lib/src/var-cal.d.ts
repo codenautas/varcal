@@ -9,12 +9,13 @@ export interface DefinicionVariableAnalizada extends DefinicionVariable {
         funciones: string[];
     };
 }
-export interface BloqueVariablesGenerables {
-    tabla: string;
-    variables: {
-        nombreVariable: string;
-        expresionValidada: string;
-    }[];
+export interface VariableGenerable {
+    nombreVariable: string;
+    expresionValidada: string;
+    insumos?: {
+        variables: string[];
+        funciones: string[];
+    };
 }
 export declare type ParametrosGeneracion = {
     nombreFuncionGeneradora: string;
@@ -22,5 +23,10 @@ export declare type ParametrosGeneracion = {
 };
 export declare type DefinicionVariables = DefinicionVariable[];
 export declare type TextoSQL = string;
+export declare type BloqueVariablesGenerables = {
+    tabla: string;
+    variables: VariableGenerable[];
+};
 export declare function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number): TextoSQL;
 export declare function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion): TextoSQL;
+export declare function calcularNiveles(definiciones: BloqueVariablesGenerables): BloqueVariablesGenerables[];

@@ -13,12 +13,13 @@ export interface DefinicionVariableAnalizada extends DefinicionVariable{
     }
 }
 
-export interface BloqueVariablesGenerables{
-    tabla:string
-    variables:{
-        nombreVariable:string
-        expresionValidada:string
-    }[]
+export interface VariableGenerable{
+    nombreVariable:string
+    expresionValidada:string
+    insumos?:{
+        variables:string[]
+        funciones:string[]
+    }            
 }
 
 export type ParametrosGeneracion={
@@ -30,9 +31,12 @@ export type DefinicionVariables=DefinicionVariable[];
 
 export type TextoSQL=string;
 
-export type  ListaVariablesAnalizadas=DefinicionVariableAnalizada[];
+export type  BloqueVariablesGenerables={
+    tabla:string,
+    variables: VariableGenerable[]
+};
 
-export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
+//export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
 
 export function sentenciaUpdate(definicion:BloqueVariablesGenerables, margen:number):TextoSQL{
     var txtMargen=Array(margen+1).join(' ');
@@ -57,22 +61,27 @@ END;
 $BODY$;`;
 }
 
-export function calcularNiveles(definiciones:ListaVariablesAnalizadas):ListaVariablesAnalizadasOut{
+export function calcularNiveles(definiciones:BloqueVariablesGenerables):BloqueVariablesGenerables[]{
     /*versión preliminar es sólo una idea y falta terminarla*/
-    var listaOut: ListaVariablesAnalizadasOut;
+    var listaOut: BloqueVariablesGenerables[];
     listaOut=[];
-    definiciones.forEach(function(varAnalizada) {
+    definiciones.variables.forEach(function(varAnalizada) {
         if (listaOut===[]){
-            listaOut.push([varAnalizada]);    
+            listaOut.push({tabla:definiciones.tabla,variables:[varAnalizada]});    
         }else{
-            listaOut.forEach(function(listaNivel,i){
-                /*var estanivel=*/listaNivel.filter(function(velem){
-                    //velem.nombreVariable==varAnalizada.nombreVariable
-                    varAnalizada.insumos.variables.find(function(vvar){
-                         return velem.nombreVariable==vvar;
-                    });        
-                });    
-            });
+            var enNivel=listaOut.findIndex(function(nivel){
+                //velem.nombreVariable==varAnalizada.nombreVariable
+                return varAnalizada.insumos.variables.findIndex(function(vvar,i){
+                        return nivel.variables[i].nombreVariable==vvar;
+                })===-1?false:true;        
+            }); 
+            if(enNivel>=0 && listaOut.length===enNivel ){
+                listaOut.push({tabla:definiciones.tabla,variables:[varAnalizada]});
+            }else if(enNivel>=0 && listaOut.length>enNivel){
+                    listaOut[enNivel+1].variables.push(varAnalizada);
+            }else{
+                listaOut[0].variables.push(varAnalizada);
+            }   
         }    
     });
 return listaOut;
