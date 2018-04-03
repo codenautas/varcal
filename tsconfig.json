@@ -7,7 +7,7 @@
         "sourceMap": true,
         "moduleResolution": "node",
         "lib": [ "es2015" , "dom"],
-        "typeRoots" : ["./node_modules/@types","../types.d.ts/modules"],
+        "typeRoots" : ["./node_modules/@types","./node_modules/types.d.ts/modules"],
         "noImplicitAny": true,
         "alwaysStrict": true,
         "noUnusedLocals": true,
