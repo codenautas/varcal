@@ -1,4 +1,6 @@
 drop schema if exists test_varcal cascade;
+set role test_user;
+
 create schema test_varcal;
 
 set search_path = test_varcal;

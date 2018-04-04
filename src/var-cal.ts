@@ -63,10 +63,11 @@ $BODY$;`;
 
 export function calcularNiveles(definiciones:BloqueVariablesGenerables):BloqueVariablesGenerables[]{
     /*versión preliminar es sólo una idea y falta terminarla*/
+    //console.log('****'+definiciones);
     var listaOut: BloqueVariablesGenerables[];
     listaOut=[];
-    definiciones.variables.forEach(function(varAnalizada) {
-        if (listaOut===[]){
+    definiciones.variables.forEach(function(varAnalizada:VariableGenerable) {
+        if (listaOut.length==0){
             listaOut.push({tabla:definiciones.tabla,variables:[varAnalizada]});    
         }else{
             var enNivel=listaOut.findIndex(function(nivel){
@@ -75,7 +76,7 @@ export function calcularNiveles(definiciones:BloqueVariablesGenerables):BloqueVa
                         return nivel.variables[i].nombreVariable==vvar;
                 })===-1?false:true;        
             }); 
-            if(enNivel>=0 && listaOut.length===enNivel ){
+            if(enNivel>=0 && listaOut.length===enNivel+1 ){
                 listaOut.push({tabla:definiciones.tabla,variables:[varAnalizada]});
             }else if(enNivel>=0 && listaOut.length>enNivel){
                     listaOut[enNivel+1].variables.push(varAnalizada);

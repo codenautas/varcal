@@ -76,29 +76,28 @@ describe("varcal", function(){
         it("separa en listas por nivel", async function(){
             var resultadoNiveles = VarCal.calcularNiveles({
                 tabla:'datos',
-                variables:[{
-                    nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'},
-                    {nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1'},
-                    {nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2'
+                variables:[{nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
+                    {nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
+                    {nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}
                 }],
             });
-            var listaEsperada = [{
+            var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
                 tabla:'datos',
                 variables:[{
-                    nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'
+                    nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}
                 }],
             },{
                 tabla:'datos',
                 variables:[{
-                    nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1'
+                    nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1',insumos:{variables:['doble_y_suma','dato1'],funciones:[]}
                 },{
-                    nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2'
+                    nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}
                 }],
-            }]
+            }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
             this.timeout(50000);
         });
-    });       
+    });    
     after(async function(){
         client.done();
     });
