@@ -3,14 +3,20 @@
 export interface DefinicionVariable{
     tabla:string
     nombreVariable:string
-    expresion:string
+    expresionValidada:string
+};
+
+export interface Joins{
+    tabla:string,
+    clausulaJoin:string
 };
 
 export interface DefinicionVariableAnalizada extends DefinicionVariable{
     insumos:{
         variables:string[],
         funciones:string[],
-    }
+    },
+    joins?:Joins[]
 }
 
 export interface VariableGenerable{
@@ -34,10 +40,7 @@ export type TextoSQL=string;
 export type  BloqueVariablesGenerables={
     tabla:string,
     variables: VariableGenerable[],
-    joins?:{
-        tabla:string,
-        clausulaJoin:string
-    }[]
+    joins?:Joins[]
 };
 
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
@@ -70,25 +73,27 @@ END;
 $BODY$;`;
 }
 
-export function calcularNiveles(definiciones:BloqueVariablesGenerables):BloqueVariablesGenerables[]{
-    /*versión preliminar es sólo una idea y falta terminarla*/
-    //console.log('****'+definiciones);
+export function laMisma(varAnalizada:DefinicionVariable){
+    return varAnalizada;
+}
+
+export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAnalizada[], variablesDefinidas:string[]):BloqueVariablesGenerables[]{
     var listaOut: BloqueVariablesGenerables[];
     listaOut=[];
-    definiciones.variables.forEach(function(varAnalizada:VariableGenerable) {
+    definiciones.forEach(function(defVariable:DefinicionVariableAnalizada) {
+        var {tabla, ...varAnalizada} = defVariable;
         if (listaOut.length==0){
-            listaOut.push({tabla:definiciones.tabla,variables:[varAnalizada]});    
+            listaOut.push({tabla ,variables:[varAnalizada]});    
         }else{
             var enNivel=listaOut.findIndex(function(nivel){
-                //velem.nombreVariable==varAnalizada.nombreVariable
-                return varAnalizada.insumos.variables.findIndex(function(vvar,i){
-                        return nivel.variables[i].nombreVariable==vvar;
-                })===-1?false:true;        
+                return defVariable.insumos.variables.findIndex(function(vvar,i){
+                    return nivel.variables[i].nombreVariable==vvar;
+                })===-1?false:true;
             }); 
             if(enNivel>=0 && listaOut.length===enNivel+1 ){
-                listaOut.push({tabla:definiciones.tabla,variables:[varAnalizada]});
+                listaOut.push({tabla ,variables:[varAnalizada]});
             }else if(enNivel>=0 && listaOut.length>enNivel){
-                    listaOut[enNivel+1].variables.push(varAnalizada);
+                listaOut[enNivel+1].variables.push(varAnalizada);
             }else{
                 listaOut[0].variables.push(varAnalizada);
             }   

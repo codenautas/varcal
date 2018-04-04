@@ -69,7 +69,6 @@ describe("varcal", function(){
    WHERE t2.id = t1.id
      AND t2.id = t1.id and t2.id=t3.id`;
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
-            this.timeout(50000);
         });
     });
     describe("funcionGeneradora", function(){
@@ -93,18 +92,15 @@ describe("varcal", function(){
             });
             var funcionEsperada = await fs.readFile('./test/fixtures/first-generated-fun.sql', {encoding:'UTF8'});
             discrepances.showAndThrow(funcionGenerada, funcionEsperada);
-            this.timeout(50000);
         });
     });
     describe("calcularNiveles", function(){
         it("separa en listas por nivel", async function(){
-            var resultadoNiveles = VarCal.calcularNiveles({
-                tabla:'datos',
-                variables:[{nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
-                    {nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
-                    {nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}
-                }],
-            });
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}}
+            ],['dato1','dato2']);
             var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
                 tabla:'datos',
                 variables:[{
@@ -119,7 +115,86 @@ describe("varcal", function(){
                 }],
             }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
-            this.timeout(50000);
+        });
+        it.skip("protesta si no se puede", async function(){
+            try{
+                VarCal.separarEnGruposPorNivelYOrigen([
+                    {tabla:'datos', nombreVariable:'a', expresionValidada:'b', insumos:{variables:['b'],funciones:[]}},
+                    {tabla:'datos', nombreVariable:'b', expresionValidada:'a', insumos:{variables:['a'],funciones:[]}},
+                ],['dato1','dato2']);
+                throw new Error('Tenía que dar error por abrazo mortal');
+            }catch(err){
+                discrepances.showAndThrow(err.message, "Error, no se pudo determinar el orden de la variable 'a' y otras")
+            }
+        });
+        it.skip("separa en listas por nivel y obtiene el join", async function(){
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal1', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}], expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal2', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'}], expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal3', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}], expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}},
+            ],['dato1','dato2']);
+            var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}
+                }],
+            },{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1',insumos:{variables:['doble_y_suma','dato1'],funciones:[]}
+                },{
+                    nombreVariable:'cal3', expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}
+                }],
+                joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}]
+            },{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2',insumos:{variables:['doble_y_suma','dato3'],funciones:[]}
+                }],
+                joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'}]
+            }];
+            discrepances.showAndThrow(resultadoNiveles , listaEsperada);
+        });
+        it.skip("separa con dependencias complejas", async function(){
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                {tabla:'datos', nombreVariable:'abbaab', expresionValidada:'abb+aab', insumos:{variables:['aab','abb'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'a'     , expresionValidada:'o'      , insumos:{variables:[],funciones:[]}},
+                {tabla:'equis', nombreVariable:'ab'    , expresionValidada:'a+b'    , insumos:{variables:['a','b'],funciones:[]}}, 
+                // {tabla:'datos', nombreVariable:'aa'    , expresionValidada:'a+a'    , insumos:{variables:['a'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'aab'   , expresionValidada:'a+ab'   , insumos:{variables:['a','ab'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'b'     , expresionValidada:'o'      , insumos:{variables:['o'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'abb'   , expresionValidada:'ab+b'   , insumos:{variables:['ab','b'],funciones:[]}}, 
+            ], ['o']);
+            var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
+                tabla:'datos',
+                variables:[
+                    {nombreVariable:'a'     , expresionValidada:'o'      , insumos:{variables:[],funciones:[]}},
+                    {nombreVariable:'b'     , expresionValidada:'o'      , insumos:{variables:['o'],funciones:[]}}, 
+                ],
+            },{
+                tabla:'equis',
+                variables:[
+                    {nombreVariable:'ab'    , expresionValidada:'a+b'    , insumos:{variables:['a','b'],funciones:[]}}, 
+                ],
+            //},{
+            //    tabla:'datos',
+            //    variables:[
+            //        {nombreVariable:'aa'    , expresionValidada:'a+a'    , insumos:{variables:['a'],funciones:[]}}, 
+            //    ],
+            },{
+                tabla:'datos',
+                variables:[
+                    {nombreVariable:'aab'   , expresionValidada:'a+ab'   , insumos:{variables:['a','ab'],funciones:[]}}, 
+                    {nombreVariable:'abb'   , expresionValidada:'ab+b'   , insumos:{variables:['ab','b'],funciones:[]}}, 
+                ],
+            },{
+                tabla:'datos',
+                variables:[
+                    {nombreVariable:'abbaab', expresionValidada:'abb+aab', insumos:{variables:['aab','abb'],funciones:[]}}, 
+                ],
+            }];
+            discrepances.showAndThrow(resultadoNiveles , listaEsperada);
         });
     });    
     after(async function(){
