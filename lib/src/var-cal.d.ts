@@ -13,8 +13,8 @@ export interface VariableGenerable {
     nombreVariable: string;
     expresionValidada: string;
     insumos?: {
-        variables: string[];
-        funciones: string[];
+        variables?: string[];
+        funciones?: string[];
     };
 }
 export declare type ParametrosGeneracion = {
@@ -26,6 +26,10 @@ export declare type TextoSQL = string;
 export declare type BloqueVariablesGenerables = {
     tabla: string;
     variables: VariableGenerable[];
+    joins?: {
+        tabla: string;
+        clausulaJoin: string;
+    }[];
 };
 export declare function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number): TextoSQL;
 export declare function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion): TextoSQL;

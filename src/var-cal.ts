@@ -17,9 +17,9 @@ export interface VariableGenerable{
     nombreVariable:string
     expresionValidada:string
     insumos?:{
-        variables:string[]
-        funciones:string[]
-    }            
+        variables?:string[]
+        funciones?:string[]
+    }
 }
 
 export type ParametrosGeneracion={
@@ -33,7 +33,11 @@ export type TextoSQL=string;
 
 export type  BloqueVariablesGenerables={
     tabla:string,
-    variables: VariableGenerable[]
+    variables: VariableGenerable[],
+    joins?:{
+        tabla:string,
+        clausulaJoin:string
+    }[]
 };
 
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
@@ -43,7 +47,12 @@ export function sentenciaUpdate(definicion:BloqueVariablesGenerables, margen:num
     return `${txtMargen}UPDATE ${definicion.tabla}\n${txtMargen}  SET `+
         definicion.variables.map(function({nombreVariable,expresionValidada}){
             return `${nombreVariable} = ${expresionValidada}`
-        }).join(`,\n      ${txtMargen}`);
+        }).join(`,\n      ${txtMargen}`)+
+        (definicion.joins && definicion.joins.length?
+            `\n  ${txtMargen}FROM `+definicion.joins.map(def=>def.tabla).join(', ')+
+            `\n  ${txtMargen}WHERE `+definicion.joins.map(def=>def.clausulaJoin).join(`\n    ${txtMargen}AND `)
+        :'')
+        ;
 }
 
 export function funcionGeneradora(definiciones:BloqueVariablesGenerables[], parametros:ParametrosGeneracion):TextoSQL{
@@ -85,5 +94,5 @@ export function calcularNiveles(definiciones:BloqueVariablesGenerables):BloqueVa
             }   
         }    
     });
-return listaOut;
+    return listaOut;
 }

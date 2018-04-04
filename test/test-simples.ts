@@ -47,6 +47,30 @@ describe("varcal", function(){
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
+        it("genera un update basado en variables de otras tablas", async function(){
+            var sqlGenerado = VarCal.sentenciaUpdate({
+                tabla:'t1',
+                variables:[{
+                    nombreVariable:'x', 
+                    expresionValidada:'dato1 * 2 + dato2',
+                }],
+                joins:[{
+                    tabla:'t2', 
+                    clausulaJoin:'t2.id = t1.id'
+                },{
+                    tabla:'t3',
+                    clausulaJoin:'t2.id = t1.id and t2.id=t3.id'
+                }]
+        }, 1)
+            var sentenciaEsperada = 
+` UPDATE t1
+   SET x = dato1 * 2 + dato2
+   FROM t2, t3
+   WHERE t2.id = t1.id
+     AND t2.id = t1.id and t2.id=t3.id`;
+            discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
+            this.timeout(50000);
+        });
     });
     describe("funcionGeneradora", function(){
         it("genera función simple", async function(){
