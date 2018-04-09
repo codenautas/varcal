@@ -80,7 +80,51 @@ export function laMisma(varAnalizada:DefinicionVariable){
 export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAnalizada[], variablesDefinidas:string[]):BloqueVariablesGenerables[]{
     var listaOut: BloqueVariablesGenerables[];
     listaOut=[];
+    var vardef: string[]; //variables con insumos definidos
+    vardef=variablesDefinidas;
+    var nvardef: DefinicionVariableAnalizada[];
+    nvardef=[]; // son las que variables cuyos insumos no están en vardef.
+    var lenAnt:number;
+    var definicionesOrd:DefinicionVariableAnalizada[]=[];
     definiciones.forEach(function(defVariable:DefinicionVariableAnalizada) {
+        var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
+        var cantDef=0;
+        insumos.variables.forEach(function(varInsumos){
+            cantDef=vardef.indexOf(varInsumos)>=0?cantDef +1:cantDef;
+        });
+        if(cantDef==insumos.variables.length){
+            vardef.push(nombreVariable);
+            definicionesOrd.push(defVariable);
+            if (nvardef.indexOf(defVariable)>=0){
+                nvardef.splice(nvardef.indexOf(defVariable),1)
+            }
+        }else{
+            if(nvardef.findIndex(function(varNvardef){return varNvardef.nombreVariable==nombreVariable})==-1){ 
+                nvardef.push(defVariable);
+            }
+        }
+    });
+    do {
+        lenAnt=nvardef.length;
+        nvardef.forEach(function(defVariable:DefinicionVariableAnalizada) {
+            var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
+            var cantDef=0;
+            insumos.variables.forEach(function(varInsumos){
+                cantDef=vardef.indexOf(varInsumos)>=0?cantDef +1:cantDef;
+            });
+            if(cantDef==insumos.variables.length){
+                vardef.push(nombreVariable);
+                definicionesOrd.push(defVariable);
+                if (nvardef.indexOf(defVariable)>=0){
+                    nvardef.splice(nvardef.indexOf(defVariable),1)
+                }
+            }
+        });
+   }while(nvardef.length>0 && nvardef.length!=lenAnt );
+    if( nvardef.length >0){
+        throw new Error("Error, no se pudo determinar el orden de la variable '" + nvardef[0].nombreVariable +"' y otras")
+    } 
+    definicionesOrd.forEach(function(defVariable:DefinicionVariableAnalizada) {
         var {tabla, ...varAnalizada} = defVariable;
         if (listaOut.length==0){
             listaOut.push({tabla ,variables:[varAnalizada]});    

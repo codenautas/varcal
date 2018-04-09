@@ -95,7 +95,7 @@ describe("varcal", function(){
         });
     });
     describe("calcularNiveles", function(){
-        it("separa en listas por nivel", async function(){
+        it.skip("separa en listas por nivel", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
                 {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
                 {tabla:'datos', nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
@@ -156,7 +156,7 @@ describe("varcal", function(){
             }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
         });
-        it.skip("separa con dependencias complejas", async function(){
+        it("separa con dependencias complejas", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
                 {tabla:'datos', nombreVariable:'abbaab', expresionValidada:'abb+aab', insumos:{variables:['aab','abb'],funciones:[]}}, 
                 {tabla:'datos', nombreVariable:'a'     , expresionValidada:'o'      , insumos:{variables:[],funciones:[]}},
