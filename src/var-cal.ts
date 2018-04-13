@@ -106,7 +106,9 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
     });
     do {
         lenAnt=nvardef.length;
-        nvardef.forEach(function(defVariable:DefinicionVariableAnalizada) {
+        var i=0;
+        while(i<nvardef.length) {
+            var defVariable:DefinicionVariableAnalizada=nvardef[i];
             var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
             var cantDef=0;
             insumos.variables.forEach(function(varInsumos){
@@ -115,12 +117,12 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
             if(cantDef==insumos.variables.length){
                 vardef.push(nombreVariable);
                 definicionesOrd.push(defVariable);
-                if (nvardef.indexOf(defVariable)>=0){
-                    nvardef.splice(nvardef.indexOf(defVariable),1)
-                }
-            }
-        });
-   }while(nvardef.length>0 && nvardef.length!=lenAnt );
+                nvardef.splice(i,1);
+            }else{
+                i++;
+            }    
+        };
+    }while(nvardef.length>0 && nvardef.length!=lenAnt );
     if( nvardef.length >0){
         throw new Error("Error, no se pudo determinar el orden de la variable '" + nvardef[0].nombreVariable +"' y otras")
     } 
@@ -129,18 +131,28 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
         if (listaOut.length==0){
             listaOut.push({tabla ,variables:[varAnalizada]});    
         }else{
-            var enNivel=listaOut.findIndex(function(nivel){
-                return defVariable.insumos.variables.findIndex(function(vvar,i){
-                    return nivel.variables[i].nombreVariable==vvar;
-                })===-1?false:true;
-            }); 
+            var enNivel=defVariable.insumos.variables.map(function(varInsumo){
+                return listaOut.findIndex(function(nivel){
+                    return nivel.variables.findIndex(function(vvar){
+                        return vvar.nombreVariable==varInsumo
+                    })==-1?false:true
+                })  
+            }).reduce(function(elem:number, anterior:number){
+                return elem>anterior? elem:anterior; 
+            });
+
             if(enNivel>=0 && listaOut.length===enNivel+1 ){
                 listaOut.push({tabla ,variables:[varAnalizada]});
-            }else if(enNivel>=0 && listaOut.length>enNivel){
-                listaOut[enNivel+1].variables.push(varAnalizada);
-            }else{
-                listaOut[0].variables.push(varAnalizada);
-            }   
+            }else {
+                var nivelTabla=listaOut[enNivel+1].tabla==tabla?enNivel+1:listaOut.findIndex(function(nivel,i){
+                        return nivel.tabla==tabla &&  i>enNivel+1
+                    });
+                if(nivelTabla>=0){    
+                    listaOut[nivelTabla].variables.push(varAnalizada);    
+                }else{
+                    listaOut.push({tabla ,variables:[varAnalizada]});
+                } 
+            } 
         }    
     });
     return listaOut;

@@ -116,7 +116,7 @@ describe("varcal", function(){
             }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
         });
-        it.skip("protesta si no se puede", async function(){
+        it("protesta si no se puede", async function(){
             try{
                 VarCal.separarEnGruposPorNivelYOrigen([
                     {tabla:'datos', nombreVariable:'a', expresionValidada:'b', insumos:{variables:['b'],funciones:[]}},
@@ -126,6 +126,7 @@ describe("varcal", function(){
             }catch(err){
                 discrepances.showAndThrow(err.message, "Error, no se pudo determinar el orden de la variable 'a' y otras")
             }
+            this.timeout(50000);
         });
         it.skip("separa en listas por nivel y obtiene el join", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
@@ -155,6 +156,7 @@ describe("varcal", function(){
                 joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'}]
             }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
+            this.timeout(50000);
         });
         it("separa con dependencias complejas", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
@@ -195,6 +197,7 @@ describe("varcal", function(){
                 ],
             }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
+            this.timeout(50000);
         });
     });    
     after(async function(){
