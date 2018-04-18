@@ -86,6 +86,21 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
     nvardef=[]; // son las que variables cuyos insumos no están en vardef.
     var lenAnt:number;
     var definicionesOrd:DefinicionVariableAnalizada[]=[];
+
+    var compararJoins=function(joins1:Joins[],joins2:Joins[] ){
+        return (joins1===undefined && joins2===undefined ||
+             JSON.stringify(joins1)===JSON.stringify(joins2))?true:false;
+    } ;
+
+    var nuevoBloqueListaOut=function(defVariable:DefinicionVariableAnalizada ): BloqueVariablesGenerables {
+        var {tabla,joins,...varAnalizada} = defVariable;
+        var nuevo:BloqueVariablesGenerables={tabla ,variables:[varAnalizada]};
+        if(joins !==undefined){
+            nuevo.joins=joins;
+        }
+        return nuevo;
+    };    
+
     definiciones.forEach(function(defVariable:DefinicionVariableAnalizada) {
         var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
         var cantDef=0;
@@ -122,14 +137,16 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
                 i++;
             }    
         };
-    }while(nvardef.length>0 && nvardef.length!=lenAnt );
+   }while(nvardef.length>0 && nvardef.length!=lenAnt );
     if( nvardef.length >0){
         throw new Error("Error, no se pudo determinar el orden de la variable '" + nvardef[0].nombreVariable +"' y otras")
     } 
     definicionesOrd.forEach(function(defVariable:DefinicionVariableAnalizada) {
-        var {tabla, ...varAnalizada} = defVariable;
+        var {tabla,joins,...varAnalizada} = defVariable;
         if (listaOut.length==0){
-            listaOut.push({tabla ,variables:[varAnalizada]});    
+            listaOut.push(nuevoBloqueListaOut(defVariable));
+            //listaOut.push({tabla ,variables:[varAnalizada]});
+           // listaOut[0]=setJoins(listaOut[0],joins);
         }else{
             var enNivel=defVariable.insumos.variables.map(function(varInsumo){
                 return listaOut.findIndex(function(nivel){
@@ -138,22 +155,26 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
                     })==-1?false:true
                 })  
             }).reduce(function(elem:number, anterior:number){
-                return elem>anterior? elem:anterior; 
+                return elem>anterior? elem:anterior;
             });
-
             if(enNivel>=0 && listaOut.length===enNivel+1 ){
-                listaOut.push({tabla ,variables:[varAnalizada]});
+                listaOut.push(nuevoBloqueListaOut(defVariable));
+                //listaOut.push({tabla ,variables:[varAnalizada]});
+                //listaOut[listaOut.length-1]=setJoins(listaOut[listaOut.length-1],joins);
             }else {
-                var nivelTabla=listaOut[enNivel+1].tabla==tabla?enNivel+1:listaOut.findIndex(function(nivel,i){
-                        return nivel.tabla==tabla &&  i>enNivel+1
-                    });
-                if(nivelTabla>=0){    
-                    listaOut[nivelTabla].variables.push(varAnalizada);    
+                var nivelTabla=listaOut[enNivel+1].tabla==tabla && compararJoins(listaOut[enNivel+1].joins,joins)?enNivel+1:listaOut.findIndex(function(nivel,i){
+                        return nivel.tabla==tabla && compararJoins(nivel.joins,joins) && i>enNivel+1
+                });
+                if(nivelTabla>=0){
+                    listaOut[nivelTabla].variables.push(varAnalizada);
                 }else{
-                    listaOut.push({tabla ,variables:[varAnalizada]});
-                } 
-            } 
-        }    
+                    listaOut.push(nuevoBloqueListaOut(defVariable));
+                    //listaOut.push({tabla ,variables:[varAnalizada]});
+                    //listaOut[listaOut.length-1]=setJoins(listaOut[listaOut.length-1],joins);
+                }
+            }
+        }
     });
+    console.log(JSON.stringify(listaOut));
     return listaOut;
 }

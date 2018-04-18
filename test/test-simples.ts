@@ -95,7 +95,7 @@ describe("varcal", function(){
         });
     });
     describe("calcularNiveles", function(){
-        it.skip("separa en listas por nivel", async function(){
+        it("separa en listas por nivel", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
                 {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
                 {tabla:'datos', nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
@@ -128,7 +128,7 @@ describe("varcal", function(){
             }
             this.timeout(50000);
         });
-        it.skip("separa en listas por nivel y obtiene el join", async function(){
+        it("separa en listas por nivel y obtiene el join", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
                 {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
                 {tabla:'datos', nombreVariable:'cal1', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}], expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
@@ -151,7 +151,7 @@ describe("varcal", function(){
             },{
                 tabla:'datos',
                 variables:[{
-                    nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2',insumos:{variables:['doble_y_suma','dato3'],funciones:[]}
+                    nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2',insumos:{variables:['doble_y_suma','dato2'],funciones:[]}
                 }],
                 joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'}]
             }];
