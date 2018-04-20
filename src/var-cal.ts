@@ -1,5 +1,12 @@
 "use strict";
 
+
+// prueba de uso externo de expreparser
+// import * as expParser from 'expre-parser';
+// import * as sqliteParser from 'sqlite-parser';
+// import { BaseNode } from '../../expre-parser/lib/src/ast-model';
+// let baseNode:BaseNodeode = expParser.ExpresionParser.convertNode(<sqliteParser.LiteralNode>{ type: 'literal', value: "43", variant: 'decimal' })
+
 export interface DefinicionVariable{
     tabla:string
     nombreVariable:string
@@ -100,7 +107,10 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
         }
         return nuevo;
     };    
+   // defConInsumos=definiciones.map(function(defVariable){
+    //    if insumos not in defVariable
 
+    //});
     definiciones.forEach(function(defVariable:DefinicionVariableAnalizada) {
         var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
         var cantDef=0;
