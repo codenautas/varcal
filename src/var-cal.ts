@@ -2,10 +2,10 @@
 
 
 // prueba de uso externo de expreparser
-// import * as expParser from 'expre-parser';
+import ExpresionParser from 'expre-parser';
 // import * as sqliteParser from 'sqlite-parser';
-// import { BaseNode } from '../../expre-parser/lib/src/ast-model';
-// let baseNode:BaseNodeode = expParser.ExpresionParser.convertNode(<sqliteParser.LiteralNode>{ type: 'literal', value: "43", variant: 'decimal' })
+// import * as EP from 'expre-parser';
+// // import { BaseNode } from '../../expre-parser/lib/src/ast-model';
 
 export interface DefinicionVariable{
     tabla:string
@@ -19,7 +19,7 @@ export interface Joins{
 };
 
 export interface DefinicionVariableAnalizada extends DefinicionVariable{
-    insumos:{
+    insumos?:{
         variables:string[],
         funciones:string[],
     },
@@ -112,8 +112,11 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
 
     //});
     definiciones.forEach(function(defVariable:DefinicionVariableAnalizada) {
-        var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
+        // var {tabla,nombreVariable, expresionValidada, ...varAnalizada} = defVariable;
+        let insumos;
+        var {nombreVariable, expresionValidada} = defVariable;
         var cantDef=0;
+        insumos = ExpresionParser.parse(expresionValidada).getInsumos();
         insumos.variables.forEach(function(varInsumos){
             cantDef=vardef.indexOf(varInsumos)>=0?cantDef +1:cantDef;
         });
@@ -134,8 +137,10 @@ export function separarEnGruposPorNivelYOrigen(definiciones:DefinicionVariableAn
         var i=0;
         while(i<nvardef.length) {
             var defVariable:DefinicionVariableAnalizada=nvardef[i];
-            var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
+            // var {tabla,nombreVariable,insumos, ...varAnalizada} = defVariable;
+            var {nombreVariable,expresionValidada} = defVariable;
             var cantDef=0;
+            let insumos = ExpresionParser.parse(expresionValidada).getInsumos();
             insumos.variables.forEach(function(varInsumos){
                 cantDef=vardef.indexOf(varInsumos)>=0?cantDef +1:cantDef;
             });
