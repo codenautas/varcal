@@ -71,6 +71,12 @@ describe("varcal", function(){
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
         });
     });
+    describe("prueba get Insumos", function(){
+        it("genera funciones y variales", function(){
+            let expectedInsumos: VarCal.Insumos = {variables:['a', 't.c'], funciones:['f', 'max']}
+            discrepances.showAndThrow(VarCal.getInsumos('a + t.c AND f(max(a, t.c))'), expectedInsumos);
+        });
+    });
     describe("funcionGeneradora", function(){
         it("genera función simple", async function(){
             var funcionGenerada = VarCal.funcionGeneradora([{
@@ -97,9 +103,9 @@ describe("varcal", function(){
     describe("calcularNiveles", function(){
         it("separa en listas por nivel", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'},
-                {tabla:'datos', nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1'},
-                {tabla:'datos', nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2'}
+                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}}
             ],['dato1','dato2']);
             var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
                 tabla:'datos',
@@ -119,8 +125,8 @@ describe("varcal", function(){
         it("protesta si no se puede", async function(){
             try{
                 VarCal.separarEnGruposPorNivelYOrigen([
-                    {tabla:'datos', nombreVariable:'a', expresionValidada:'b'},
-                    {tabla:'datos', nombreVariable:'b', expresionValidada:'a'},
+                    {tabla:'datos', nombreVariable:'a', expresionValidada:'b', insumos:{variables:['b'],funciones:[]}},
+                    {tabla:'datos', nombreVariable:'b', expresionValidada:'a', insumos:{variables:['a'],funciones:[]}},
                 ],['dato1','dato2']);
                 throw new Error('Tenía que dar error por abrazo mortal');
             }catch(err){
@@ -130,10 +136,10 @@ describe("varcal", function(){
         });
         it("separa en listas por nivel y obtiene el join", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'},
-                {tabla:'datos', nombreVariable:'cal1', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}], expresionValidada:'doble_y_suma + dato1'},
-                {tabla:'datos', nombreVariable:'cal2', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'}], expresionValidada:'doble_y_suma + dato2'},
-                {tabla:'datos', nombreVariable:'cal3', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}], expresionValidada:'doble_y_suma + dato2'},
+                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal1', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}], expresionValidada:'doble_y_suma + dato1', insumos:{variables:['doble_y_suma','dato1'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal2', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'}], expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}},
+                {tabla:'datos', nombreVariable:'cal3', joins:[{tabla:'t1',clausulaJoin:'t1.x=datos.x'},{tabla:'t2',clausulaJoin:'t2.y=t1.y'}], expresionValidada:'doble_y_suma + dato2', insumos:{variables:['doble_y_suma','dato2'],funciones:[]}},
             ],['dato1','dato2']);
             var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
                 tabla:'datos',
@@ -160,13 +166,13 @@ describe("varcal", function(){
         });
         it("separa con dependencias complejas", async function(){
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-                {tabla:'datos', nombreVariable:'abbaab', expresionValidada:'abb+aab'}, 
-                {tabla:'datos', nombreVariable:'a'     , expresionValidada:'o'      },
-                {tabla:'equis', nombreVariable:'ab'    , expresionValidada:'a+b'    }, 
-                // {tabla:'datos', nombreVariable:'aa'    , expresionValidada:'a+a' }, 
-                {tabla:'datos', nombreVariable:'aab'   , expresionValidada:'a+ab'   }, 
-                {tabla:'datos', nombreVariable:'b'     , expresionValidada:'o'      }, 
-                {tabla:'datos', nombreVariable:'abb'   , expresionValidada:'ab+b'   }, 
+                {tabla:'datos', nombreVariable:'abbaab', expresionValidada:'abb+aab', insumos:{variables:['aab','abb'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'a'     , expresionValidada:'o'      , insumos:{variables:[],funciones:[]}},
+                {tabla:'equis', nombreVariable:'ab'    , expresionValidada:'a+b'    , insumos:{variables:['a','b'],funciones:[]}}, 
+                // {tabla:'datos', nombreVariable:'aa'    , expresionValidada:'a+a'    , insumos:{variables:['a'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'aab'   , expresionValidada:'a+ab'   , insumos:{variables:['a','ab'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'b'     , expresionValidada:'o'      , insumos:{variables:['o'],funciones:[]}}, 
+                {tabla:'datos', nombreVariable:'abb'   , expresionValidada:'ab+b'   , insumos:{variables:['ab','b'],funciones:[]}}, 
             ], ['o']);
             var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
                 tabla:'datos',
