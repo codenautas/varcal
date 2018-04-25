@@ -47,22 +47,44 @@ export type BloqueVariablesGenerables = {
     joins?: Joins[]
 };
 
+export type DefinicionEstructuralTabla = {
+    target: string
+    source: string
+    where: string
+}
+
+export type DefinicionEstructural = {
+    tables: {
+        [key: string]: DefinicionEstructuralTabla
+    }
+}
+
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
 
-export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number): TextoSQL {
+export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural): TextoSQL {
     var txtMargen = Array(margen + 1).join(' ');
-    return `${txtMargen}UPDATE ${definicion.tabla}\n${txtMargen}  SET ` +
+    let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla])? defEst.tables[definicion.tabla] : null;
+    let defJoinExist:boolean = !!(definicion.joins && definicion.joins.length);
+    let tablesToFromClausule: string[] = [];
+    let completeWhereConditions: string = '';
+    if (tableDefEst || defJoinExist) {
+        let defJoinsWhere = defJoinExist? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `): '';
+        completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
+        tablesToFromClausule = [].concat(tableDefEst ? tableDefEst.source : [], defJoinExist ? definicion.joins.map(def => def.tabla) : []);
+    }
+    
+    return `${txtMargen}UPDATE ${tableDefEst?tableDefEst.target:definicion.tabla}\n${txtMargen}  SET ` +
         definicion.variables.map(function ({ nombreVariable, expresionValidada }) {
             return `${nombreVariable} = ${expresionValidada}`
         }).join(`,\n      ${txtMargen}`) +
-        (definicion.joins && definicion.joins.length ?
-            `\n  ${txtMargen}FROM ` + definicion.joins.map(def => def.tabla).join(', ') +
-            `\n  ${txtMargen}WHERE ` + definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `)
+        (tablesToFromClausule.length ?
+            `\n  ${txtMargen}FROM ${tablesToFromClausule.join(', ')}` +
+            (completeWhereConditions? `\n  ${txtMargen}WHERE ${completeWhereConditions}` : '')
             : '')
-        ;
+
 }
 
-export function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion): TextoSQL {
+export function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion, defEst?: DefinicionEstructural): TextoSQL {
     return `CREATE OR REPLACE FUNCTION ${parametros.esquema}.${parametros.nombreFuncionGeneradora}() RETURNS TEXT
   LANGUAGE PLPGSQL
 AS
@@ -70,7 +92,7 @@ $BODY$
 BEGIN
 `+
         definiciones.map(function (definicion) {
-            return sentenciaUpdate(definicion, 2) + ';'
+            return sentenciaUpdate(definicion, 2, defEst) + ';'
         }).join('\n') + `
   RETURN 'OK';
 END;

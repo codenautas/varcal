@@ -47,6 +47,29 @@ describe("varcal", function(){
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
+        it("genera un update basado en 2 variables con definition structure", async function(){
+            var sqlGenerado = VarCal.sentenciaUpdate({
+                tabla:'t1',
+                variables:[{
+                    nombreVariable:'x', 
+                    expresionValidada:'dato1 * 2 + dato2'
+                },{
+                    nombreVariable:'pepe', 
+                    expresionValidada:'f(j)'
+                }]
+            }, 2, {
+                tables:{
+                    t1:{
+                        target: 't1_cal',
+                        source: 't1 inner join t0 using(pk0)',
+                        where: 't1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0',
+                    }
+                }
+            })
+            var sentenciaEsperada = '  UPDATE t1_cal\n    SET x = dato1 * 2 + dato2,\n        pepe = f(j)\n    FROM t1 inner join t0 using(pk0)\n    WHERE t1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0';
+            discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
+            this.timeout(50000);
+        });
         it("genera un update basado en variables de otras tablas", async function(){
             var sqlGenerado = VarCal.sentenciaUpdate({
                 tabla:'t1',
@@ -61,7 +84,7 @@ describe("varcal", function(){
                     tabla:'t3',
                     clausulaJoin:'t2.id = t1.id and t2.id=t3.id'
                 }]
-        }, 1)
+        }, 1);
             var sentenciaEsperada = 
 ` UPDATE t1
    SET x = dato1 * 2 + dato2
@@ -95,8 +118,52 @@ describe("varcal", function(){
             {
                 nombreFuncionGeneradora:'gen_fun',
                 esquema:'test_varcal'
+            },{
+                tables:{
+                    datos:{
+                        target: 't1_cal',
+                        source: 't1 inner join t0 using(pk0)',
+                        where: 't1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0',
+                    }
+                }
             });
             var funcionEsperada = await fs.readFile('./test/fixtures/first-generated-fun.sql', {encoding:'UTF8'});
+            discrepances.showAndThrow(funcionGenerada, funcionEsperada);
+        });
+    });
+    describe("funcionGeneradora", function(){
+        it("genera función compleja", async function(){
+            var funcionGenerada = VarCal.funcionGeneradora([{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2'
+                }],
+            },{
+                tabla:'datos2',
+                variables:[{
+                    nombreVariable:'cal1', expresionValidada:'doble_y_suma + dato1'
+                },{
+                    nombreVariable:'cal2', expresionValidada:'doble_y_suma + dato2'
+                }],
+            }], 
+            {
+                nombreFuncionGeneradora:'gen_fun',
+                esquema:'test_varcal'
+            },{
+                tables:{
+                    datos:{
+                        target: 't1_cal',
+                        source: 't1 inner join t0 using(pk0)',
+                        where: 't1_cal.t1 = datos.t1 and t1_cal.pk0=t0.pk0',
+                    },
+                    datos2:{
+                        target: 't2_cal',
+                        source: 't2 inner join t0 using(pk0) join t1_cal using(pk0)',
+                        where: 't2_cal.t2 = datos2.t2 and t2_cal.pk0=t0.pk0 and t2_cal.pk0=t1_cal.pk0',
+                    }
+                }
+            });
+            var funcionEsperada = await fs.readFile('./test/fixtures/second-generated-fun.sql', {encoding:'UTF8'});
             discrepances.showAndThrow(funcionGenerada, funcionEsperada);
         });
     });
