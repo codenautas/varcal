@@ -61,7 +61,7 @@ describe("varcal", function(){
                 tables:{
                     t1:{
                         target: 't1_cal',
-                        source: 't1 inner join t0 using(pk0)',
+                        sourceJoin: 't1 inner join t0 using(pk0)',
                         where: 't1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0',
                     }
                 }
@@ -122,7 +122,7 @@ describe("varcal", function(){
                 tables:{
                     datos:{
                         target: 't1_cal',
-                        source: 't1 inner join t0 using(pk0)',
+                        sourceJoin: 't1 inner join t0 using(pk0)',
                         where: 't1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0',
                     }
                 }
@@ -153,12 +153,12 @@ describe("varcal", function(){
                 tables:{
                     datos:{
                         target: 't1_cal',
-                        source: 't1 inner join t0 using(pk0)',
+                        sourceJoin: 't1 inner join t0 using(pk0)',
                         where: 't1_cal.t1 = datos.t1 and t1_cal.pk0=t0.pk0',
                     },
                     datos2:{
                         target: 't2_cal',
-                        source: 't2 inner join t0 using(pk0) join t1_cal using(pk0)',
+                        sourceJoin: 't2 inner join t0 using(pk0) join t1_cal using(pk0)',
                         where: 't2_cal.t2 = datos2.t2 and t2_cal.pk0=t0.pk0 and t2_cal.pk0=t1_cal.pk0',
                     }
                 }

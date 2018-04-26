@@ -4,7 +4,8 @@
   "version": "0.1.5",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
-  "main": "lib/server/varcal.js",
+  "main": "lib/src/var-cal.js",
+  "types": "lib/src/var-cal.d.ts",
   "files": [
     "lib",
     "src/client"

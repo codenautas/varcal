@@ -49,7 +49,8 @@ export type BloqueVariablesGenerables = {
 
 export type DefinicionEstructuralTabla = {
     target: string
-    source: string
+    sourceBro?: string
+    sourceJoin: string
     where: string
 }
 
@@ -70,7 +71,7 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     if (tableDefEst || defJoinExist) {
         let defJoinsWhere = defJoinExist? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `): '';
         completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
-        tablesToFromClausule = [].concat(tableDefEst ? tableDefEst.source : [], defJoinExist ? definicion.joins.map(def => def.tabla) : []);
+        tablesToFromClausule = [].concat(tableDefEst ? tableDefEst.sourceJoin : [], defJoinExist ? definicion.joins.map(def => def.tabla) : []);
     }
     
     return `${txtMargen}UPDATE ${tableDefEst?tableDefEst.target:definicion.tabla}\n${txtMargen}  SET ` +
@@ -99,12 +100,13 @@ END;
 $BODY$;`;
 }
 
-export function laMisma(varAnalizada: DefinicionVariable) {
-    return varAnalizada;
-}
-
 export function getInsumos(expression: string): Insumos {
     return ExpresionParser.parse(expression).getInsumos();
+}
+
+export function getWrappedExpression(expression: string, pkExpression:string, options:ExpresionParser.CompilerOptions):string {
+    var compiler=new ExpresionParser.Compiler(options);
+    return compiler.toCode(ExpresionParser.parse(expression),pkExpression);
 }
 
 export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableAnalizada[], variablesDefinidas: string[]): BloqueVariablesGenerables[] {
