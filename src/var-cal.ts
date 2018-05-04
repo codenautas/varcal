@@ -2,11 +2,6 @@
 
 import * as ExpresionParser from 'expre-parser';
 
-export interface Insumos {
-    variables: string[],
-    funciones: string[],
-}
-
 export interface DefinicionVariable {
     tabla: string
     nombreVariable: string
@@ -19,7 +14,7 @@ export interface Joins {
 };
 
 export interface DefinicionVariableAnalizada extends DefinicionVariable {
-    insumos: Insumos
+    insumos: ExpresionParser.Insumos
     joins?: Joins[]
 }
 
@@ -28,6 +23,7 @@ export interface VariableGenerable {
     expresionValidada: string
     insumos?: {
         variables?: string[]
+        aliases?: string[]
         funciones?: string[]
     }
 }
@@ -100,7 +96,7 @@ END;
 $BODY$;`;
 }
 
-export function getInsumos(expression: string): Insumos {
+export function getInsumos(expression: string): ExpresionParser.Insumos {
     return ExpresionParser.parse(expression).getInsumos();
 }
 
@@ -213,3 +209,6 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
     console.log(JSON.stringify(listaOut));
     return listaOut;
 }
+
+// re-exports
+export {Insumos} from 'expre-parser';

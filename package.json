@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
   "main": "lib/src/var-cal.js",
@@ -13,7 +13,7 @@
   "dependencies": {
     "mini-tools": "~1.0.0",
     "pg-promise-strict": "~0.4.6",
-    "expre-parser": "~0.1.8"
+    "expre-parser": "~0.1.9"
   },
   "devDependencies": {
     "types.d.ts": "^0.1.16",
