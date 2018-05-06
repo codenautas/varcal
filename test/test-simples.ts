@@ -94,6 +94,97 @@ describe("varcal", function(){
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
         });
     });
+    describe("sentenciaUpdate agregada", function(){
+        it("genera un update basado en 2 variables con definition structure", async function(){
+            var sqlGenerado = VarCal.sentenciaUpdate({
+                tabla:'hogares',
+                variables:[{
+                    nombreVariable:'cantidad_mujeres', 
+                    expresionValidada:'sexo=2',
+                    funcionAgregacion:'contar',
+                    tablaAgregada:'personas'
+                },{
+                    nombreVariable:'cant_revisitas', 
+                    expresionValidada:'true',
+                    funcionAgregacion:'contar',
+                    tablaAgregada:'visitas'
+                },{
+                    nombreVariable:'ingresos_hogar', 
+                    expresionValidada:'ingreso_personal',
+                    funcionAgregacion:'sumar',
+                    tablaAgregada:'personas'
+                },{
+                    nombreVariable:'tres',
+                    expresionValidada:'uno+dos'
+                }],
+            }, 14, {
+                tables:{
+                    hogares:{
+                        target: 'hogares_calc',
+                        sourceJoin: 'hogares inner join viviendas using(v)',
+                        where: 'hogares_calc.h = hogares.h and hogares_calc.v=hogares.v',
+                    },
+                    personas:{
+                        target:'personas_calc',
+                        sourceJoin:'personas_calc inner join personas(v,h,p)',
+                        where:'personas_calc.h = hogares.h and personas_calc.v = hogares.v'
+                    },
+                    visitas:{
+                        target:'visitas',
+                        sourceJoin:'visitas',
+                        where:'visitas.h = hogares.h and visitas.v = hogares.v'
+                    }
+                }
+            })
+            var sentenciaEsperada = 
+`              UPDATE hogares
+                SET cantidad_mujeres = personas_calc.cantidad_mujeres,
+                    cant_revisitas = visitas.cant_revisitas,
+                    ingreso_hogar = personas_calc.ingresos_hogar,
+                    tres = uno+dos
+                FROM hogares inner join viviendas using(v),
+                  LATERAL (
+                    SELECT 
+                      count(nullif(sexo=2,false)) as cantidad_mujeres,
+                      sum(ingreso_personal) as ingresos_hogar
+                    FROM personas_calc inner join personas(v,h,p)
+                    WHERE personas_calc.h = hogares.h and personas_calc.v = hogares.v
+                  ) personas_calc,
+                  LATERAL (
+                    SELECT 
+                      count(nullif(true,false)) as cant_revisitas
+                    FROM visitas
+                    WHERE visitas.h = hogares.h and visitas.v = hogares.v
+                  ) visitas
+                WHERE hogares_calc.h = hogares.h and hogares_calc.v=hogares.v
+`;
+            discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
+            this.timeout(50000);
+        });
+        it("genera un update basado en variables de otras tablas", async function(){
+            var sqlGenerado = VarCal.sentenciaUpdate({
+                tabla:'t1',
+                variables:[{
+                    nombreVariable:'x', 
+                    expresionValidada:'dato1 * 2 + dato2',
+                }],
+                joins:[{
+                    tabla:'t2', 
+                    clausulaJoin:'t2.id = t1.id'
+                },{
+                    tabla:'t3',
+                    clausulaJoin:'t2.id = t1.id and t2.id=t3.id'
+                }]
+        }, 1);
+            var sentenciaEsperada = 
+` UPDATE t1
+   SET x = dato1 * 2 + dato2
+   FROM t2, t3
+   WHERE t2.id = t1.id
+     AND t2.id = t1.id and t2.id=t3.id`;
+            discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
+        });
+    });
     describe("prueba get Insumos", function(){
         it("genera funciones y variales", function(){
             let expectedInsumos: VarCal.Insumos = {variables:['a', 't.c'], aliases: ['t'], funciones:['f', 'max']}

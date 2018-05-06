@@ -21,6 +21,8 @@ export interface DefinicionVariableAnalizada extends DefinicionVariable {
 export interface VariableGenerable {
     nombreVariable: string
     expresionValidada: string
+    funcionAgregacion?: 'contar' | 'sumar'
+    tablaAgregada?: string
     insumos?: {
         variables?: string[]
         aliases?: string[]
@@ -38,8 +40,8 @@ export type DefinicionVariables = DefinicionVariable[];
 export type TextoSQL = string;
 
 export type BloqueVariablesGenerables = {
-    tabla: string,
-    variables: VariableGenerable[],
+    tabla: string
+    variables: VariableGenerable[]
     joins?: Joins[]
 };
 
