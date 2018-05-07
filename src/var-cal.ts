@@ -63,6 +63,17 @@ export type DefinicionEstructural = {
 
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
 
+function getAggregacion(f:string, exp:string){
+    switch (f) {
+        case 'sumar':
+            return 'sum('+exp+')';
+        case 'contar':
+            return 'count(nullif('+exp+',false))';
+        default:
+            break;
+    }
+}
+
 export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural): TextoSQL {
     var txtMargen = Array(margen + 1).join(' ');
     let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla])? defEst.tables[definicion.tabla] : null;
@@ -72,18 +83,37 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     if (tableDefEst || defJoinExist) {
         let defJoinsWhere = defJoinExist? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `): '';
         completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
-        tablesToFromClausule = [].concat(tableDefEst ? tableDefEst.sourceJoin : [], defJoinExist ? definicion.joins.map(def => def.tabla) : []);
     }
+    tablesToFromClausule = tablesToFromClausule.concat(tableDefEst ? tableDefEst.sourceJoin : []);
+    tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
+
+    //sacando duplicados de las tablas agregadas
+    let tablasAgregadas = [...(new Set(definicion.variables.filter(v=>v.tablaAgregada).map(v=> v.tablaAgregada)))];
+    
+    tablasAgregadas.forEach(tabAgg => {
+        let vars = definicion.variables.filter(v => v.tablaAgregada == tabAgg);
+        tablesToFromClausule = tablesToFromClausule.concat(
+`\nLATERAL (
+  SELECT
+    ${vars.map(v=> `${getAggregacion(v.funcionAgregacion,v.expresionValidada)} as ${v.nombreVariable}`).join(',\n        '+txtMargen)}
+  FROM ${defEst.tables[tabAgg].sourceAgg}
+  WHERE ${defEst.tables[tabAgg].whereAgg}
+) ${defEst.tables[tabAgg].aliasAgg}`
+        );        
+    })
     
     return `${txtMargen}UPDATE ${tableDefEst?tableDefEst.target:definicion.tabla}\n${txtMargen}  SET ` +
-        definicion.variables.map(function ({ nombreVariable, expresionValidada }) {
-            return `${nombreVariable} = ${expresionValidada}`
+        definicion.variables.map(function (variable) {
+            if (variable.tablaAgregada && variable.funcionAgregacion){
+                return `${variable.nombreVariable} = ${defEst.tables[variable.tablaAgregada].aliasAgg}.${variable.nombreVariable}`;
+            } else {
+                return `${variable.nombreVariable} = ${variable.expresionValidada}`;
+            }
         }).join(`,\n      ${txtMargen}`) +
         (tablesToFromClausule.length ?
             `\n  ${txtMargen}FROM ${tablesToFromClausule.join(', ')}` +
             (completeWhereConditions? `\n  ${txtMargen}WHERE ${completeWhereConditions}` : '')
             : '')
-
 }
 
 export function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion, defEst?: DefinicionEstructural): TextoSQL {
