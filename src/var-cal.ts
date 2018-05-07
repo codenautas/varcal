@@ -86,22 +86,20 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     }
     tablesToFromClausule = tablesToFromClausule.concat(tableDefEst ? tableDefEst.sourceJoin : []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
-
     //sacando duplicados de las tablas agregadas
     let tablasAgregadas = [...(new Set(definicion.variables.filter(v=>v.tablaAgregada).map(v=> v.tablaAgregada)))];
-    
     tablasAgregadas.forEach(tabAgg => {
         let vars = definicion.variables.filter(v => v.tablaAgregada == tabAgg);
         tablesToFromClausule = tablesToFromClausule.concat(
-`\nLATERAL (
-  SELECT
-    ${vars.map(v=> `${getAggregacion(v.funcionAgregacion,v.expresionValidada)} as ${v.nombreVariable}`).join(',\n        '+txtMargen)}
-  FROM ${defEst.tables[tabAgg].sourceAgg}
-  WHERE ${defEst.tables[tabAgg].whereAgg}
-) ${defEst.tables[tabAgg].aliasAgg}`
+`
+${txtMargen}    LATERAL (
+${txtMargen}      SELECT
+${txtMargen}          ${vars.map(v=> `${getAggregacion(v.funcionAgregacion,v.expresionValidada)} as ${v.nombreVariable}`).join(',\n          '+txtMargen)}
+${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg}
+${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg}
+${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
         );        
-    })
-    
+    });
     return `${txtMargen}UPDATE ${tableDefEst?tableDefEst.target:definicion.tabla}\n${txtMargen}  SET ` +
         definicion.variables.map(function (variable) {
             if (variable.tablaAgregada && variable.funcionAgregacion){
