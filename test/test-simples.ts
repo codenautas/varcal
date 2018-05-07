@@ -125,22 +125,22 @@ describe("varcal", function(){
                         where: 'hogares_calc.h = hogares.h and hogares_calc.v=hogares.v',
                     },
                     personas:{
-                        target:'personas_calc',
-                        sourceJoin:'personas_calc inner join personas(v,h,p)',
-                        where:'personas_calc.h = hogares.h and personas_calc.v = hogares.v'
+                        aliasAgg:'personas_agg',
+                        sourceAgg:'personas_calc inner join personas(v,h,p)',
+                        whereAgg:'personas_calc.h = hogares.h and personas_calc.v = hogares.v'
                     },
                     visitas:{
-                        target:'visitas',
-                        sourceJoin:'visitas',
-                        where:'visitas.h = hogares.h and visitas.v = hogares.v'
+                        aliasAgg:'visitas_agg',
+                        sourceAgg:'visitas',
+                        whereAgg:'visitas.h = hogares.h and visitas.v = hogares.v'
                     }
                 }
             })
             var sentenciaEsperada = 
-`              UPDATE hogares
-                SET cantidad_mujeres = personas_calc.cantidad_mujeres,
-                    cant_revisitas = visitas.cant_revisitas,
-                    ingreso_hogar = personas_calc.ingresos_hogar,
+`              UPDATE hogares_calc
+                SET cantidad_mujeres = personas_agg.cantidad_mujeres,
+                    cant_revisitas = visitas_agg.cant_revisitas,
+                    ingreso_hogar = personas_agg.ingresos_hogar,
                     tres = uno+dos
                 FROM hogares inner join viviendas using(v),
                   LATERAL (
@@ -149,13 +149,13 @@ describe("varcal", function(){
                       sum(ingreso_personal) as ingresos_hogar
                     FROM personas_calc inner join personas(v,h,p)
                     WHERE personas_calc.h = hogares.h and personas_calc.v = hogares.v
-                  ) personas_calc,
+                  ) personas_agg,
                   LATERAL (
                     SELECT 
                       count(nullif(true,false)) as cant_revisitas
                     FROM visitas
                     WHERE visitas.h = hogares.h and visitas.v = hogares.v
-                  ) visitas
+                  ) visitas_agg
                 WHERE hogares_calc.h = hogares.h and hogares_calc.v=hogares.v
 `;
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);

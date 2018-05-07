@@ -46,10 +46,13 @@ export type BloqueVariablesGenerables = {
 };
 
 export type DefinicionEstructuralTabla = {
-    target: string
+    target?: string
     sourceBro?: string
-    sourceJoin: string
-    where: string
+    sourceJoin?: string
+    where?: string
+    aliasAgg?: string
+    sourceAgg?: string
+    whereAgg?: string
 }
 
 export type DefinicionEstructural = {
