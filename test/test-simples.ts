@@ -101,18 +101,18 @@ describe("varcal", function(){
                 variables:[{
                     nombreVariable:'cantidad_mujeres', 
                     expresionValidada:'sexo=2',
-                    funcionAgregacion:'contar',
-                    tablaAgregada:'personas'
+                    funcion_agregacion:'contar',
+                    tabla_agregada:'personas'
                 },{
                     nombreVariable:'cant_revisitas', 
                     expresionValidada:'true',
-                    funcionAgregacion:'contar',
-                    tablaAgregada:'visitas'
+                    funcion_agregacion:'contar',
+                    tabla_agregada:'visitas'
                 },{
                     nombreVariable:'ingresos_hogar', 
                     expresionValidada:'ingreso_personal',
-                    funcionAgregacion:'sumar',
-                    tablaAgregada:'personas'
+                    funcion_agregacion:'sumar',
+                    tabla_agregada:'personas'
                 },{
                     nombreVariable:'tres',
                     expresionValidada:'uno+dos'

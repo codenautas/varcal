@@ -21,8 +21,8 @@ export interface DefinicionVariableAnalizada extends DefinicionVariable {
 export interface VariableGenerable {
     nombreVariable: string
     expresionValidada: string
-    funcionAgregacion?: 'contar' | 'sumar'
-    tablaAgregada?: string
+    funcion_agregacion?: 'contar' | 'sumar'
+    tabla_agregada?: string
     insumos?: {
         variables?: string[]
         aliases?: string[]
@@ -70,7 +70,7 @@ function getAggregacion(f:string, exp:string){
         case 'contar':
             return 'count(nullif('+exp+',false))';
         default:
-            break;
+            return f+'('+exp+')';
     }
 }
 
@@ -87,14 +87,14 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     tablesToFromClausule = tablesToFromClausule.concat(tableDefEst ? tableDefEst.sourceJoin : []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
     //sacando duplicados de las tablas agregadas
-    let tablasAgregadas = [...(new Set(definicion.variables.filter(v=>v.tablaAgregada).map(v=> v.tablaAgregada)))];
+    let tablasAgregadas = [...(new Set(definicion.variables.filter(v=>v.tabla_agregada).map(v=> v.tabla_agregada)))];
     tablasAgregadas.forEach(tabAgg => {
-        let vars = definicion.variables.filter(v => v.tablaAgregada == tabAgg);
+        let vars = definicion.variables.filter(v => v.tabla_agregada == tabAgg);
         tablesToFromClausule = tablesToFromClausule.concat(
 `
 ${txtMargen}    LATERAL (
 ${txtMargen}      SELECT
-${txtMargen}          ${vars.map(v=> `${getAggregacion(v.funcionAgregacion,v.expresionValidada)} as ${v.nombreVariable}`).join(',\n          '+txtMargen)}
+${txtMargen}          ${vars.map(v=> `${getAggregacion(v.funcion_agregacion,v.expresionValidada)} as ${v.nombreVariable}`).join(',\n          '+txtMargen)}
 ${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg}
 ${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg}
 ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
@@ -102,8 +102,8 @@ ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
     });
     return `${txtMargen}UPDATE ${tableDefEst?tableDefEst.target:definicion.tabla}\n${txtMargen}  SET ` +
         definicion.variables.map(function (variable) {
-            if (variable.tablaAgregada && variable.funcionAgregacion){
-                return `${variable.nombreVariable} = ${defEst.tables[variable.tablaAgregada].aliasAgg}.${variable.nombreVariable}`;
+            if (variable.tabla_agregada && variable.funcion_agregacion){
+                return `${variable.nombreVariable} = ${defEst.tables[variable.tabla_agregada].aliasAgg}.${variable.nombreVariable}`;
             } else {
                 return `${variable.nombreVariable} = ${variable.expresionValidada}`;
             }
@@ -212,7 +212,7 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
             //listaOut.push({tabla ,variables:[varAnalizada]});
             // listaOut[0]=setJoins(listaOut[0],joins);
         } else {
-            var enNivel = defVariable.insumos.variables.map(function (varInsumo) {
+            var enNivel = defVariable.insumos.variables.length?defVariable.insumos.variables.map(function (varInsumo) {
                 return listaOut.findIndex(function (nivel) {
                     return nivel.variables.findIndex(function (vvar) {
                         return vvar.nombreVariable == varInsumo
@@ -220,7 +220,7 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
                 })
             }).reduce(function (elem: number, anterior: number) {
                 return elem > anterior ? elem : anterior;
-            });
+            }):0;
             if (enNivel >= 0 && listaOut.length === enNivel + 1) {
                 listaOut.push(nuevoBloqueListaOut(defVariable));
                 //listaOut.push({tabla ,variables:[varAnalizada]});
