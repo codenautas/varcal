@@ -61,6 +61,15 @@ export type DefinicionEstructural = {
     }
 }
 
+export interface Alias {
+    tabla: string
+    join: string
+}
+
+export interface Aliases {
+    [key: string]: Alias 
+}
+
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
 
 function getAggregacion(f:string, exp:string){
@@ -138,7 +147,32 @@ export function getWrappedExpression(expression: string, pkExpression:string, op
     return compiler.toCode(ExpresionParser.parse(expression),pkExpression);
 }
 
-export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableAnalizada[], variablesDefinidas: string[]): BloqueVariablesGenerables[] {
+let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: string[], definicionesOrd: DefinicionVariableAnalizada[], nvardef: DefinicionVariableAnalizada[], aliases: Aliases): boolean{
+    var { nombreVariable, insumos } = defVariable;
+    var cantDef: number=0;
+    insumos.variables.forEach(function (varInsumos) {
+        // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
+        if (varInsumos.match(/^.+\..+$/)){
+            var [prefix, varName] = varInsumos.split('.');
+            if (vardef.indexOf(varName) > -1 && (prefix in aliases)){
+                vardef.push(varInsumos);// then agrego esta variable a vardef
+            }
+        }
+
+        cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
+    });
+
+    if(cantDef == insumos.variables.length) {
+        vardef.push(nombreVariable);
+        definicionesOrd.push(defVariable);
+        if (nvardef.indexOf(defVariable) >= 0) {
+            nvardef.splice(nvardef.indexOf(defVariable), 1)
+        }
+    }
+    return cantDef == insumos.variables.length;
+}
+
+export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableAnalizada[], variablesDefinidas: string[], aliases?: Aliases): BloqueVariablesGenerables[] {
     var listaOut: BloqueVariablesGenerables[];
     listaOut = [];
     var vardef: string[]; //variables con insumos definidos
@@ -165,39 +199,17 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
     //    if insumos not in defVariable
 
     //});
+
     definiciones.forEach(function (defVariable: DefinicionVariableAnalizada) {
-        var { tabla, nombreVariable, insumos, ...varAnalizada } = defVariable;
-        var cantDef = 0;
-        insumos.variables.forEach(function (varInsumos) {
-            cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
-        });
-        if (cantDef == insumos.variables.length) {
-            vardef.push(nombreVariable);
-            definicionesOrd.push(defVariable);
-            if (nvardef.indexOf(defVariable) >= 0) {
-                nvardef.splice(nvardef.indexOf(defVariable), 1)
-            }
-        } else {
-            if (nvardef.findIndex(function (varNvardef) { return varNvardef.nombreVariable == nombreVariable }) == -1) {
-                nvardef.push(defVariable);
-            }
+        if(!checkInsumos(defVariable, vardef,definicionesOrd, nvardef, aliases) && ! nvardef.some(varNvardef => varNvardef.nombreVariable == defVariable.nombreVariable)) {
+            nvardef.push(defVariable);
         }
     });
     do {
         lenAnt = nvardef.length;
         var i = 0;
         while (i < nvardef.length) {
-            var defVariable: DefinicionVariableAnalizada = nvardef[i];
-            var { tabla, nombreVariable, insumos, ...varAnalizada } = defVariable;
-            var cantDef = 0;
-            insumos.variables.forEach(function (varInsumos) {
-                cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
-            });
-            if (cantDef == insumos.variables.length) {
-                vardef.push(nombreVariable);
-                definicionesOrd.push(defVariable);
-                nvardef.splice(i, 1);
-            } else {
+            if(!checkInsumos(nvardef[i], vardef,definicionesOrd, nvardef, aliases)){
                 i++;
             }
         };

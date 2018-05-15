@@ -279,6 +279,29 @@ describe("varcal", function(){
             }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
         });
+        it("separa en listas por nivel usando alias", async function(){
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'], aliases:[], funciones:[]}},
+                {tabla:'personas', nombreVariable:'dif_edad_padre', expresionValidada:'padre.p3 - p3', insumos:{variables:['padre.p3','p3'], aliases:['padre'], funciones:[]}}
+            ],['p3', 'dato1', 'dato2'], {
+                padre: {
+                    tabla: 'personas',
+                    join: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
+                }
+            });
+            var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'],aliases:[], funciones:[]}
+                }],
+            },{
+                tabla:'personas',
+                variables:[{
+                    nombreVariable:'dif_edad_padre', expresionValidada:'padre.p3 - p3', insumos:{variables:['padre.p3','p3'],aliases:['padre'], funciones:[]}
+                }],
+            }];
+            discrepances.showAndThrow(resultadoNiveles , listaEsperada);
+        });
         it("protesta si no se puede", async function(){
             try{
                 VarCal.separarEnGruposPorNivelYOrigen([

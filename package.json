@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
   "main": "lib/src/var-cal.js",
@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "types.d.ts": "^0.1.16",
-    "@types/node": "~10.0.3",
+    "@types/node": "~10.0.6",
     "@types/mocha": "~5.2.0",
     "discrepances": "~0.2.2",
     "mocha": "^5.1.1"
