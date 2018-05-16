@@ -61,13 +61,53 @@ describe("varcal", function(){
                 tables:{
                     t1:{
                         target: 't1_cal',
-                        sourceJoin: 't1 inner join t0 using(pk0)',
+                        sourceJoin: 'inner join t0 using(pk0)',
+                        sourceBro: 't1',
                         where: 't1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0',
                     }
                 }
             })
             var sentenciaEsperada = '  UPDATE t1_cal\n    SET x = dato1 * 2 + dato2,\n        pepe = f(j)\n    FROM t1 inner join t0 using(pk0)\n    WHERE t1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0';
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
+            this.timeout(50000);
+        });
+        it("genera un update basado en 2 variables cuyos insumos pertenecen a un alias, con definition structure", async function(){
+            var sqlGenerado = VarCal.sentenciaUpdate({
+                tabla:'personas',
+                variables:[{
+                    nombreVariable:'x', 
+                    expresionValidada:'ingreso * 2 + ingreso2',
+                    insumos:{variables:['ingreso', 'ingreso2']}
+                },{
+                    nombreVariable:'dif_edad_padre', 
+                    expresionValidada:'padre.edad - edad',
+                    insumos:{variables:['padre.edad', 'edad'], aliases:['padre']}
+                }]
+            }, 14, {
+                aliases:{
+                    padre: {
+                        tabla: 'personas',
+                        join: 'padre.id = personas.id AND padre.p0 = personas.p11',
+                    }
+                },
+                tables:{
+                    personas:{
+                        target: 'personas_cal',
+                        sourceJoin: 'inner join t0 using(pk0)',
+                        sourceBro: 'personas',
+                        where: 'personas_cal.id = personas.id and personas_cal.pk0=t0.pk0',
+                    }
+                }
+            })
+            var sentenciaEsperada = 
+`              UPDATE personas_cal
+                SET x = ingreso * 2 + ingreso2,
+                    dif_edad_padre = padre.edad - edad
+                FROM personas 
+                  LEFT JOIN personas padre ON (padre.id = personas.id AND padre.p0 = personas.p11)
+                  inner join t0 using(pk0)
+                WHERE personas_cal.id = personas.id and personas_cal.pk0=t0.pk0`;
+                discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
         it("genera un update basado en variables de otras tablas", async function(){
@@ -95,7 +135,7 @@ describe("varcal", function(){
         });
     });
     describe("sentenciaUpdate agregada", function(){
-        it("genera un update basado en 2 variables con definition structure", async function(){
+        it("genera un update basado en 2 variables con definition structure con funciones de agregación", async function(){
             var sqlGenerado = VarCal.sentenciaUpdate({
                 tabla:'hogares',
                 variables:[{
@@ -121,7 +161,8 @@ describe("varcal", function(){
                 tables:{
                     hogares:{
                         target: 'hogares_calc',
-                        sourceJoin: 'hogares inner join viviendas using(v)',
+                        sourceJoin: 'inner join viviendas using(v)',
+                        sourceBro: 'hogares',
                         where: 'hogares_calc.h = hogares.h and hogares_calc.v=hogares.v',
                     },
                     personas:{
@@ -189,7 +230,8 @@ describe("varcal", function(){
                 tables:{
                     datos:{
                         target: 't1_cal',
-                        sourceJoin: 't1 inner join t0 using(pk0)',
+                        sourceJoin: 'inner join t0 using(pk0)',
+                        sourceBro: 't1',
                         where: 't1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0',
                     }
                 }
@@ -220,12 +262,14 @@ describe("varcal", function(){
                 tables:{
                     datos:{
                         target: 't1_cal',
-                        sourceJoin: 't1 inner join t0 using(pk0)',
+                        sourceJoin: 'inner join t0 using(pk0)',
+                        sourceBro: 't1',
                         where: 't1_cal.t1 = datos.t1 and t1_cal.pk0=t0.pk0',
                     },
                     datos2:{
                         target: 't2_cal',
-                        sourceJoin: 't2 inner join t0 using(pk0) join t1_cal using(pk0)',
+                        sourceJoin: 'inner join t0 using(pk0) join t1_cal using(pk0)',
+                        sourceBro: 't2',
                         where: 't2_cal.t2 = datos2.t2 and t2_cal.pk0=t0.pk0 and t2_cal.pk0=t1_cal.pk0',
                     }
                 }

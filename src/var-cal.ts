@@ -56,6 +56,7 @@ export type DefinicionEstructuralTabla = {
 }
 
 export type DefinicionEstructural = {
+    aliases?: Aliases
     tables: {
         [key: string]: DefinicionEstructuralTabla
     }
@@ -93,9 +94,23 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
         let defJoinsWhere = defJoinExist? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `): '';
         completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
     }
-    tablesToFromClausule = tablesToFromClausule.concat(tableDefEst ? tableDefEst.sourceJoin : []);
+    // resultado: se tienen todos los alias de todas las variables (se eliminan duplicados usando Set)
+    let aliasesUsados = [...(new Set([].concat(...(definicion.variables.filter(v=>(v.insumos && v.insumos.aliases)).map(v=> v.insumos.aliases)))))];
+    let aliasLeftJoins = '';
+    aliasesUsados.forEach(aliasName => {
+        let alias = defEst.aliases[aliasName];
+        // LEFT JOIN personas padre ON (padre.id = personas.id AND padre.p0 = personas.p11)
+        aliasLeftJoins +=
+`
+${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
+${txtMargen}    `;
+    });
+    tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro)? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
-    //sacando duplicados de las tablas agregadas
+
+
+
+    //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
     let tablasAgregadas = [...(new Set(definicion.variables.filter(v=>v.tabla_agregada).map(v=> v.tabla_agregada)))];
     tablasAgregadas.forEach(tabAgg => {
         let vars = definicion.variables.filter(v => v.tabla_agregada == tabAgg);
@@ -109,6 +124,7 @@ ${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg}
 ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
         );        
     });
+    
     return `${txtMargen}UPDATE ${tableDefEst?tableDefEst.target:definicion.tabla}\n${txtMargen}  SET ` +
         definicion.variables.map(function (variable) {
             if (variable.tabla_agregada && variable.funcion_agregacion){
