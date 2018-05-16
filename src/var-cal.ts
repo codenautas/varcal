@@ -100,10 +100,11 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     aliasesUsados.forEach(aliasName => {
         let alias = defEst.aliases[aliasName];
         // LEFT JOIN personas padre ON (padre.id = personas.id AND padre.p0 = personas.p11)
-        aliasLeftJoins +=
+
+        aliasLeftJoins +=alias?
 `
 ${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
-${txtMargen}    `;
+${txtMargen}    `:'';
     });
     tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro)? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
