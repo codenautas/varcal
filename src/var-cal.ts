@@ -178,7 +178,7 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
     var vardef: string[]; //variables con insumos definidos
     vardef = variablesDefinidas;
     var nvardef: DefinicionVariableAnalizada[];
-    nvardef = []; // son las que variables cuyos insumos no están en vardef.
+    nvardef = definiciones; // son las que variables cuyos insumos no están en vardef.
     var lenAnt: number;
     var definicionesOrd: DefinicionVariableAnalizada[] = [];
 
@@ -195,16 +195,7 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
         }
         return nuevo;
     };
-    // defConInsumos=definiciones.map(function(defVariable){
-    //    if insumos not in defVariable
-
-    //});
-
-    definiciones.forEach(function (defVariable: DefinicionVariableAnalizada) {
-        if(!checkInsumos(defVariable, vardef,definicionesOrd, nvardef, aliases) && ! nvardef.some(varNvardef => varNvardef.nombreVariable == defVariable.nombreVariable)) {
-            nvardef.push(defVariable);
-        }
-    });
+ 
     do {
         lenAnt = nvardef.length;
         var i = 0;
