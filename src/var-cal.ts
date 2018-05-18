@@ -99,12 +99,12 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     let aliasLeftJoins = '';
     aliasesUsados.forEach(aliasName => {
         let alias = defEst.aliases[aliasName];
-        // LEFT JOIN personas padre ON (padre.id = personas.id AND padre.p0 = personas.p11)
-
-        aliasLeftJoins +=alias?
-`
-${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
-${txtMargen}    `:'';
+        if (alias){
+            aliasLeftJoins +=
+            `
+            ${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
+            ${txtMargen}    `;
+        }
     });
     tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro)? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
@@ -164,21 +164,19 @@ export function getWrappedExpression(expression: string, pkExpression:string, op
     return compiler.toCode(ExpresionParser.parse(expression),pkExpression);
 }
 
-let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: string[], definicionesOrd: DefinicionVariableAnalizada[], nvardef: DefinicionVariableAnalizada[], aliases: Aliases): boolean{
+let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: string[], definicionesOrd: DefinicionVariableAnalizada[], nvardef: DefinicionVariableAnalizada[], defEst: DefinicionEstructural): boolean{
     var { nombreVariable, insumos } = defVariable;
     var cantDef: number=0;
     insumos.variables.forEach(function (varInsumos) {
         // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
-        if (varInsumos.match(/^.+\..+$/)){
+        if (varInsumos.match(/^.+\..+$/) && defEst){
             var [prefix, varName] = varInsumos.split('.');
-            if (vardef.indexOf(varName) > -1 && (prefix in aliases)){
+            if (vardef.indexOf(varName) > -1 && (prefix in {...defEst.tables, ...defEst.aliases})){
                 vardef.push(varInsumos);// then agrego esta variable a vardef
             }
         }
-
         cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
     });
-
     if(cantDef == insumos.variables.length) {
         vardef.push(nombreVariable);
         definicionesOrd.push(defVariable);
@@ -189,7 +187,7 @@ let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: s
     return cantDef == insumos.variables.length;
 }
 
-export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableAnalizada[], variablesDefinidas: string[], aliases?: Aliases): BloqueVariablesGenerables[] {
+export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableAnalizada[], variablesDefinidas: string[], defESt?: DefinicionEstructural): BloqueVariablesGenerables[] {
     var listaOut: BloqueVariablesGenerables[];
     listaOut = [];
     var vardef: string[]; //variables con insumos definidos
@@ -217,7 +215,7 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
         lenAnt = nvardef.length;
         var i = 0;
         while (i < nvardef.length) {
-            if(!checkInsumos(nvardef[i], vardef,definicionesOrd, nvardef, aliases)){
+            if(!checkInsumos(nvardef[i], vardef,definicionesOrd, nvardef, defESt)){
                 i++;
             }
         };

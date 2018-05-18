@@ -75,13 +75,9 @@ describe("varcal", function(){
             var sqlGenerado = VarCal.sentenciaUpdate({
                 tabla:'personas',
                 variables:[{
-                    nombreVariable:'x', 
-                    expresionValidada:'ingreso * 2 + ingreso2',
-                    insumos:{variables:['ingreso', 'ingreso2']}
+                    nombreVariable:'x', expresionValidada:'ingreso * 2 + ingreso2', insumos:{variables:['ingreso', 'ingreso2']}
                 },{
-                    nombreVariable:'dif_edad_padre', 
-                    expresionValidada:'padre.edad - edad',
-                    insumos:{variables:['padre.edad', 'edad'], aliases:['padre']}
+                    nombreVariable:'dif_edad_padre', expresionValidada:'padre.edad - edad', insumos:{variables:['padre.edad', 'edad'], aliases:['padre']}
                 }]
             }, 14, {
                 aliases:{
@@ -332,10 +328,13 @@ describe("varcal", function(){
                 {tabla:'datos', nombreVariable:'doble_y_suma', expresionValidada:'dato1 * 2 + dato2', insumos:{variables:['dato1','dato2'], aliases:[], funciones:[]}},
                 {tabla:'personas', nombreVariable:'dif_edad_padre', expresionValidada:'padre.p3 - p3', insumos:{variables:['padre.p3','p3'], aliases:['padre'], funciones:[]}}
             ],['p3', 'dato1', 'dato2'], {
-                padre: {
-                    tabla: 'personas',
-                    join: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
-                }
+                aliases:{
+                    padre: {
+                        tabla: 'personas',
+                        join: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
+                    }
+                },
+                tables:{}
             });
             var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
                 tabla:'datos',
@@ -350,11 +349,38 @@ describe("varcal", function(){
             }];
             discrepances.showAndThrow(resultadoNiveles , listaEsperada);
         });
-        it("protesta si no se puede", async function(){
+        it("separa en listas por nivel que usa prefijos de tablas (no de aliases), por ej unidades de análisis con wrappers", async function(){
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                {tabla:'datos', nombreVariable:'promedio_edad', expresionValidada:'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos:{variables:['suma_edad','cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases:['grupo_personas'], funciones:['div0err','null2zero']}},
+            ],['suma_edad', 'cant_f2', 'operativo', 'id_caso'], {
+                tables:{
+                    grupo_personas:{}
+                }
+            });
+            var listaEsperada: VarCal.BloqueVariablesGenerables[]= [{
+                tabla:'datos',
+                variables:[{
+                    nombreVariable:'promedio_edad', expresionValidada:'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos:{variables:['suma_edad','cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases:['grupo_personas'], funciones:['div0err','null2zero']}
+                }],
+            }];
+            discrepances.showAndThrow(resultadoNiveles , listaEsperada);
+        });
+        it("protesta si no se puede por abrazo mortal", async function(){
             try{
                 VarCal.separarEnGruposPorNivelYOrigen([
                     {tabla:'datos', nombreVariable:'a', expresionValidada:'b', insumos:{variables:['b'],aliases:[], funciones:[]}},
                     {tabla:'datos', nombreVariable:'b', expresionValidada:'a', insumos:{variables:['a'],aliases:[], funciones:[]}},
+                ],['dato1','dato2']);
+                throw new Error('Tenía que dar error por abrazo mortal');
+            }catch(err){
+                discrepances.showAndThrow(err.message, "Error, no se pudo determinar el orden de la variable 'a' y otras")
+            }
+            this.timeout(50000);
+        });
+        it("protesta si no se puede porque no encuentra el prefijo en la definición estructural", async function(){
+            try{
+                VarCal.separarEnGruposPorNivelYOrigen([
+                    {tabla:'datos', nombreVariable:'a', expresionValidada:'prefix_alias.dato2 + 4', insumos:{variables:['prefix_alias.dato2'],aliases:['prefix_alias'], funciones:[]}},
                 ],['dato1','dato2']);
                 throw new Error('Tenía que dar error por abrazo mortal');
             }catch(err){
