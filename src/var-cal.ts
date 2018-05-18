@@ -68,67 +68,67 @@ export interface Alias {
 }
 
 export interface Aliases {
-    [key: string]: Alias 
+    [key: string]: Alias
 }
 
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
 
-function getAggregacion(f:string, exp:string){
+function getAggregacion(f: string, exp: string) {
     switch (f) {
         case 'sumar':
-            return 'sum('+exp+')';
+            return 'sum(' + exp + ')';
         case 'contar':
-            return 'count(nullif('+exp+',false))';
+            return 'count(nullif(' + exp + ',false))';
         default:
-            return f+'('+exp+')';
+            return f + '(' + exp + ')';
     }
 }
 
 export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural): TextoSQL {
     var txtMargen = Array(margen + 1).join(' ');
-    let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla])? defEst.tables[definicion.tabla] : null;
-    let defJoinExist:boolean = !!(definicion.joins && definicion.joins.length);
+    let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla]) ? defEst.tables[definicion.tabla] : null;
+    let defJoinExist: boolean = !!(definicion.joins && definicion.joins.length);
     let tablesToFromClausule: string[] = [];
     let completeWhereConditions: string = '';
     if (tableDefEst || defJoinExist) {
-        let defJoinsWhere = defJoinExist? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `): '';
+        let defJoinsWhere = defJoinExist ? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `) : '';
         completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
     }
     // resultado: se tienen todos los alias de todas las variables (se eliminan duplicados usando Set)
-    let aliasesUsados = [...(new Set([].concat(...(definicion.variables.filter(v=>(v.insumos && v.insumos.aliases)).map(v=> v.insumos.aliases)))))];
+    let aliasesUsados = [...(new Set([].concat(...(definicion.variables.filter(v => (v.insumos && v.insumos.aliases)).map(v => v.insumos.aliases)))))];
     let aliasLeftJoins = '';
     aliasesUsados.forEach(aliasName => {
         let alias = defEst.aliases[aliasName];
-        if (alias){
+        if (alias) {
             aliasLeftJoins +=
-            `
+                `
             ${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
             ${txtMargen}    `;
         }
     });
-    tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro)? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);
+    tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro) ? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
 
 
 
     //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
-    let tablasAgregadas = [...(new Set(definicion.variables.filter(v=>v.tabla_agregada).map(v=> v.tabla_agregada)))];
+    let tablasAgregadas = [...(new Set(definicion.variables.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
     tablasAgregadas.forEach(tabAgg => {
         let vars = definicion.variables.filter(v => v.tabla_agregada == tabAgg);
         tablesToFromClausule = tablesToFromClausule.concat(
-`
+            `
 ${txtMargen}    LATERAL (
 ${txtMargen}      SELECT
-${txtMargen}          ${vars.map(v=> `${getAggregacion(v.funcion_agregacion,v.expresionValidada)} as ${v.nombreVariable}`).join(',\n          '+txtMargen)}
+${txtMargen}          ${vars.map(v => `${getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.nombreVariable}`).join(',\n          ' + txtMargen)}
 ${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg}
 ${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg}
 ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
-        );        
+        );
     });
-    
-    return `${txtMargen}UPDATE ${tableDefEst?tableDefEst.target:definicion.tabla}\n${txtMargen}  SET ` +
+
+    return `${txtMargen}UPDATE ${tableDefEst ? tableDefEst.target : definicion.tabla}\n${txtMargen}  SET ` +
         definicion.variables.map(function (variable) {
-            if (variable.tabla_agregada && variable.funcion_agregacion){
+            if (variable.tabla_agregada && variable.funcion_agregacion) {
                 return `${variable.nombreVariable} = ${defEst.tables[variable.tabla_agregada].aliasAgg}.${variable.nombreVariable}`;
             } else {
                 return `${variable.nombreVariable} = ${variable.expresionValidada}`;
@@ -136,7 +136,7 @@ ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
         }).join(`,\n      ${txtMargen}`) +
         (tablesToFromClausule.length ?
             `\n  ${txtMargen}FROM ${tablesToFromClausule.join(', ')}` +
-            (completeWhereConditions? `\n  ${txtMargen}WHERE ${completeWhereConditions}` : '')
+            (completeWhereConditions ? `\n  ${txtMargen}WHERE ${completeWhereConditions}` : '')
             : '')
 }
 
@@ -159,25 +159,25 @@ export function getInsumos(expression: string): ExpresionParser.Insumos {
     return ExpresionParser.parse(expression).getInsumos();
 }
 
-export function getWrappedExpression(expression: string, pkExpression:string, options:ExpresionParser.CompilerOptions):string {
-    var compiler=new ExpresionParser.Compiler(options);
-    return compiler.toCode(ExpresionParser.parse(expression),pkExpression);
+export function getWrappedExpression(expression: string, pkExpression: string, options: ExpresionParser.CompilerOptions): string {
+    var compiler = new ExpresionParser.Compiler(options);
+    return compiler.toCode(ExpresionParser.parse(expression), pkExpression);
 }
 
-let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: string[], definicionesOrd: DefinicionVariableAnalizada[], nvardef: DefinicionVariableAnalizada[], defEst: DefinicionEstructural): boolean{
+let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: string[], definicionesOrd: DefinicionVariableAnalizada[], nvardef: DefinicionVariableAnalizada[], defEst: DefinicionEstructural): boolean {
     var { nombreVariable, insumos } = defVariable;
-    var cantDef: number=0;
+    var cantDef: number = 0;
     insumos.variables.forEach(function (varInsumos) {
         // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
-        if (varInsumos.match(/^.+\..+$/) && defEst){
+        if (varInsumos.match(/^.+\..+$/) && defEst) {
             var [prefix, varName] = varInsumos.split('.');
-            if (vardef.indexOf(varName) > -1 && (prefix in {...defEst.tables, ...defEst.aliases})){
+            if (vardef.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
                 vardef.push(varInsumos);// then agrego esta variable a vardef
             }
         }
         cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
     });
-    if(cantDef == insumos.variables.length) {
+    if (cantDef == insumos.variables.length) {
         vardef.push(nombreVariable);
         definicionesOrd.push(defVariable);
         if (nvardef.indexOf(defVariable) >= 0) {
@@ -210,12 +210,12 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
         }
         return nuevo;
     };
- 
+
     do {
         lenAnt = nvardef.length;
         var i = 0;
         while (i < nvardef.length) {
-            if(!checkInsumos(nvardef[i], vardef,definicionesOrd, nvardef, defESt)){
+            if (!checkInsumos(nvardef[i], vardef, definicionesOrd, nvardef, defESt)) {
                 i++;
             }
         };
@@ -230,7 +230,7 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
             //listaOut.push({tabla ,variables:[varAnalizada]});
             // listaOut[0]=setJoins(listaOut[0],joins);
         } else {
-            var enNivel = defVariable.insumos.variables.length?defVariable.insumos.variables.map(function (varInsumo) {
+            var enNivel = defVariable.insumos.variables.length ? defVariable.insumos.variables.map(function (varInsumo) {
                 return listaOut.findIndex(function (nivel) {
                     return nivel.variables.findIndex(function (vvar) {
                         return vvar.nombreVariable == varInsumo
@@ -238,7 +238,7 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
                 })
             }).reduce(function (elem: number, anterior: number) {
                 return elem > anterior ? elem : anterior;
-            }):0;
+            }) : 0;
             if (enNivel >= 0 && listaOut.length === enNivel + 1) {
                 listaOut.push(nuevoBloqueListaOut(defVariable));
                 //listaOut.push({tabla ,variables:[varAnalizada]});
@@ -262,4 +262,4 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
 }
 
 // re-exports
-export {Insumos} from 'expre-parser';
+export { Insumos } from 'expre-parser';
