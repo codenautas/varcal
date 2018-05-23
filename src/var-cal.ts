@@ -104,7 +104,7 @@ function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDef
             let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? target : variablesDefinidas[varInsumo].tabla;
 
             let baseRegex = `(${varInsumo})`;
-            let noWordRegex = '([^\w])';
+            let noWordRegex = '([^\w\.])';
 
             let varWithPrefix = prefix + '.' + varInsumo;
             v.expresionValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, v.expresionValidada, varWithPrefix);
