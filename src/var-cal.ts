@@ -71,6 +71,8 @@ export interface VariablesDefinidas{
 
 export interface Alias {
     tabla: string
+    where: string
+    selectFields: string[]
     join: string
 }
 
@@ -135,15 +137,46 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     }
 
     // resultado: se tienen todos los alias de todas las variables (se eliminan duplicados usando Set)
-    let aliasesUsados = [...(new Set([].concat(...(definicion.variables.filter(v => (v.insumos && v.insumos.aliases)).map(v => v.insumos.aliases)))))];
+    //let aliasesUsados = [...(new Set([].concat(...(definicion.variables.filter(v => (v.insumos && v.insumos.aliases)).map(v => v.insumos.aliases)))))]; // borrar
+    let aliasesUsados: {[key:string]:Set<string>} = {};
+    
+    definicion.variables.filter(v => (v.insumos && v.insumos.aliases)).forEach(vac => {
+        vac.insumos.aliases.forEach(alias => {
+            if (! aliasesUsados[alias]){
+                aliasesUsados[alias] = new Set();
+            }
+            vac.insumos.variables.forEach(varName => {
+                if (hasTablePrefix(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
+                    aliasesUsados[alias].add(varName)
+                }
+            })
+        })
+    })
+
     let aliasLeftJoins = '';
-    aliasesUsados.forEach(aliasName => {
+    likear(aliasesUsados).forEach((aliasName, aliasVars) => {
+        // juntar alias.selectFields y aliasVars y luego hacer join con comas para que no sobren ni falten comas en el SELECT mas interno
         let alias = defEst.aliases[aliasName];
         if (alias) {
             aliasLeftJoins +=
                 `
-${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
+${txtMargen}    LEFT JOIN LATERAL (
+${txtMargen}        SELECT ${alias.selectFields} + ${aliasVars.join(',')}
+${txtMargen}        FROM ${alias.tabla} ${aliasName}
+${txtMargen}        WHERE ${alias.where}
+${txtMargen}    ) ${aliasName} using (${alias.join})
 ${txtMargen}    `;
+
+//   LEFT JOIN (${alias.tabla} ${aliasName} ON (${alias.join})
+// --LEFT JOIN personas padre ON (padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo)
+// por esto:
+// LEFT JOIN LATERAL (
+//     SELECT padre.operativo, padre.id_caso, padre.p3 
+//     FROM personas padre 
+//     WHERE padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo
+//   ) padre using (id_caso, operativo)
+
+
         }
     });
     tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro) ? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);

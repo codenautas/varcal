@@ -109,7 +109,9 @@ describe("varcal", function () {
                     aliases: {
                         padre: {
                             tabla: 'personas',
-                            join: 'padre.id = personas.id AND padre.p0 = personas.p11',
+                            where: 'padre.id = personas.id AND padre.p0 = personas.p11',
+                            selectFields: ['operativo', 'id_caso'],
+                            join: 'operativo, id_caso'
                         }
                     },
                     tables: {
