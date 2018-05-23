@@ -47,6 +47,32 @@ describe("varcal", function () {
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
+        it("genera un update basado en 2 variables agregando prefijos a todas las variables de la expresionValidada", async function () {
+            var sqlGenerado = VarCal.sentenciaUpdate({
+                tabla: 't1',
+                variables: [{
+                    nombreVariable: 'x',
+                    expresionValidada: 'dato1 * 2 + dato2',
+                    insumos:{variables:['dato1', 'dato2']}
+                }, {
+                    nombreVariable: 'pepe',
+                    expresionValidada: 'f(j)',
+                    insumos:{variables:['j']}
+                }]
+            }, 2, {tables:{t1:{
+                    target: 't1_cal',
+                    sourceJoin: 'inner join t0 using(pk0)',
+                    sourceBro: 't1',
+                    where: 't1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0',
+            }}},{
+                dato1:{tabla:'t1'},
+                dato2:{tabla:'t1', clase:'calculada'},
+                j:{tabla:'t1'},
+            })
+            var sentenciaEsperada = '  UPDATE t1_cal\n    SET x = t1.dato1 * 2 + t1_cal.dato2,\n        pepe = f(t1.j)\n    FROM t1 inner join t0 using(pk0)\n    WHERE t1_cal.t1 = t1.t1 and t1_cal.pk0=t0.pk0';
+            discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
+            this.timeout(50000);
+        });
         it("genera un update basado en 2 variables con definition structure", async function () {
             var sqlGenerado = VarCal.sentenciaUpdate({
                 tabla: 't1',

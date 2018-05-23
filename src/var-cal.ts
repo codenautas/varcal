@@ -35,8 +35,6 @@ export type ParametrosGeneracion = {
     esquema: string
 }
 
-export type DefinicionVariables = DefinicionVariable[];
-
 export type TextoSQL = string;
 
 export type BloqueVariablesGenerables = {
@@ -62,6 +60,15 @@ export type DefinicionEstructural = {
     }
 }
 
+export interface VariableDefinida{
+    tabla: string
+    clase?: string
+}
+
+export interface VariablesDefinidas{
+    [key:string]: VariableDefinida
+}
+
 export interface Alias {
     tabla: string
     join: string
@@ -84,7 +91,30 @@ function getAggregacion(f: string, exp: string) {
     }
 }
 
-export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural): TextoSQL {
+function regexpReplace(guno:string, gdos:string, gtres:string, sourceStr:string, replaceStr:string){
+    let regex = guno+gdos+gtres;
+    return sourceStr.replace(new RegExp(regex, 'g'), '$1'+ replaceStr+'$3');
+}
+
+function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas, target: string){
+    v.insumos.variables.forEach(varInsumo => {
+        if ( ! hasTablePrefix(varInsumo) && ( ! v.insumos.funciones || v.insumos.funciones.indexOf(varInsumo) == -1) && variablesDefinidas[varInsumo]
+            && (variablesDefinidas[varInsumo].clase != 'calculada' || target)){
+
+            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? target : variablesDefinidas[varInsumo].tabla;
+
+            let baseRegex = `(${varInsumo})`;
+            let noWordRegex = '([^\w])';
+
+            let varWithPrefix = prefix + '.' + varInsumo;
+            v.expresionValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, v.expresionValidada, varWithPrefix);
+            v.expresionValidada = regexpReplace('^()', baseRegex, noWordRegex, v.expresionValidada, varWithPrefix);
+            v.expresionValidada = regexpReplace(noWordRegex, baseRegex, '()$', v.expresionValidada, varWithPrefix);
+        }
+    });
+}
+
+export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL {
     var txtMargen = Array(margen + 1).join(' ');
     let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla]) ? defEst.tables[definicion.tabla] : null;
     let defJoinExist: boolean = !!(definicion.joins && definicion.joins.length);
@@ -94,6 +124,16 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
         let defJoinsWhere = defJoinExist ? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `) : '';
         completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
     }
+
+    // se agregan prefijos a todas las variables de cada expresión validada
+    if (variablesDefinidas){
+        definicion.variables.forEach((v:VariableGenerable) => {
+            if (v.insumos){
+                prefijarExpresion(v, variablesDefinidas, tableDefEst.target)
+            }
+        });
+    }
+
     // resultado: se tienen todos los alias de todas las variables (se eliminan duplicados usando Set)
     let aliasesUsados = [...(new Set([].concat(...(definicion.variables.filter(v => (v.insumos && v.insumos.aliases)).map(v => v.insumos.aliases)))))];
     let aliasLeftJoins = '';
@@ -102,14 +142,12 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
         if (alias) {
             aliasLeftJoins +=
                 `
-            ${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
-            ${txtMargen}    `;
+${txtMargen}    LEFT JOIN ${alias.tabla} ${aliasName} ON (${alias.join})
+${txtMargen}    `;
         }
     });
     tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro) ? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
-
-
 
     //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
     let tablasAgregadas = [...(new Set(definicion.variables.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
@@ -140,7 +178,7 @@ ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
             : '')
 }
 
-export function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion, defEst?: DefinicionEstructural): TextoSQL {
+export function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL {
     return `CREATE OR REPLACE FUNCTION ${parametros.esquema}.${parametros.nombreFuncionGeneradora}() RETURNS TEXT
   LANGUAGE PLPGSQL
 AS
@@ -148,7 +186,7 @@ $BODY$
 BEGIN
 `+
         definiciones.map(function (definicion) {
-            return sentenciaUpdate(definicion, 2, defEst) + ';'
+            return sentenciaUpdate(definicion, 2, defEst, variablesDefinidas) + ';'
         }).join('\n') + `
   RETURN 'OK';
 END;
@@ -164,12 +202,16 @@ export function getWrappedExpression(expression: string, pkExpression: string, o
     return compiler.toCode(ExpresionParser.parse(expression), pkExpression);
 }
 
+function hasTablePrefix(variable: string){
+    return variable.match(/^.+\..+$/);
+}
+
 let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: string[], definicionesOrd: DefinicionVariableAnalizada[], nvardef: DefinicionVariableAnalizada[], defEst: DefinicionEstructural): boolean {
     var { nombreVariable, insumos } = defVariable;
     var cantDef: number = 0;
     insumos.variables.forEach(function (varInsumos) {
         // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
-        if (varInsumos.match(/^.+\..+$/) && defEst) {
+        if (hasTablePrefix(varInsumos) && defEst) {
             var [prefix, varName] = varInsumos.split('.');
             if (vardef.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
                 vardef.push(varInsumos);// then agrego esta variable a vardef
@@ -187,21 +229,19 @@ let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: s
     return cantDef == insumos.variables.length;
 }
 
-export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableAnalizada[], variablesDefinidas: string[], defESt?: DefinicionEstructural): BloqueVariablesGenerables[] {
+/**
+ * @param variablesDefinidas variables con insumos definidos
+ * @param nvardef  son las que variables cuyos insumos no están en vardef.
+ */
+export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnalizada[], variablesDefinidas: string[], defESt?: DefinicionEstructural): BloqueVariablesGenerables[] {
     var listaOut: BloqueVariablesGenerables[];
     listaOut = [];
-    var vardef: string[]; //variables con insumos definidos
-    vardef = variablesDefinidas;
-    var nvardef: DefinicionVariableAnalizada[];
-    nvardef = definiciones; // son las que variables cuyos insumos no están en vardef.
     var lenAnt: number;
     var definicionesOrd: DefinicionVariableAnalizada[] = [];
-
     var compararJoins = function (joins1: Joins[], joins2: Joins[]) {
         return (joins1 === undefined && joins2 === undefined ||
             JSON.stringify(joins1) === JSON.stringify(joins2)) ? true : false;
     };
-
     var nuevoBloqueListaOut = function (defVariable: DefinicionVariableAnalizada): BloqueVariablesGenerables {
         var { tabla, joins, ...varAnalizada } = defVariable;
         var nuevo: BloqueVariablesGenerables = { tabla, variables: [varAnalizada] };
@@ -210,12 +250,11 @@ export function separarEnGruposPorNivelYOrigen(definiciones: DefinicionVariableA
         }
         return nuevo;
     };
-
     do {
         lenAnt = nvardef.length;
         var i = 0;
         while (i < nvardef.length) {
-            if (!checkInsumos(nvardef[i], vardef, definicionesOrd, nvardef, defESt)) {
+            if (!checkInsumos(nvardef[i], variablesDefinidas, definicionesOrd, nvardef, defESt)) {
                 i++;
             }
         };
