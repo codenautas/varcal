@@ -1,6 +1,8 @@
 "use strict";
 
 import * as ExpresionParser from 'expre-parser';
+import * as likear          from 'like-ar';
+
 
 export interface DefinicionVariable {
     tabla: string
@@ -72,7 +74,6 @@ export interface VariablesDefinidas{
 export interface Alias {
     tabla: string
     where: string
-    selectFields: string[]
     join: string
 }
 
@@ -142,40 +143,32 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     
     definicion.variables.filter(v => (v.insumos && v.insumos.aliases)).forEach(vac => {
         vac.insumos.aliases.forEach(alias => {
-            if (! aliasesUsados[alias]){
-                aliasesUsados[alias] = new Set();
-            }
-            vac.insumos.variables.forEach(varName => {
-                if (hasTablePrefix(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
-                    aliasesUsados[alias].add(varName)
+            if(defEst && defEst.aliases && defEst.aliases[alias]){
+                if (! aliasesUsados[alias]){
+                    aliasesUsados[alias] = new Set();
                 }
-            })
+                vac.insumos.variables.forEach(varName => {
+                    if (hasTablePrefix(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
+                        aliasesUsados[alias].add(varName)
+                    }
+                })
+            }
         })
     })
 
     let aliasLeftJoins = '';
-    likear(aliasesUsados).forEach((aliasName, aliasVars) => {
-        // juntar alias.selectFields y aliasVars y luego hacer join con comas para que no sobren ni falten comas en el SELECT mas interno
+    likear(aliasesUsados).forEach((aliasVars,aliasName) => {
         let alias = defEst.aliases[aliasName];
+        let selectFieldsAlias=alias.join.split(', ').concat([...aliasVars]).join(', ');
         if (alias) {
             aliasLeftJoins +=
                 `
 ${txtMargen}    LEFT JOIN LATERAL (
-${txtMargen}        SELECT ${alias.selectFields} + ${aliasVars.join(',')}
-${txtMargen}        FROM ${alias.tabla} ${aliasName}
-${txtMargen}        WHERE ${alias.where}
+${txtMargen}        SELECT ${selectFieldsAlias}
+${txtMargen}          FROM ${alias.tabla} ${aliasName}
+${txtMargen}          WHERE ${alias.where}
 ${txtMargen}    ) ${aliasName} using (${alias.join})
 ${txtMargen}    `;
-
-//   LEFT JOIN (${alias.tabla} ${aliasName} ON (${alias.join})
-// --LEFT JOIN personas padre ON (padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo)
-// por esto:
-// LEFT JOIN LATERAL (
-//     SELECT padre.operativo, padre.id_caso, padre.p3 
-//     FROM personas padre 
-//     WHERE padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo
-//   ) padre using (id_caso, operativo)
-
 
         }
     });
@@ -263,8 +256,8 @@ let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: s
 }
 
 /**
+ * @param nvardef son las que variables a calcular cuyos insumos no están en vardef
  * @param variablesDefinidas variables con insumos definidos
- * @param nvardef  son las que variables cuyos insumos no están en vardef.
  */
 export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnalizada[], variablesDefinidas: string[], defESt?: DefinicionEstructural): BloqueVariablesGenerables[] {
     var listaOut: BloqueVariablesGenerables[];
@@ -299,8 +292,6 @@ export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnaliz
         var { tabla, joins, ...varAnalizada } = defVariable;
         if (listaOut.length == 0) {
             listaOut.push(nuevoBloqueListaOut(defVariable));
-            //listaOut.push({tabla ,variables:[varAnalizada]});
-            // listaOut[0]=setJoins(listaOut[0],joins);
         } else {
             var enNivel = defVariable.insumos.variables.length ? defVariable.insumos.variables.map(function (varInsumo) {
                 return listaOut.findIndex(function (nivel) {
@@ -313,8 +304,6 @@ export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnaliz
             }) : 0;
             if (enNivel >= 0 && listaOut.length === enNivel + 1) {
                 listaOut.push(nuevoBloqueListaOut(defVariable));
-                //listaOut.push({tabla ,variables:[varAnalizada]});
-                //listaOut[listaOut.length-1]=setJoins(listaOut[listaOut.length-1],joins);
             } else {
                 var nivelTabla = listaOut[enNivel + 1].tabla == tabla && compararJoins(listaOut[enNivel + 1].joins, joins) ? enNivel + 1 : listaOut.findIndex(function (nivel, i) {
                     return nivel.tabla == tabla && compararJoins(nivel.joins, joins) && i > enNivel + 1
@@ -323,13 +312,11 @@ export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnaliz
                     listaOut[nivelTabla].variables.push(varAnalizada);
                 } else {
                     listaOut.push(nuevoBloqueListaOut(defVariable));
-                    //listaOut.push({tabla ,variables:[varAnalizada]});
-                    //listaOut[listaOut.length-1]=setJoins(listaOut[listaOut.length-1],joins);
                 }
             }
         }
     });
-    console.log(JSON.stringify(listaOut));
+    //console.log(JSON.stringify(listaOut));
     return listaOut;
 }
 

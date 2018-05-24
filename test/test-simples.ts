@@ -110,7 +110,6 @@ describe("varcal", function () {
                         padre: {
                             tabla: 'personas',
                             where: 'padre.id = personas.id AND padre.p0 = personas.p11',
-                            selectFields: ['operativo', 'id_caso'],
                             join: 'operativo, id_caso'
                         }
                     },
@@ -128,7 +127,11 @@ describe("varcal", function () {
                 SET x = ingreso * 2 + ingreso2,
                     dif_edad_padre = padre.edad - edad
                 FROM personas 
-                  LEFT JOIN personas padre ON (padre.id = personas.id AND padre.p0 = personas.p11)
+                  LEFT JOIN LATERAL (
+                      SELECT operativo, id_caso, padre.edad
+                        FROM personas padre
+                        WHERE padre.id = personas.id AND padre.p0 = personas.p11
+                  ) padre using (operativo, id_caso)
                   inner join t0 using(pk0)
                 WHERE personas_cal.id = personas.id and personas_cal.pk0=t0.pk0`;
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
@@ -360,6 +363,7 @@ describe("varcal", function () {
                         padre: {
                             tabla: 'personas',
                             join: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
+                            where:''
                         }
                     },
                     tables: {}
