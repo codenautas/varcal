@@ -20,6 +20,8 @@ export interface DefinicionVariableAnalizada extends DefinicionVariable {
     joins?: Joins[]
 }
 
+export {CompilerOptions} from 'expre-parser';
+
 export interface VariableGenerable {
     nombreVariable: string
     expresionValidada: string
@@ -45,15 +47,22 @@ export type BloqueVariablesGenerables = {
     joins?: Joins[]
 };
 
-export type DefinicionEstructuralTabla = {
-    target?: string
-    sourceBro?: string
-    sourceJoin?: string
-    where?: string
-    aliasAgg?: string
-    sourceAgg?: string
-    whereAgg?: string
+export type DetailTable = {
+    table: string
+    fields: string[]
+    abr?: string
 }
+
+export type DefinicionEstructuralTabla = {
+    target?: string;
+    sourceBro?: string;
+    sourceJoin?: string;
+    where?: string;
+    aliasAgg?: string;
+    sourceAgg?: string;
+    whereAgg?: string;
+    detailTables?: DetailTable[];
+};
 
 export type DefinicionEstructural = {
     aliases?: Aliases
