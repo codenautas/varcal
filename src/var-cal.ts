@@ -3,6 +3,7 @@
 import * as ExpresionParser from 'expre-parser';
 import * as likear          from 'like-ar';
 
+export const sufijo_tabla_calculada:string='_calc';
 
 export interface DefinicionVariable {
     tabla: string
@@ -56,11 +57,14 @@ export type DetailTable = {
 export type DefinicionEstructuralTabla = {
     target?: string;
     sourceBro?: string;
+    pkString?:string;
     sourceJoin?: string;
     where?: string;
     aliasAgg?: string;
     sourceAgg?: string;
-    whereAgg?: string;
+    whereAgg?:{ 
+        [key: string]: string
+    }    
     detailTables?: DetailTable[];
 };
 
@@ -81,9 +85,9 @@ export interface VariablesDefinidas{
 }
 
 export interface Alias {
-    tabla: string
-    where: string
-    join: string
+    tabla : string
+    on    : string
+    where?: string
 }
 
 export interface Aliases {
@@ -108,12 +112,12 @@ function regexpReplace(guno:string, gdos:string, gtres:string, sourceStr:string,
     return sourceStr.replace(new RegExp(regex, 'g'), '$1'+ replaceStr+'$3');
 }
 
-function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas, target: string){
+function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas, sufijoTablaCalculada: string){
     v.insumos.variables.forEach(varInsumo => {
         if ( ! hasTablePrefix(varInsumo) && ( ! v.insumos.funciones || v.insumos.funciones.indexOf(varInsumo) == -1) && variablesDefinidas[varInsumo]
-            && (variablesDefinidas[varInsumo].clase != 'calculada' || target)){
+            && (variablesDefinidas[varInsumo].clase != 'calculada' || sufijoTablaCalculada)){
 
-            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? target : variablesDefinidas[varInsumo].tabla;
+            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? variablesDefinidas[varInsumo].tabla + sufijoTablaCalculada : variablesDefinidas[varInsumo].tabla;
 
             let baseRegex = `(${varInsumo})`;
             let noWordRegex = '([^\w\.])';
@@ -141,7 +145,7 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     if (variablesDefinidas){
         definicion.variables.forEach((v:VariableGenerable) => {
             if (v.insumos){
-                prefijarExpresion(v, variablesDefinidas, tableDefEst.target)
+                prefijarExpresion(v, variablesDefinidas, sufijo_tabla_calculada)
             }
         });
     }
@@ -168,20 +172,23 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     let aliasLeftJoins = '';
     likear(aliasesUsados).forEach((aliasVars,aliasName) => {
         let alias = defEst.aliases[aliasName];
-        let selectFieldsAlias=alias.join.split(', ').concat([...aliasVars]).join(', ');
+        let selectFieldsAlias=defEst.tables[alias.tabla].pkString.split(', ').concat([...aliasVars]).join(', ');
         if (alias) {
             aliasLeftJoins +=
-                `
-${txtMargen}    LEFT JOIN LATERAL (
-${txtMargen}        SELECT ${selectFieldsAlias}
-${txtMargen}          FROM ${alias.tabla} ${aliasName}
-${txtMargen}          WHERE ${alias.where}
-${txtMargen}    ) ${aliasName} using (${alias.join})
-${txtMargen}    `;
+`
+${txtMargen}      LEFT JOIN (
+${txtMargen}          SELECT ${selectFieldsAlias}
+${txtMargen}            FROM ${alias.tabla} ${aliasName}`;
+            aliasLeftJoins +=alias.where?
+`
+${txtMargen}            WHERE ${alias.where}`:'';
+            aliasLeftJoins +=
+`
+${txtMargen}      ) ${aliasName} ON ${alias.on}`; 
 
         }
     });
-    tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro) ? tableDefEst.sourceBro + ' ' + aliasLeftJoins + tableDefEst.sourceJoin : []);
+    tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro) ? tableDefEst.sourceBro + ' ' + tableDefEst.sourceJoin + aliasLeftJoins: []);
     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
 
     //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
@@ -194,7 +201,7 @@ ${txtMargen}    LATERAL (
 ${txtMargen}      SELECT
 ${txtMargen}          ${vars.map(v => `${getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.nombreVariable}`).join(',\n          ' + txtMargen)}
 ${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg}
-${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg}
+${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg[definicion.tabla]}
 ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
         );
     });
