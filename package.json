@@ -11,14 +11,15 @@
     "src/client"
   ],
   "dependencies": {
+    "expre-parser": "~0.1.9",
     "mini-tools": "~1.0.1",
-    "pg-promise-strict": "~0.4.7",
-    "expre-parser": "~0.1.9"
+    "pg-promise-strict": "~0.4.7"
   },
   "devDependencies": {
     "types.d.ts": "^0.1.21",
     "@types/node": "~10.3.0",
     "@types/mocha": "~5.2.0",
+    "@types/fs-extra": "^5.0.2",
     "discrepances": "~0.2.2",
     "mocha": "^5.2.0"
   },
