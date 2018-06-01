@@ -107,25 +107,25 @@ function getAggregacion(f: string, exp: string) {
     }
 }
 
+// construye una sola regex con 3 partes (grupos de captura) de regex diferentes, y hace el reemplazo que se pide por parametro
 function regexpReplace(guno:string, gdos:string, gtres:string, sourceStr:string, replaceStr:string){
-    let regex = guno+gdos+gtres;
-    return sourceStr.replace(new RegExp(regex, 'g'), '$1'+ replaceStr+'$3');
+    let completeRegex = guno+gdos+gtres;
+    return sourceStr.replace(new RegExp(completeRegex, 'g'), '$1'+ replaceStr+'$3');
 }
 
-function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas, sufijoTablaCalculada: string){
+function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas){
     v.insumos.variables.forEach(varInsumo => {
-        if ( ! hasTablePrefix(varInsumo) && ( ! v.insumos.funciones || v.insumos.funciones.indexOf(varInsumo) == -1) && variablesDefinidas[varInsumo]
-            && (variablesDefinidas[varInsumo].clase != 'calculada' || sufijoTablaCalculada)){
+        if ( ! hasTablePrefix(varInsumo) && ( ! v.insumos.funciones || v.insumos.funciones.indexOf(varInsumo) == -1) && variablesDefinidas[varInsumo]){
+            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? variablesDefinidas[varInsumo].tabla + sufijo_tabla_calculada : variablesDefinidas[varInsumo].tabla;
+            let varWithPrefix = prefix + '.' + varInsumo;
 
-            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? variablesDefinidas[varInsumo].tabla + sufijoTablaCalculada : variablesDefinidas[varInsumo].tabla;
-
+            // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
+            // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada
             let baseRegex = `(${varInsumo})`;
             let noWordRegex = '([^\w\.])';
-
-            let varWithPrefix = prefix + '.' + varInsumo;
-            v.expresionValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, v.expresionValidada, varWithPrefix);
-            v.expresionValidada = regexpReplace('^()', baseRegex, noWordRegex, v.expresionValidada, varWithPrefix);
-            v.expresionValidada = regexpReplace(noWordRegex, baseRegex, '()$', v.expresionValidada, varWithPrefix);
+            v.expresionValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza casi todas las ocurrencias en la exp validada
+            v.expresionValidada = regexpReplace('^()', baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al principio
+            v.expresionValidada = regexpReplace(noWordRegex, baseRegex, '()$', v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al final
         }
     });
 }
@@ -145,7 +145,7 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     if (variablesDefinidas){
         definicion.variables.forEach((v:VariableGenerable) => {
             if (v.insumos){
-                prefijarExpresion(v, variablesDefinidas, sufijo_tabla_calculada)
+                prefijarExpresion(v, variablesDefinidas)
             }
         });
     }
