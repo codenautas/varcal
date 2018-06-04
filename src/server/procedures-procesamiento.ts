@@ -84,10 +84,10 @@ var ProceduresProcesamiento = [
                 ,[parameters.operativo]
             ).execute();
             await context.client.query(
-                `DELETE FROM repsic.variables WHERE operativo = $1 and clase = 'relevamiento'`,
+                `DELETE FROM varcal.variables WHERE operativo = $1 and clase = 'relevamiento'`,
                 [parameters.operativo]
             ).execute();
-            await context.client.query(`INSERT INTO repsic.variables(
+            await context.client.query(`INSERT INTO varcal.variables(
                 operativo, variable, unidad_analisis, tipovar, nombre,  activa, 
                 clase, cerrada)
               select c1.operativo, var_name, c0.unidad_analisis, 
@@ -111,7 +111,7 @@ var ProceduresProcesamiento = [
                         where c1.operativo =c0.operativo and ultimo_ancestro = c0.id_casillero and c1.tipovar is not null
                         order by orden_total
                 )
-                INSERT INTO repsic.variables_opciones(
+                INSERT INTO varcal.variables_opciones(
                         operativo, variable, opcion, nombre, orden)
                   select op.operativo, pre.var_name, casillero::integer,op.nombre, orden
                     from  pre join casilleros op on pre.operativo=op.operativo and pre.id_casillero=op.padre 
