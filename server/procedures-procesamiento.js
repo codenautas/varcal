@@ -46,7 +46,7 @@ var ProceduresProcesamiento = [
     {
         action: 'calculadas/generar',
         parameters: [
-        // {name:'operativo', typeName:'text', references:'operativos', }
+            { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
         coreFunction: async function (context, parameters) {
             parameters.operativo = OPERATIVO;

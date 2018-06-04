@@ -68,11 +68,13 @@ export type DefinicionEstructuralTabla = {
     detailTables?: DetailTable[];
 };
 
+export type Tables = {
+    [key: string]: DefinicionEstructuralTabla
+}
+
 export type DefinicionEstructural = {
     aliases?: Aliases
-    tables: {
-        [key: string]: DefinicionEstructuralTabla
-    }
+    tables: Tables
 }
 
 export interface VariableDefinida{

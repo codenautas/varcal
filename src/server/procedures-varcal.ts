@@ -3,9 +3,9 @@
 import * as backendPlus from "backend-plus";
 import { ProcedureContext, Context } from "backend-plus";
 import * as VarCal from "./var-cal";
+import { CompilerOptions } from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
-import { CompilerOptions } from "./var-cal";
 
 type OrigenesGenerarParameters = {
     operativo: string
@@ -17,7 +17,7 @@ const fkPersonas = [{ target: 'operativo', source: 'operativo' }, { target: 'id_
 const pkGrupoPersonas = [{ fieldName: 'operativo' }, { fieldName: 'id_caso' }];
 const formPrincipal = 'F1';
 const operativo = 'REPSIC';
-const estructuraParaGenerar = {
+const estructuraParaGenerar: VarCal.DefinicionEstructural = {
     aliases: {
         padre: {
             tabla: 'personas',
@@ -68,19 +68,6 @@ var ProceduresVarCal = [
             parameters.operativo = 'REPSIC';
             var be: backendPlus.AppBackend = context.be;
             var db = be.db;
-            be.sanitizarExpSql = 'as'; function(x) {
-                if (typeof x === 'string' && /"'/.test(x)) {
-                    console.log('caracteres invalidos en expresion');
-                    console.log(x);
-                    throw new Error("caracteres invalidos en expresion")
-                }
-                if (typeof x !== 'string' && typeof x !== 'number') {
-                    console.log('tipo invalidos en expresion');
-                    console.log(x);
-                    throw new Error("tipo invalidos en expresion")
-                }
-                return x;
-            };
             /* -------------- ESTO SE HACE UNA SOLA VEZ AL CERRAR, PASAR A CERRAR CUANDO LO HAGAMOS ------ */
             await context.client.query(
                 `DELETE FROM variables_opciones op
@@ -127,31 +114,37 @@ var ProceduresVarCal = [
                 , [parameters.operativo]
             ).execute();
             /* -------------- fin ESTO SE HACE UNA SOLA VEZ --------------------------------------------- */
-            var drops = [];
-            var creates = [];
-            var inserts = [];
-            var allPrefixedPks = {};
+            var drops:string[]=[];
+            var creates:string[]=[];
+            var inserts:string[]=[];
+            var allPrefixedPks:{
+                [key:string]: {pks:string[], pksString: string}
+            } = {};
             var tableDefs = {};
             var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) 
                     FROM meta.tipovar                    
             `).fetchUniqueValue();
             var typeNameTipoVar = resTypeNameTipoVar.value;
-            var resultUA = await context.client.query(`SELECT 
-                   /* pk_padre debe ser el primer campo */
-                   ${be.sqls.exprFieldUaPkPadre} as pk_padre, ua.*,
-                   (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
+            // var resultUA = await context.client.query(`SELECT 
+            //        /* pk_padre debe ser el primer campo */
+            //        ${be.sqls.exprFieldUaPkPadre} as pk_padre, ua.*,
+            //        (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
+            //     FROM unidad_analisis ua
+            //     WHERE operativo=$1
+            //     ORDER BY 1
+            // `, [operativo]).fetchAll();
+            var resultUA = await context.client.query(`SELECT *
                 FROM unidad_analisis ua
                 WHERE operativo=$1
-                ORDER BY 1
             `, [operativo]).fetchAll();
             resultUA.rows.forEach(function (row) {
-                var estParaGen = estructuraParaGenerar.tables[row.unidad_analisis];
+                var estParaGen:VarCal.DefinicionEstructuralTabla = estructuraParaGenerar.tables[row.unidad_analisis];
                 var tableName = estParaGen.target;
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
                 var broDef = be.tableStructures[estParaGen.sourceBro](be.getContextForDump())
                 var primaryKey = row.pk_padre.concat(row.pk_agregada);
                 primaryKey.unshift('operativo'); // GENE              
-                var prefixedPks = primaryKey.map(pk => row.unidad_analisis + '.' + pk);
+                var prefixedPks = primaryKey.map((pk:string) => row.unidad_analisis + '.' + pk);
                 allPrefixedPks[row.unidad_analisis] = {
                     pks: prefixedPks,
                     pksString: prefixedPks.join(', ')

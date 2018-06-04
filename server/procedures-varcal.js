@@ -52,13 +52,14 @@ var ProceduresVarCal = [
     {
         action: 'calculadas/generar',
         parameters: [
-        // {name:'operativo', typeName:'text', references:'operativos', }
+            { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
         coreFunction: async function (context, parameters) {
             parameters.operativo = 'REPSIC';
             var be = context.be;
             var db = be.db;
-            be.sanitizarExpSql = function (x) {
+            be.sanitizarExpSql = 'as';
+            function (x) {
                 if (typeof x === 'string' && /"'/.test(x)) {
                     console.log('caracteres invalidos en expresion');
                     console.log(x);
@@ -70,7 +71,8 @@ var ProceduresVarCal = [
                     throw new Error("tipo invalidos en expresion");
                 }
                 return x;
-            };
+            }
+            ;
             /* -------------- ESTO SE HACE UNA SOLA VEZ AL CERRAR, PASAR A CERRAR CUANDO LO HAGAMOS ------ */
             await context.client.query(`DELETE FROM variables_opciones op
                     WHERE EXISTS 

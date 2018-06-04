@@ -5,7 +5,11 @@ declare type OrigenesGenerarParameters = {
 };
 declare var ProceduresProcesamiento: {
     action: string;
-    parameters: any[];
+    parameters: {
+        name: string;
+        typeName: string;
+        references: string;
+    }[];
     coreFunction: (context: ProcedureContext, parameters: OrigenesGenerarParameters) => Promise<string>;
 }[];
 export { ProceduresProcesamiento };
