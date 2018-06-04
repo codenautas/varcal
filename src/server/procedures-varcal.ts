@@ -6,6 +6,8 @@ import * as VarCal from "./var-cal";
 import { CompilerOptions } from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
+import * as operativos from "operativos";
+import { AppOperativosType } from "operativos";
 
 type OrigenesGenerarParameters = {
     operativo: string
