@@ -1,11 +1,11 @@
 "use strict";
 
+import * as backendPlus from "backend-plus";
 import {ProcedureContext, Context} from "backend-plus";
-import * as VarCal from "varcal";
+import * as VarCal from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
-import {VariablesOpciones} from "./types-varcal";
-import { CompilerOptions } from "varcal";
+import { CompilerOptions } from "./var-cal";
 
 type OrigenesGenerarParameters={
     operativo: string
@@ -62,13 +62,13 @@ var ProceduresVarCal = [
     {   
         action:'calculadas/generar',
         parameters:[
-            // {name:'operativo', typeName:'text', references:'operativos', }
+            {name:'operativo', typeName:'text', references:'operativos', }
         ],
-        coreFunction:async function(context, parameters){
+        coreFunction:async function(context:ProcedureContext, parameters:OrigenesGenerarParameters){
             parameters.operativo='REPSIC';
-            var be=context.be;
+            var be: backendPlus.AppBackend=context.be;
             var db=be.db;
-            be.sanitizarExpSql = function(x){ 
+            be.sanitizarExpSql = 'as'; function(x){ 
                 if(typeof x === 'string' && /"'/.test(x)){
                     console.log('caracteres invalidos en expresion');
                     console.log(x);

@@ -55,7 +55,7 @@ var ProceduresProcesamiento = [
     {   
         action:'calculadas/generar',
         parameters:[
-            // {name:'operativo', typeName:'text', references:'operativos', }
+            {name:'operativo', typeName:'text', references:'operativos', }
         ],
         coreFunction:async function(context:ProcedureContext, parameters:OrigenesGenerarParameters){
             parameters.operativo=OPERATIVO;
