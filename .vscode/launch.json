@@ -8,9 +8,23 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}/test/test-simples.ts",
+            "preLaunchTask": "build-all",
+            "program": "${workspaceFolder}/server/server-varcal.js",
             "outFiles": [
-                "${workspaceFolder}/lib/test/*.js"
+                "${workspaceFolder}/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "dumpDb",
+            "preLaunchTask": "tsc-server",
+            "program": "${workspaceFolder}/server/server-varcal.js",
+            "args": [
+                "--dump-db"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/**/*.js"
             ]
         },
         {

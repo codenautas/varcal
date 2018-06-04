@@ -1,13 +1,19 @@
 {
     "compilerOptions": {
         "declaration": true,
-        "outDir": "lib",
-        "module": "none",
-        "target": "es2017",
+        "outDir": "x:\this-dir-must-not-be-created",
         "sourceMap": true,
         "moduleResolution": "node",
-        "lib": [ "es2015" , "dom"],
-        "typeRoots" : ["./node_modules/@types","./node_modules/types.d.ts/modules"],
+        "lib": [
+            "es2015",
+            "dom"
+        ],
+        "target": "es5",
+        "module": "umd",
+        "typeRoots": [
+            "node_modules/@types",
+            "node_modules/types.d.ts/modules"
+        ],
         "noImplicitAny": true,
         "alwaysStrict": true,
         "noUnusedLocals": true,
@@ -15,7 +21,8 @@
         "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
         "noFallthroughCasesInSwitch": true
     },
-    "include":[
-        "src", "test"
+    "include": [
+        "src",
+        "test"
     ]
 }

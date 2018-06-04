@@ -13,6 +13,8 @@
   "dependencies": {
     "expre-parser": "~0.1.9",
     "mini-tools": "~1.0.1",
+    "backend-plus": "~0.21.0",
+    "operativos": "~0.1.7",
     "pg-promise-strict": "~0.4.7"
   },
   "devDependencies": {
@@ -27,11 +29,11 @@
     "node": ">= 8.0.0"
   },
   "scripts": {
-    "prepublish": "tsc || echo \"continue w/error\"",
     "x-test": "tsc || echo \"continue with errors\" && mocha --reporter spec --bail --check-leaks lib\\test\\*.js",
     "test": "(tsc || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks lib/test/*.js",
     "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks test/",
-    "start": "node server/server-varcal.js"
+    "start": "node server/server-varcal.js",
+    "prepublish": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")"
   },
   "qa-control": {
     "package-version": "0.3.0",
