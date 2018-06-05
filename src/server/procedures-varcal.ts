@@ -1,13 +1,11 @@
 "use strict";
 
-import * as backendPlus from "backend-plus";
-import { ProcedureContext, Context } from "backend-plus";
 import * as VarCal from "./var-cal";
 import { CompilerOptions } from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import { AppOperativosType } from "operativos";
+import {TableDefinition} from "operativos";
 
 type OrigenesGenerarParameters = {
     operativo: string
@@ -66,9 +64,9 @@ var ProceduresVarCal = [
         parameters: [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
-        coreFunction: async function (context: ProcedureContext, parameters: OrigenesGenerarParameters) {
+        coreFunction: async function (context: operativos.ProcedureContext, parameters: OrigenesGenerarParameters) {
             parameters.operativo = 'REPSIC';
-            var be: backendPlus.AppBackend = context.be;
+            var be: operativos.AppBackend = context.be;
             var db = be.db;
             /* -------------- ESTO SE HACE UNA SOLA VEZ AL CERRAR, PASAR A CERRAR CUANDO LO HAGAMOS ------ */
             await context.client.query(
@@ -122,7 +120,7 @@ var ProceduresVarCal = [
             var allPrefixedPks:{
                 [key:string]: {pks:string[], pksString: string}
             } = {};
-            var tableDefs = {};
+            var tableDefs:operativos.TableDefinitions = {};
             var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) 
                     FROM meta.tipovar                    
             `).fetchUniqueValue();
@@ -143,7 +141,7 @@ var ProceduresVarCal = [
                 var estParaGen:VarCal.DefinicionEstructuralTabla = estructuraParaGenerar.tables[row.unidad_analisis];
                 var tableName = estParaGen.target;
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
-                var broDef = be.tableStructures[estParaGen.sourceBro](be.getContextForDump())
+                var broDef = <operativos.TableDefinitionFunction>be.tableStructures[estParaGen.sourceBro](be.getContextForDump())
                 var primaryKey = row.pk_padre.concat(row.pk_agregada);
                 primaryKey.unshift('operativo'); // GENE              
                 var prefixedPks = primaryKey.map((pk:string) => row.unidad_analisis + '.' + pk);
@@ -152,10 +150,10 @@ var ProceduresVarCal = [
                     pksString: prefixedPks.join(', ')
                 }
                 var isAdmin = context.user.rol === 'admin';
-                var tableDefParteCtte = {
+                var tableDefParteCtte:TableDefinition = {
                     name: tableName,
                     fields: broDef.fields.filter(field => field.isPk).concat(
-                        row.variables ? (row.variables.map(v => { return { name: v.variable, typeName: typeNameTipoVar[v.tipovar], editable: false } }))
+                        row.variables ? (row.variables.map((v: operativos.Variables) => { return { name: v.variable, typeName: typeNameTipoVar[v.tipovar], editable: false } }))
                             : []
                     ),
                     editable: isAdmin,
@@ -169,7 +167,7 @@ var ProceduresVarCal = [
                         isReferable: true
                     }
                 }
-                be.tableStructures[tableName] = tableDefs[tableName] = function (context) {
+                be.tableStructures[tableName] = tableDefs[tableName] = function (context: operativos.ContextForDump):TableDefinition {
                     return context.be.tableDefAdapt(tableDefParteCtte, context);
                 };
                 var pkString = primaryKey.join(', ');

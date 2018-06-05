@@ -58,21 +58,6 @@ var ProceduresVarCal = [
             parameters.operativo = 'REPSIC';
             var be = context.be;
             var db = be.db;
-            be.sanitizarExpSql = 'as';
-            function (x) {
-                if (typeof x === 'string' && /"'/.test(x)) {
-                    console.log('caracteres invalidos en expresion');
-                    console.log(x);
-                    throw new Error("caracteres invalidos en expresion");
-                }
-                if (typeof x !== 'string' && typeof x !== 'number') {
-                    console.log('tipo invalidos en expresion');
-                    console.log(x);
-                    throw new Error("tipo invalidos en expresion");
-                }
-                return x;
-            }
-            ;
             /* -------------- ESTO SE HACE UNA SOLA VEZ AL CERRAR, PASAR A CERRAR CUANDO LO HAGAMOS ------ */
             await context.client.query(`DELETE FROM variables_opciones op
                     WHERE EXISTS 
@@ -118,13 +103,17 @@ var ProceduresVarCal = [
                     FROM meta.tipovar                    
             `).fetchUniqueValue();
             var typeNameTipoVar = resTypeNameTipoVar.value;
-            var resultUA = await context.client.query(`SELECT 
-                   /* pk_padre debe ser el primer campo */
-                   ${be.sqls.exprFieldUaPkPadre} as pk_padre, ua.*,
-                   (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
+            // var resultUA = await context.client.query(`SELECT 
+            //        /* pk_padre debe ser el primer campo */
+            //        ${be.sqls.exprFieldUaPkPadre} as pk_padre, ua.*,
+            //        (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
+            //     FROM unidad_analisis ua
+            //     WHERE operativo=$1
+            //     ORDER BY 1
+            // `, [operativo]).fetchAll();
+            var resultUA = await context.client.query(`SELECT *
                 FROM unidad_analisis ua
                 WHERE operativo=$1
-                ORDER BY 1
             `, [operativo]).fetchAll();
             resultUA.rows.forEach(function (row) {
                 var estParaGen = estructuraParaGenerar.tables[row.unidad_analisis];
@@ -133,7 +122,7 @@ var ProceduresVarCal = [
                 var broDef = be.tableStructures[estParaGen.sourceBro](be.getContextForDump());
                 var primaryKey = row.pk_padre.concat(row.pk_agregada);
                 primaryKey.unshift('operativo'); // GENE              
-                var prefixedPks = primaryKey.map(pk => row.unidad_analisis + '.' + pk);
+                var prefixedPks = primaryKey.map((pk) => row.unidad_analisis + '.' + pk);
                 allPrefixedPks[row.unidad_analisis] = {
                     pks: prefixedPks,
                     pksString: prefixedPks.join(', ')
@@ -141,7 +130,7 @@ var ProceduresVarCal = [
                 var isAdmin = context.user.rol === 'admin';
                 var tableDefParteCtte = {
                     name: tableName,
-                    fields: broDef.fields.filter(field => field.isPk).concat(row.variables ? (row.variables.map(v => { return { name: v.variable, typeName: typeNameTipoVar[v.tipovar], editable: false }; }))
+                    fields: broDef.fields.filter(field => field.isPk).concat(row.variables ? (row.variables.map((v) => { return { name: v.variable, typeName: typeNameTipoVar[v.tipovar], editable: false }; }))
                         : []),
                     editable: isAdmin,
                     primaryKey: primaryKey,

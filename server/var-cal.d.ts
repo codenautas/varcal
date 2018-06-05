@@ -53,11 +53,12 @@ export declare type DefinicionEstructuralTabla = {
     };
     detailTables?: DetailTable[];
 };
+export declare type Tables = {
+    [key: string]: DefinicionEstructuralTabla;
+};
 export declare type DefinicionEstructural = {
     aliases?: Aliases;
-    tables: {
-        [key: string]: DefinicionEstructuralTabla;
-    };
+    tables: Tables;
 };
 export interface VariableDefinida {
     tabla: string;
