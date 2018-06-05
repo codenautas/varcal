@@ -5,7 +5,7 @@ import { CompilerOptions } from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition} from "operativos";
+import {TableDefinition, Variable, VariablesOpciones} from "operativos";
 
 type OrigenesGenerarParameters = {
     operativo: string
@@ -141,7 +141,7 @@ var ProceduresVarCal = [
                 var estParaGen:VarCal.DefinicionEstructuralTabla = estructuraParaGenerar.tables[row.unidad_analisis];
                 var tableName = estParaGen.target;
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
-                var broDef = <operativos.TableDefinitionFunction>be.tableStructures[estParaGen.sourceBro](be.getContextForDump())
+                var broDef = (<operativos.TableDefinitionFunction>be.tableStructures[estParaGen.sourceBro])(be.getContextForDump())
                 var primaryKey = row.pk_padre.concat(row.pk_agregada);
                 primaryKey.unshift('operativo'); // GENE              
                 var prefixedPks = primaryKey.map((pk:string) => row.unidad_analisis + '.' + pk);
@@ -153,7 +153,7 @@ var ProceduresVarCal = [
                 var tableDefParteCtte:TableDefinition = {
                     name: tableName,
                     fields: broDef.fields.filter(field => field.isPk).concat(
-                        row.variables ? (row.variables.map((v: operativos.Variables) => { return { name: v.variable, typeName: typeNameTipoVar[v.tipovar], editable: false } }))
+                        row.variables ? (row.variables.map((v: operativos.Variable) => { return { name: v.variable, typeName: typeNameTipoVar[v.tipovar], editable: false } }))
                             : []
                     ),
                     editable: isAdmin,
@@ -167,7 +167,7 @@ var ProceduresVarCal = [
                         isReferable: true
                     }
                 }
-                be.tableStructures[tableName] = tableDefs[tableName] = function (context: operativos.ContextForDump):TableDefinition {
+                be.tableStructures[tableName] = tableDefs[tableName] = function (context: operativos.Context):TableDefinition {
                     return context.be.tableDefAdapt(tableDefParteCtte, context);
                 };
                 var pkString = primaryKey.join(', ');
@@ -190,15 +190,15 @@ var ProceduresVarCal = [
                  AND v.clase = 'calculada'
                  AND v.activa
             `, [operativo]).fetchAll();
-            function wrapExpression(expression, pkExpression) {
-                var opts = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
+            function wrapExpression(expression:string|number, pkExpression:string) {
+                var opts:VarCal.CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
                 return VarCal.getWrappedExpression(expression, pkExpression, opts);
             }
-            var variablesACalcular = variablesDatoResult.rows.map(function (v) {
+            var variablesACalcular = variablesDatoResult.rows.map(function (v:Variable & {opciones: VariablesOpciones[]}) {
                 let expresionValidada;
                 var pkList = allPrefixedPks[v.unidad_analisis].pksString;
                 if (v.opciones && v.opciones.length) {
-                    expresionValidada = 'CASE ' + v.opciones.map(function (opcion) {
+                    expresionValidada = 'CASE ' + v.opciones.map(function (opcion:VariablesOpciones) {
                         return '\n          WHEN ' + wrapExpression(opcion.expresion_condicion, pkList) +
                             ' THEN ' + wrapExpression(opcion.expresion_valor || opcion.opcion, pkList)
                     }).join('') + (v.expresion ? '\n          ELSE ' + wrapExpression(v.expresion, pkList) : '') + ' END'
@@ -219,8 +219,8 @@ var ProceduresVarCal = [
                 SELECT variable, unidad_analisis, clase from variables
                 WHERE operativo = $1 AND activa
             `, [operativo]).fetchAll();
-            var allVariables = {};
-            variablesDatoResult.rows.forEach(vDato => allVariables[vDato.variable] = { tabla: vDato.unidad_analisis, clase: vDato.clase });
+            var allVariables: VarCal.VariablesDefinidas = {};
+            variablesDatoResult.rows.forEach((vDato:operativos.Variable) => allVariables[vDato.variable] = { tabla: vDato.unidad_analisis, clase: vDato.clase });
             likear(allPrefixedPks).forEach(function (prefixedPk, ua) {
                 prefixedPk.pks.forEach(pk => allVariables[pk] = { tabla: ua })
             });

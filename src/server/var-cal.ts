@@ -3,7 +3,11 @@
 import * as ExpresionParser from 'expre-parser';
 import * as likear          from 'like-ar';
 
+import * as typesVarcal from "./types-varcal";
+
 export const sufijo_tabla_calculada:string='_calc';
+
+export {CompilerOptions} from 'expre-parser';
 
 export interface DefinicionVariable {
     tabla: string
@@ -20,8 +24,6 @@ export interface DefinicionVariableAnalizada extends DefinicionVariable {
     insumos: ExpresionParser.Insumos
     joins?: Joins[]
 }
-
-export {CompilerOptions} from 'expre-parser';
 
 export interface VariableGenerable {
     nombreVariable: string
@@ -48,12 +50,6 @@ export type BloqueVariablesGenerables = {
     joins?: Joins[]
 };
 
-export type DetailTable = {
-    table: string
-    fields: string[]
-    abr?: string
-}
-
 export type DefinicionEstructuralTabla = {
     target?: string;
     sourceBro?: string;
@@ -65,7 +61,7 @@ export type DefinicionEstructuralTabla = {
     whereAgg?:{ 
         [key: string]: string
     }    
-    detailTables?: DetailTable[];
+    detailTables?: typesVarcal.DetailTable[];
 };
 
 export type Tables = {
@@ -241,7 +237,7 @@ export function getInsumos(expression: string): ExpresionParser.Insumos {
     return ExpresionParser.parse(expression).getInsumos();
 }
 
-export function getWrappedExpression(expression: string, pkExpression: string, options: ExpresionParser.CompilerOptions): string {
+export function getWrappedExpression(expression: string|number, pkExpression: string, options: ExpresionParser.CompilerOptions): string {
     var compiler = new ExpresionParser.Compiler(options);
     return compiler.toCode(ExpresionParser.parse(expression), pkExpression);
 }

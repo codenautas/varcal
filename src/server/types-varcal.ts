@@ -1,1 +1,2 @@
-import * as backendPlus from "backend-plus";
+
+export * from 'operativos';
