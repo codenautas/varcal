@@ -1,21 +1,16 @@
 "use strict";
 
 import * as VarCal from "./var-cal";
-import { CompilerOptions } from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition, Variable, VariablesOpciones} from "operativos";
+import {TableDefinition, Variable, VariableOpcion} from "operativos";
 
 type OrigenesGenerarParameters = {
     operativo: string
     origen: string
 }
 
-const pkPersonas = [{ fieldName: 'operativo' }, { fieldName: 'id_caso' }, { fieldName: 'p0' }];
-const fkPersonas = [{ target: 'operativo', source: 'operativo' }, { target: 'id_caso', source: 'id_caso' }];
-const pkGrupoPersonas = [{ fieldName: 'operativo' }, { fieldName: 'id_caso' }];
-const formPrincipal = 'F1';
 const operativo = 'REPSIC';
 const estructuraParaGenerar: VarCal.DefinicionEstructural = {
     aliases: {
@@ -194,11 +189,11 @@ var ProceduresVarCal = [
                 var opts:VarCal.CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
                 return VarCal.getWrappedExpression(expression, pkExpression, opts);
             }
-            var variablesACalcular = variablesDatoResult.rows.map(function (v:Variable & {opciones: VariablesOpciones[]}) {
+            var variablesACalcular = variablesDatoResult.rows.map(function (v:Variable & {opciones: VariableOpcion[]}) {
                 let expresionValidada;
                 var pkList = allPrefixedPks[v.unidad_analisis].pksString;
                 if (v.opciones && v.opciones.length) {
-                    expresionValidada = 'CASE ' + v.opciones.map(function (opcion:VariablesOpciones) {
+                    expresionValidada = 'CASE ' + v.opciones.map(function (opcion:VariableOpcion) {
                         return '\n          WHEN ' + wrapExpression(opcion.expresion_condicion, pkList) +
                             ' THEN ' + wrapExpression(opcion.expresion_valor || opcion.opcion, pkList)
                     }).join('') + (v.expresion ? '\n          ELSE ' + wrapExpression(v.expresion, pkList) : '') + ' END'
@@ -241,4 +236,4 @@ var ProceduresVarCal = [
     }
 ];
 
-module.exports = ProceduresVarCal;
+export {ProceduresVarCal};

@@ -7,17 +7,20 @@ function emergeAppVarCal(Base) {
             super(...args);
         }
         getProcedures() {
+            //TODO: es igual que en datos-ext llevarlo a operativos
             var be = this;
             return super.getProcedures().then(function (procedures) {
                 return procedures.concat(procedures_varcal_1.ProceduresVarCal.map(be.procedureDefCompleter, be));
             });
         }
         clientIncludes(req, hideBEPlusInclusions) {
+            //TODO: es igual que en datos-ext llevarlo a operativos
             return super.clientIncludes(req, hideBEPlusInclusions).concat([
                 { type: 'js', src: 'client/varcal.js' },
             ]);
         }
         getMenu() {
+            //TODO: es igual que en datos-ext llevarlo a operativos
             let myMenuPart = [
                 { menuType: 'proc', name: 'generar', proc: 'origenes/generar' },
             ];
@@ -25,16 +28,9 @@ function emergeAppVarCal(Base) {
             return menu;
         }
         prepareGetTables() {
+            //TODO: es igual que en datos-ext llevarlo a operativos
             super.prepareGetTables();
             this.getTableDefinition = Object.assign({}, this.getTableDefinition);
-            this.appendToTableDefinition('parametros', function (tableDef) {
-                tableDef.fields.push({ name: 'esquema_tablas_externas', typeName: 'text', defaultValue: 'ext', editable: false });
-            });
-            this.appendToTableDefinition('tabla_datos', function (tableDef) {
-                console.log(tableDef);
-                tableDef.fields.push({ name: 'estructura_cerrada', typeName: 'boolean', editable: false });
-                tableDef.constraints.push({ consName: 'estructura_cerrada true/null', constraintType: 'check', expr: 'estructura_cerrada is true' });
-            });
         }
     };
 }

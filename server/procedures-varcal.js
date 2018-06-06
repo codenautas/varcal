@@ -3,10 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const VarCal = require("./var-cal");
 const fs = require("fs-extra");
 const likear = require("like-ar");
-const pkPersonas = [{ fieldName: 'operativo' }, { fieldName: 'id_caso' }, { fieldName: 'p0' }];
-const fkPersonas = [{ target: 'operativo', source: 'operativo' }, { target: 'id_caso', source: 'id_caso' }];
-const pkGrupoPersonas = [{ fieldName: 'operativo' }, { fieldName: 'id_caso' }];
-const formPrincipal = 'F1';
 const operativo = 'REPSIC';
 const estructuraParaGenerar = {
     aliases: {
@@ -195,7 +191,7 @@ var ProceduresVarCal = [
                 WHERE operativo = $1 AND activa
             `, [operativo]).fetchAll();
             var allVariables = {};
-            variablesDatoResult.rows.forEach(vDato => allVariables[vDato.variable] = { tabla: vDato.unidad_analisis, clase: vDato.clase });
+            variablesDatoResult.rows.forEach((vDato) => allVariables[vDato.variable] = { tabla: vDato.unidad_analisis, clase: vDato.clase });
             likear(allPrefixedPks).forEach(function (prefixedPk, ua) {
                 prefixedPk.pks.forEach(pk => allVariables[pk] = { tabla: ua });
             });
@@ -215,5 +211,5 @@ var ProceduresVarCal = [
         }
     }
 ];
-module.exports = ProceduresVarCal;
+exports.ProceduresVarCal = ProceduresVarCal;
 //# sourceMappingURL=procedures-varcal.js.map

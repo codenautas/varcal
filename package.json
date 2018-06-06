@@ -11,11 +11,12 @@
     "src/client"
   ],
   "dependencies": {
+    "backend-plus": "~0.21.5",
     "expre-parser": "~0.1.9",
     "mini-tools": "~1.0.1",
-    "backend-plus": "~0.21.5",
     "operativos": "~0.1.9",
-    "pg-promise-strict": "~0.4.7"
+    "pg-promise-strict": "~0.4.7",
+    "pg-triggers": "^0.2.1"
   },
   "devDependencies": {
     "types.d.ts": "^0.1.25",
