@@ -4,21 +4,14 @@ import * as VarCal from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition, Variable, VariableOpcion} from "operativos";
+import {TableDefinition, Variable, VariableOpcion, UnidadDeAnalisis} from "operativos";
 
-type OrigenesGenerarParameters = {
+type procedureParameters = {
     operativo: string
-    origen: string
 }
 
 const operativo = 'REPSIC';
 const estructuraParaGenerar: VarCal.DefinicionEstructural = {
-    aliases: {
-        padre: {
-            tabla: 'personas',
-            on: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
-        }
-    },
     tables: {
         grupo_personas: {
             target: 'grupo_personas_calc',
@@ -55,11 +48,83 @@ const estructuraParaGenerar: VarCal.DefinicionEstructural = {
 
 var ProceduresVarCal = [
     {
+        action: 'definicion_estructural/armar',
+        parameters: [
+            {name:'operativo'     ,references:'operativos',  typeName:'text'},
+        ],
+        coreFunction: async function(context:operativos.ProcedureContext, parameters: procedureParameters){
+            var sqlParams=[parameters.operativo];
+            var results={
+                aliases: await context.client.query(
+                    `Select a.alias, (to_jsonb(a.*)) alias_data
+                    From alias a
+                    Where operativo=$1`
+                    , sqlParams
+                ).fetchAll(),
+                tables: await context.client.query(
+                    `SELECT ua.*, to_jsonb(array_agg(v.variable)) pk_arr
+                    FROM unidad_analisis ua join variables v on v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.es_pk
+                    where operativo=$1
+                    order by v.orden`
+                    , sqlParams
+                ).fetchAll()
+            };
+            let defEst: VarCal.DefinicionEstructural ={
+                aliases: {},
+                tables: {}
+            }
+            results.aliases.rows.forEach(function(alias){ defEst.aliases[alias.alias]=alias.alias_data });
+            //falta trabajar results para obtener la pinta de  defEst
+            results.tables.rows.forEach(function(table: UnidadDeAnalisis & {pk_arr: string[]}){
+                let tua = table.unidad_analisis;
+                let tDefEst:VarCal.DefinicionEstructuralTabla = {
+                    sourceBro : tua,
+                    target: tua + VarCal.sufijo_tabla_calculada,
+                    pkString : table.pk_arr.join(', '),
+                    aliasAgg : tua + VarCal.sufijo_agregacion,
+                    // sourceJoin
+                }
+                tDefEst.where = table.pk_arr.map((pk: string) =>
+                    `${tDefEst.sourceBro}.${pk} = ${tDefEst.target}.${pk}`
+                ).join(' and ');
+                tDefEst.sourceAgg = tDefEst.target;
+
+                // Calculo whereAgg
+                tDefEst.whereAgg = {};
+                let pksPadre: string[] = table.pk_arr;
+                table.pk_agregada.split(',').forEach(pkAgregada => {
+                    let index = pksPadre.indexOf(pkAgregada);
+                    if (index){
+                        pksPadre.splice(index, 1);
+                    }
+                });
+                tDefEst.whereAgg[table.padre] = pksPadre.map((pk: string) =>
+                    `${table.padre}.${pk} = ${tDefEst.target}.${pk}`
+                ).join(' and ');
+                // FIN whereAgg
+
+                // TODO: completar la tabla hija
+                tDefEst.detailTables = [{
+                    table: 'TODO PONER AQUI LA TABLA HIJA',//'personas_calc',
+                    fields: table.pk_arr,
+                    abr: "p"
+                }];
+            
+                defEst.tables[tua] = tDefEst;
+                //defEst.tables[ta_r.unidad_analisis].sourceJoin=ta_r.pk_arr.join(' and ');
+                //SourceJoin = junta con tabla unidad_analisis padre 
+                //grupo_personas: 'personas_calc.operativo = grupo_personas.operativo and personas_calc.id_caso = grupo_personas.id_caso'
+
+            });
+            return defEst;
+        }
+    },
+    {
         action: 'calculadas/generar',
         parameters: [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
-        coreFunction: async function (context: operativos.ProcedureContext, parameters: OrigenesGenerarParameters) {
+        coreFunction: async function (context: operativos.ProcedureContext, parameters: procedureParameters) {
             parameters.operativo = 'REPSIC';
             var be: operativos.AppBackend = context.be;
             var db = be.db;

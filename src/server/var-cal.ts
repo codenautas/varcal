@@ -6,6 +6,7 @@ import * as likear          from 'like-ar';
 import * as typesVarcal from "./types-varcal";
 
 export const sufijo_tabla_calculada:string='_calc';
+export const sufijo_agregacion:string='_agg';
 
 export {CompilerOptions} from 'expre-parser';
 
