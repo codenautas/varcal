@@ -1,6 +1,11 @@
 "use strict";
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
 Object.defineProperty(exports, "__esModule", { value: true });
 const procedures_varcal_1 = require("./procedures-varcal");
+const table_alias_1 = require("./table-alias");
+__export(require("./types-varcal"));
 function emergeAppVarCal(Base) {
     return class AppVarCal extends Base {
         constructor(...args) {
@@ -23,6 +28,7 @@ function emergeAppVarCal(Base) {
             //TODO: es igual que en datos-ext llevarlo a operativos
             let myMenuPart = [
                 { menuType: 'proc', name: 'generar', proc: 'origenes/generar' },
+                { menuType: 'table', name: 'alias' },
             ];
             let menu = { menu: super.getMenu().menu.concat(myMenuPart) };
             return menu;
@@ -30,7 +36,7 @@ function emergeAppVarCal(Base) {
         prepareGetTables() {
             //TODO: es igual que en datos-ext llevarlo a operativos
             super.prepareGetTables();
-            this.getTableDefinition = Object.assign({}, this.getTableDefinition);
+            this.getTableDefinition = Object.assign({}, this.getTableDefinition, { alias: table_alias_1.alias });
         }
     };
 }

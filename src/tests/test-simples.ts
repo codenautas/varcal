@@ -5,7 +5,7 @@ import * as fs from 'fs-extra';
 
 import 'mocha';
 
-import * as VarCal from '../src/var-cal';
+import * as VarCal from '../server/var-cal';
 
 (pg as { easy: boolean }).easy = true;
 
@@ -24,11 +24,11 @@ describe("varcal", function () {
     before(async function () {
         this.timeout(50000);
         config = await MiniTools.readConfig(
-            [config, 'test/local-config'],
+            [config, 'src/tests/local-config'],
             { whenNotExist: 'ignore' }
         ) as typeof config;
         client = await pg.connect(config.db);
-        await client.executeSqlScript('test/fixtures/initial_db.sql');
+        await client.executeSqlScript('src/tests/fixtures/initial_db.sql');
         console.log('system ready');
     });
     describe("sentenciaUpdate", function () {
@@ -265,7 +265,7 @@ describe("varcal", function () {
                         }
                     }
                 });
-            var funcionEsperada = await fs.readFile('./test/fixtures/first-generated-fun.sql', { encoding: 'UTF8' });
+            var funcionEsperada = await fs.readFile('./src/tests/fixtures/first-generated-fun.sql', { encoding: 'UTF8' });
             discrepances.showAndThrow(funcionGenerada, funcionEsperada);
         });
     });
@@ -303,7 +303,7 @@ describe("varcal", function () {
                         }
                     }
                 });
-            var funcionEsperada = await fs.readFile('./test/fixtures/second-generated-fun.sql', { encoding: 'UTF8' });
+            var funcionEsperada = await fs.readFile('./src/tests/fixtures/second-generated-fun.sql', { encoding: 'UTF8' });
             discrepances.showAndThrow(funcionGenerada, funcionEsperada);
         });
     });

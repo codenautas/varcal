@@ -4,11 +4,13 @@
   "version": "0.1.18",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
-  "main": "lib/src/var-cal.js",
-  "types": "lib/src/var-cal.d.ts",
+  "main": "server/app-varcal.js",
+  "types": "server/app-varcal.d.ts",
   "files": [
-    "lib",
-    "src/client"
+    "client",
+    "install",
+    "server",
+    "unlogged"
   ],
   "dependencies": {
     "backend-plus": "~0.21.6",
@@ -30,11 +32,11 @@
     "node": ">= 8.0.0"
   },
   "scripts": {
-    "x-test": "tsc || echo \"continue with errors\" && mocha --reporter spec --bail --check-leaks lib\\test\\*.js",
-    "test": "(tsc || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks lib/test/*.js",
-    "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks test/",
+    "x-test": "tsc || echo \"continue with errors\" && mocha --reporter spec --bail --check-leaks tests\\tests\\*.js",
+    "test": "(npm run prepublish || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks tests/tests/*.js",
+    "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks tests/tests/",
     "start": "node server/server-varcal.js",
-    "prepublish": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")"
+    "prepublish": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-tests.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")"
   },
   "qa-control": {
     "package-version": "0.3.0",
