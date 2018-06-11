@@ -1,6 +1,7 @@
 import * as ExpresionParser from 'expre-parser';
 import * as typesVarcal from "./types-varcal";
 export declare const sufijo_tabla_calculada: string;
+export declare const sufijo_agregacion: string;
 export { CompilerOptions } from 'expre-parser';
 export interface DefinicionVariable {
     tabla: string;
@@ -63,13 +64,8 @@ export interface VariableDefinida {
 export interface VariablesDefinidas {
     [key: string]: VariableDefinida;
 }
-export interface Alias {
-    tabla: string;
-    on: string;
-    where?: string;
-}
 export interface Aliases {
-    [key: string]: Alias;
+    [key: string]: typesVarcal.AliasDefEst;
 }
 export declare function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL;
 export declare function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL;

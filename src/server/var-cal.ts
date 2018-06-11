@@ -83,14 +83,8 @@ export interface VariablesDefinidas{
     [key:string]: VariableDefinida
 }
 
-export interface Alias {
-    tabla : string
-    on    : string
-    where?: string
-}
-
 export interface Aliases {
-    [key: string]: Alias
+    [key: string]: typesVarcal.AliasDefEst
 }
 
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
@@ -171,13 +165,13 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     let aliasLeftJoins = '';
     likear(aliasesUsados).forEach((aliasVars,aliasName) => {
         let alias = defEst.aliases[aliasName];
-        let selectFieldsAlias=defEst.tables[alias.tabla].pkString.split(', ').concat([...aliasVars]).join(', ');
+        let selectFieldsAlias=defEst.tables[alias.tabla_datos].pkString.split(', ').concat([...aliasVars]).join(', ');
         if (alias) {
             aliasLeftJoins +=
 `
 ${txtMargen}      LEFT JOIN (
 ${txtMargen}          SELECT ${selectFieldsAlias}
-${txtMargen}            FROM ${alias.tabla} ${aliasName}`;
+${txtMargen}            FROM ${alias.tabla_datos} ${aliasName}`;
             aliasLeftJoins +=alias.where?
 `
 ${txtMargen}            WHERE ${alias.where}`:'';

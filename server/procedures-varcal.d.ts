@@ -1,15 +1,24 @@
+import * as VarCal from "./var-cal";
 import * as operativos from "operativos";
-declare type OrigenesGenerarParameters = {
+export interface coreFunctionParameters {
     operativo: string;
-    origen: string;
-};
-declare var ProceduresVarCal: {
+}
+export declare type CoreFunction = (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<VarCal.DefinicionEstructural>;
+declare var ProceduresVarCal: ({
+    action: string;
+    parameters: {
+        name: string;
+        references: string;
+        typeName: string;
+    }[];
+    coreFunction: (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<VarCal.DefinicionEstructural>;
+} | {
     action: string;
     parameters: {
         name: string;
         typeName: string;
         references: string;
     }[];
-    coreFunction: (context: operativos.ProcedureContext, parameters: OrigenesGenerarParameters) => Promise<string>;
-}[];
+    coreFunction: (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<string>;
+})[];
 export { ProceduresVarCal };

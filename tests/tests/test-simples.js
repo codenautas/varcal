@@ -102,7 +102,7 @@ describe("varcal", function () {
             }, 14, {
                 aliases: {
                     padre: {
-                        tabla: 'personas',
+                        tabla_datos: 'personas',
                         on: 'padre.id = personas.id AND padre.p0 = personas.p11',
                     }
                 },
@@ -352,9 +352,8 @@ describe("varcal", function () {
             ], ['p3', 'dato1', 'dato2'], {
                 aliases: {
                     padre: {
-                        tabla: 'personas',
+                        tabla_datos: 'personas',
                         on: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
-                        where: ''
                     }
                 },
                 tables: {}

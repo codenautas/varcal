@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const ExpresionParser = require("expre-parser");
 const likear = require("like-ar");
 exports.sufijo_tabla_calculada = '_calc';
+exports.sufijo_agregacion = '_agg';
 ;
 ;
 //export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
@@ -83,13 +84,13 @@ function sentenciaUpdate(definicion, margen, defEst, variablesDefinidas) {
     let aliasLeftJoins = '';
     likear(aliasesUsados).forEach((aliasVars, aliasName) => {
         let alias = defEst.aliases[aliasName];
-        let selectFieldsAlias = defEst.tables[alias.tabla].pkString.split(', ').concat([...aliasVars]).join(', ');
+        let selectFieldsAlias = defEst.tables[alias.tabla_datos].pkString.split(', ').concat([...aliasVars]).join(', ');
         if (alias) {
             aliasLeftJoins +=
                 `
 ${txtMargen}      LEFT JOIN (
 ${txtMargen}          SELECT ${selectFieldsAlias}
-${txtMargen}            FROM ${alias.tabla} ${aliasName}`;
+${txtMargen}            FROM ${alias.tabla_datos} ${aliasName}`;
             aliasLeftJoins += alias.where ?
                 `
 ${txtMargen}            WHERE ${alias.where}` : '';

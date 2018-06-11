@@ -1,10 +1,13 @@
 export * from 'operativos';
 
-export interface Alias{
+export interface AliasDefEst{
+    on: string
+    tabla_datos: string
+    where?: string
+}
+
+export interface Alias extends AliasDefEst{
     operativo: string
     alias: string
-    tabla_datos: string
-    where: string
-    on: string
-    descripcion: string
+    descripcion?: string
 }

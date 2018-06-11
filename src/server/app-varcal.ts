@@ -6,7 +6,6 @@ import * as pgPromise from "pg-promise-strict";
 // tslint:disable-next-line:TS6133.
 import * as express from "express";
 
-
 import * as operativos from "operativos";
 import {AppOperativos} from "operativos";
 

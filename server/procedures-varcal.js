@@ -4,47 +4,103 @@ const VarCal = require("./var-cal");
 const fs = require("fs-extra");
 const likear = require("like-ar");
 const operativo = 'REPSIC';
-const estructuraParaGenerar = {
-    aliases: {
-        padre: {
-            tabla: 'personas',
-            on: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
+// const estructuraParaGenerar: VarCal.DefinicionEstructural = {
+//     tables: {
+//         grupo_personas: {
+//             target: 'grupo_personas_calc',
+//             sourceBro: 'grupo_personas',
+//             pkString: 'operativo,id_caso',
+//             sourceJoin: '',
+//             where: 'grupo_personas.operativo = grupo_personas_calc.operativo and grupo_personas.id_caso = grupo_personas_calc.id_caso',
+//             aliasAgg: 'grupo_personas_agg',
+//             sourceAgg: 'grupo_personas_calc',
+//             whereAgg: {},
+//             detailTables: [
+//                 {
+//                     table: 'personas_calc',
+//                     fields: ["operativo", "id_caso"],
+//                     abr: "p"
+//                 }
+//             ],
+//         },
+//         personas: {
+//             target: 'personas_calc',
+//             sourceBro: 'personas',
+//             pkString: 'operativo, id_caso, p0',
+//             sourceJoin: 'inner join grupo_personas using (operativo, id_caso)',
+//             where: 'personas.operativo = personas_calc.operativo and personas.id_caso = personas_calc.id_caso and personas.p0 = personas_calc.p0',
+//             aliasAgg: 'personas_agg',
+//             sourceAgg: 'personas_calc inner join personas ON personas_calc.operativo=personas.operativo and personas_calc.id_caso=personas.id_caso and personas_calc.p0=personas.p0',
+//             whereAgg: {
+//                 grupo_personas: 'personas_calc.operativo = grupo_personas.operativo and personas_calc.id_caso = grupo_personas.id_caso'
+//             },
+//         }
+//     }
+// }
+var ProceduresVarCal = [
+    {
+        action: 'definicion_estructural/armar',
+        parameters: [
+            { name: 'operativo', references: 'operativos', typeName: 'text' },
+        ],
+        coreFunction: async function (context, parameters) {
+            var sqlParams = [parameters.operativo];
+            var results = {
+                aliases: await context.client.query(`Select alias, (to_jsonb(tabla_datos, on, where)) alias_def_est
+                    From alias
+                    Where operativo=$1`, sqlParams).fetchAll(),
+                tables: await context.client.query(`SELECT ua.*, to_jsonb(array_agg(v.variable)) pk_arr
+                    FROM unidad_analisis ua join variables v on v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.es_pk
+                    where operativo=$1
+                    order by v.orden`, sqlParams).fetchAll()
+            };
+            let defEst = {
+                aliases: {},
+                tables: {}
+            };
+            results.aliases.rows.forEach(function (a) { defEst.aliases[a.alias] = a.alias_def_est; });
+            //falta trabajar results para obtener la pinta de  defEst
+            results.tables.rows.forEach(function (table) {
+                let tua = table.unidad_analisis;
+                let tDefEst = {
+                    sourceBro: tua,
+                    target: tua + VarCal.sufijo_tabla_calculada,
+                    pkString: table.pk_arr.join(', '),
+                    aliasAgg: tua + VarCal.sufijo_agregacion,
+                };
+                tDefEst.where = table.pk_arr.map((pk) => `${tDefEst.sourceBro}.${pk} = ${tDefEst.target}.${pk}`).join(' and ');
+                tDefEst.sourceAgg = tDefEst.target;
+                tDefEst.whereAgg = {};
+                tDefEst.sourceJoin = '';
+                if (table.padre) {
+                    //calculo pks del padre
+                    let pksPadre = table.pk_arr;
+                    table.pk_agregada.split(',').forEach(pkAgregada => {
+                        let index = pksPadre.indexOf(pkAgregada);
+                        if (index) {
+                            pksPadre.splice(index, 1);
+                        }
+                    });
+                    // Calculo whereAgg
+                    tDefEst.whereAgg[table.padre] = pksPadre.map((pk) => `${table.padre}.${pk} = ${tDefEst.target}.${pk}`).join(' and ');
+                    // Calculo sourceJoin
+                    tDefEst.sourceJoin = `inner join ${table.padre} using (${pksPadre.join(', ')})`;
+                }
+                tDefEst.detailTables = [];
+                defEst.tables[tua] = tDefEst;
+            });
+            //Seteo de detail tables a los padres de las tablas que tienen padre
+            results.tables.rows.filter(t => t.padre).forEach(function (table) {
+                // TODO: completar la tabla hija
+                defEst.tables[table.padre].detailTables.push({
+                    table: table.unidad_analisis,
+                    fields: table.pk_arr,
+                    abr: table.unidad_analisis.substr(0, 1).toUpperCase()
+                });
+            });
+            return defEst;
         }
     },
-    tables: {
-        grupo_personas: {
-            target: 'grupo_personas_calc',
-            sourceBro: 'grupo_personas',
-            pkString: 'operativo,id_caso',
-            sourceJoin: '',
-            where: 'grupo_personas.operativo = grupo_personas_calc.operativo and grupo_personas.id_caso = grupo_personas_calc.id_caso',
-            aliasAgg: 'grupo_personas_agg',
-            sourceAgg: 'grupo_personas_calc',
-            whereAgg: {},
-            detailTables: [
-                {
-                    table: 'personas_calc',
-                    fields: ["operativo", "id_caso"],
-                    abr: "p"
-                }
-            ],
-        },
-        personas: {
-            target: 'personas_calc',
-            sourceBro: 'personas',
-            pkString: 'operativo, id_caso, p0',
-            sourceJoin: 'inner join grupo_personas using (operativo, id_caso)',
-            where: 'personas.operativo = personas_calc.operativo and personas.id_caso = personas_calc.id_caso and personas.p0 = personas_calc.p0',
-            aliasAgg: 'personas_agg',
-            sourceAgg: 'personas_calc inner join personas ON personas_calc.operativo=personas.operativo and personas_calc.id_caso=personas.id_caso and personas_calc.p0=personas.p0',
-            whereAgg: {
-                grupo_personas: 'personas_calc.operativo = grupo_personas.operativo and personas_calc.id_caso = grupo_personas.id_caso'
-            },
-        }
-    }
-};
-// estructuraParaGenerar.tables.personas.laMadreEs=estructuraParaGenerar.tables.grupo_personas;
-var ProceduresVarCal = [
     {
         action: 'calculadas/generar',
         parameters: [
@@ -108,9 +164,10 @@ var ProceduresVarCal = [
             //     ORDER BY 1
             // `, [operativo]).fetchAll();
             var resultUA = await context.client.query(`SELECT *
-                FROM unidad_analisis ua
-                WHERE operativo=$1
+            FROM unidad_analisis ua
+            WHERE operativo=$1
             `, [operativo]).fetchAll();
+            var estructuraParaGenerar = await be.procedure['definicion_estructural/armar'].coreFunction(context, { operativo });
             resultUA.rows.forEach(function (row) {
                 var estParaGen = estructuraParaGenerar.tables[row.unidad_analisis];
                 var tableName = estParaGen.target;
