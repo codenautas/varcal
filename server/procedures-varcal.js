@@ -46,13 +46,13 @@ var ProceduresVarCal = [
         coreFunction: async function (context, parameters) {
             var sqlParams = [parameters.operativo];
             var results = {
-                aliases: await context.client.query(`Select alias, (to_jsonb(tabla_datos, on, where)) alias_def_est
+                aliases: await context.client.query(`Select alias, (to_jsonb(alias.*)) alias_def_est
                     From alias
                     Where operativo=$1`, sqlParams).fetchAll(),
-                tables: await context.client.query(`SELECT ua.*, to_jsonb(array_agg(v.variable)) pk_arr
+                tables: await context.client.query(`SELECT ua.*, to_jsonb(array_agg(v.variable order by v.orden)) pk_arr
                     FROM unidad_analisis ua join variables v on v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.es_pk
-                    where operativo=$1
-                    order by v.orden`, sqlParams).fetchAll()
+                    where ua.operativo=$1
+                    group by ua.operativo, ua.unidad_analisis`, sqlParams).fetchAll()
             };
             let defEst = {
                 aliases: {},
@@ -110,50 +110,12 @@ var ProceduresVarCal = [
             parameters.operativo = 'REPSIC';
             var be = context.be;
             var db = be.db;
-            /* -------------- ESTO SE HACE UNA SOLA VEZ AL CERRAR, PASAR A CERRAR CUANDO LO HAGAMOS ------ */
-            await context.client.query(`DELETE FROM variables_opciones op
-                    WHERE EXISTS 
-                        (SELECT variable FROM variables v 
-                            WHERE v.operativo=op.operativo and v.variable=op.variable 
-                                and v.clase='relevamiento' and v.operativo=$1)`, [parameters.operativo]).execute();
-            await context.client.query(`DELETE FROM varcal.variables WHERE operativo = $1 and clase = 'relevamiento'`, [parameters.operativo]).execute();
-            await context.client.query(`INSERT INTO varcal.variables(
-                operativo, variable, unidad_analisis, tipovar, nombre,  activa, 
-                clase, cerrada)
-              select c1.operativo, var_name, c0.unidad_analisis, 
-                case tipovar 
-                  when 'si_no' then 'opciones' 
-                  when 'si_no_nn' then 'opciones' 
-                else tipovar end, 
-                nombre, true, 
-                'relevamiento', true
-                from casilleros c1, lateral casilleros_recursivo(operativo, id_casillero),
-                (select operativo, id_casillero, unidad_analisis from casilleros where operativo =$1 and tipoc='F') c0
-                where c1.operativo =c0.operativo and ultimo_ancestro = c0.id_casillero and c1.tipovar is not null
-                order by orden_total`, [parameters.operativo]).execute();
-            await context.client.query(`
-                with pre as (
-                    select c1.operativo, var_name, c0.unidad_analisis, tipovar, orden_total, c1.id_casillero
-                        from casilleros c1, lateral casilleros_recursivo(operativo, id_casillero),
-                            (select operativo, id_casillero,unidad_analisis from casilleros where operativo ='REPSIC' and tipoc='F') c0
-                        where c1.operativo =c0.operativo and ultimo_ancestro = c0.id_casillero and c1.tipovar is not null
-                        order by orden_total
-                )
-                INSERT INTO varcal.variables_opciones(
-                        operativo, variable, opcion, nombre, orden)
-                  select op.operativo, pre.var_name, casillero::integer,op.nombre, orden
-                    from  pre join casilleros op on pre.operativo=op.operativo and pre.id_casillero=op.padre 
-                    where pre.operativo=$1
-                    order by orden_total, orden`, [parameters.operativo]).execute();
-            /* -------------- fin ESTO SE HACE UNA SOLA VEZ --------------------------------------------- */
             var drops = [];
             var creates = [];
             var inserts = [];
             var allPrefixedPks = {};
             var tableDefs = {};
-            var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) 
-                    FROM meta.tipovar                    
-            `).fetchUniqueValue();
+            var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) FROM tipovar`).fetchUniqueValue();
             var typeNameTipoVar = resTypeNameTipoVar.value;
             // var resultUA = await context.client.query(`SELECT 
             //        /* pk_padre debe ser el primer campo */
@@ -169,10 +131,10 @@ var ProceduresVarCal = [
             `, [operativo]).fetchAll();
             var estructuraParaGenerar = await be.procedure['definicion_estructural/armar'].coreFunction(context, { operativo });
             resultUA.rows.forEach(function (row) {
-                var estParaGen = estructuraParaGenerar.tables[row.unidad_analisis];
-                var tableName = estParaGen.target;
+                var estParaGenTabla = estructuraParaGenerar.tables[row.unidad_analisis];
+                var tableName = estParaGenTabla.target;
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
-                var broDef = be.tableStructures[estParaGen.sourceBro](be.getContextForDump());
+                var broDef = be.tableStructures[estParaGenTabla.sourceBro](be.getContextForDump());
                 var primaryKey = row.pk_padre.concat(row.pk_agregada);
                 primaryKey.unshift('operativo'); // GENE              
                 var prefixedPks = primaryKey.map((pk) => row.unidad_analisis + '.' + pk);
@@ -188,9 +150,9 @@ var ProceduresVarCal = [
                     editable: isAdmin,
                     primaryKey: primaryKey,
                     foreignKeys: [
-                        { references: estParaGen.sourceBro, fields: primaryKey, onDelete: 'cascade', displayAllFields: true }
+                        { references: estParaGenTabla.sourceBro, fields: primaryKey, onDelete: 'cascade', displayAllFields: true }
                     ],
-                    detailTables: estParaGen.detailTables,
+                    detailTables: estParaGenTabla.detailTables,
                     sql: {
                         skipEnance: true,
                         isReferable: true
@@ -201,7 +163,7 @@ var ProceduresVarCal = [
                 };
                 var pkString = primaryKey.join(', ');
                 inserts.push("INSERT INTO " + db.quoteIdent(tableName) + " (" + pkString + ") " +
-                    "SELECT " + pkString + " FROM " + estParaGen.sourceBro + ' ' + estParaGen.sourceJoin + ";");
+                    "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";");
             });
             var sqls = await be.dumpDbSchemaPartial(tableDefs, {});
             creates = creates.concat(sqls.mainSql).concat(sqls.enancePart);
