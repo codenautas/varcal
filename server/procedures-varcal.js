@@ -4,39 +4,6 @@ const VarCal = require("./var-cal");
 const fs = require("fs-extra");
 const likear = require("like-ar");
 const operativo = 'REPSIC';
-// const estructuraParaGenerar: VarCal.DefinicionEstructural = {
-//     tables: {
-//         grupo_personas: {
-//             target: 'grupo_personas_calc',
-//             sourceBro: 'grupo_personas',
-//             pkString: 'operativo,id_caso',
-//             sourceJoin: '',
-//             where: 'grupo_personas.operativo = grupo_personas_calc.operativo and grupo_personas.id_caso = grupo_personas_calc.id_caso',
-//             aliasAgg: 'grupo_personas_agg',
-//             sourceAgg: 'grupo_personas_calc',
-//             whereAgg: {},
-//             detailTables: [
-//                 {
-//                     table: 'personas_calc',
-//                     fields: ["operativo", "id_caso"],
-//                     abr: "p"
-//                 }
-//             ],
-//         },
-//         personas: {
-//             target: 'personas_calc',
-//             sourceBro: 'personas',
-//             pkString: 'operativo, id_caso, p0',
-//             sourceJoin: 'inner join grupo_personas using (operativo, id_caso)',
-//             where: 'personas.operativo = personas_calc.operativo and personas.id_caso = personas_calc.id_caso and personas.p0 = personas_calc.p0',
-//             aliasAgg: 'personas_agg',
-//             sourceAgg: 'personas_calc inner join personas ON personas_calc.operativo=personas.operativo and personas_calc.id_caso=personas.id_caso and personas_calc.p0=personas.p0',
-//             whereAgg: {
-//                 grupo_personas: 'personas_calc.operativo = grupo_personas.operativo and personas_calc.id_caso = grupo_personas.id_caso'
-//             },
-//         }
-//     }
-// }
 var ProceduresVarCal = [
     {
         action: 'definicion_estructural/armar',
@@ -117,17 +84,23 @@ var ProceduresVarCal = [
             var tableDefs = {};
             var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) FROM tipovar`).fetchUniqueValue();
             var typeNameTipoVar = resTypeNameTipoVar.value;
-            // var resultUA = await context.client.query(`SELECT 
-            //        /* pk_padre debe ser el primer campo */
-            //        ${be.sqls.exprFieldUaPkPadre} as pk_padre, ua.*,
-            //        (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
-            //     FROM unidad_analisis ua
-            //     WHERE operativo=$1
-            //     ORDER BY 1
-            // `, [operativo]).fetchAll();
-            var resultUA = await context.client.query(`SELECT *
-            FROM unidad_analisis ua
-            WHERE operativo=$1
+            this.sqls = {
+                exprFieldUaPkPadre: `
+                coalesce((
+                            with recursive uas(operativo, profundidad, padre, pk) as (
+                              select ua.operativo, 1 as profundidad, ua.padre, null as pk
+                            union all
+                              select uas.operativo, profundidad+1, p.padre, p.pk_agregada
+                                from uas left join unidad_analisis p on p.unidad_analisis = uas.padre and p.operativo = uas.operativo
+                                where p.unidad_analisis is not null
+                            ) select array_agg(pk order by profundidad desc) from uas where pk is not null
+                          ),array[]::text[])`
+            };
+            var resultUA = await context.client.query(`
+            select *, ${this.sqls.exprFieldUaPkPadre} as pk_padre,
+              (select jsonb_agg(to_jsonb(h.*)) from unidad_analisis h where ua.unidad_analisis=h.padre ) as details
+              from unidad_analisis ua
+              where operativo = $1
             `, [operativo]).fetchAll();
             var estructuraParaGenerar = await be.procedure['definicion_estructural/armar'].coreFunction(context, { operativo });
             resultUA.rows.forEach(function (row) {
@@ -136,7 +109,7 @@ var ProceduresVarCal = [
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
                 var broDef = be.tableStructures[estParaGenTabla.sourceBro](be.getContextForDump());
                 var primaryKey = row.pk_padre.concat(row.pk_agregada);
-                primaryKey.unshift('operativo'); // GENE              
+                primaryKey.unshift('operativo'); //TODO: DESHARDCODEAR pk
                 var prefixedPks = primaryKey.map((pk) => row.unidad_analisis + '.' + pk);
                 allPrefixedPks[row.unidad_analisis] = {
                     pks: prefixedPks,
