@@ -13,7 +13,6 @@
     "unlogged"
   ],
   "dependencies": {
-    "backend-plus": "~0.21.13",
     "expre-parser": "~0.1.10",
     "mini-tools": "~1.0.1",
     "operativos": "~0.1.12",
