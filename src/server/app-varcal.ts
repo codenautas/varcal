@@ -1,21 +1,15 @@
 "use strict";
 
-//Imports que no deberián estar, los agregamos porque sino tira error
-// tslint:disable TS6133
-import * as pgPromise from "pg-promise-strict";
-// tslint:disable-next-line:TS6133.
-import * as express from "express";
-
 import * as operativos from "operativos";
 import {AppOperativos} from "operativos";
 
 import {ProceduresVarCal} from "./procedures-varcal";
 import { alias } from "./table-alias";
+import { personas } from "./table-personas";
+import { grupo_personas } from "./table-grupo_personas";
 
 export * from './types-varcal';
-
 export type Constructor<T> = new(...args: any[]) => T;
-
 export function emergeAppVarCal<T extends Constructor<InstanceType<typeof AppOperativos>>>(Base:T){
     
     return class AppVarCal extends Base{
@@ -40,7 +34,7 @@ export function emergeAppVarCal<T extends Constructor<InstanceType<typeof AppOpe
         getMenu():operativos.MenuDefinition{
             //TODO: es igual que en datos-ext llevarlo a operativos
             let myMenuPart:operativos.MenuInfo[]=[
-                {menuType:'proc', name:'generar', proc:'origenes/generar'},
+                {menuType:'proc', name:'generar', proc:'calculadas/generar'},
                 {menuType:'table', name:'alias'},
             ];
             let menu = {menu: super.getMenu().menu.concat(myMenuPart)}
@@ -51,6 +45,8 @@ export function emergeAppVarCal<T extends Constructor<InstanceType<typeof AppOpe
             super.prepareGetTables();
             this.getTableDefinition={
                 ...this.getTableDefinition,
+                personas,
+                grupo_personas,
                 alias
             }
         }

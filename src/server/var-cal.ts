@@ -54,7 +54,7 @@ export type BloqueVariablesGenerables = {
 export type DefinicionEstructuralTabla = {
     target?: string;
     sourceBro?: string;
-    pkString?:string;
+    pks?:string[];
     sourceJoin?: string;
     where?: string;
     aliasAgg?: string;
@@ -171,7 +171,7 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     let aliasLeftJoins = '';
     likear(aliasesUsados).forEach((aliasVars,aliasName) => {
         let alias = defEst.aliases[aliasName];
-        let selectFieldsAlias=defEst.tables[alias.tabla_datos].pkString.split(', ').concat([...aliasVars]).join(', ');
+        let selectFieldsAlias=defEst.tables[alias.tabla_datos].pks.concat([...aliasVars]).join(', ');
         if (alias) {
             aliasLeftJoins +=
 `

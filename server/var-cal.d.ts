@@ -40,7 +40,7 @@ export declare type BloqueVariablesGenerables = {
 export declare type DefinicionEstructuralTabla = {
     target?: string;
     sourceBro?: string;
-    pkString?: string;
+    pks?: string[];
     sourceJoin?: string;
     where?: string;
     aliasAgg?: string;
@@ -67,6 +67,7 @@ export interface VariablesDefinidas {
 export interface Aliases {
     [key: string]: typesVarcal.AliasDefEst;
 }
+export declare function generateConditions(left: string, rigth: string, fields: string[]): string;
 export declare function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL;
 export declare function funcionGeneradora(definiciones: BloqueVariablesGenerables[], parametros: ParametrosGeneracion, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL;
 export declare function getInsumos(expression: string): ExpresionParser.Insumos;

@@ -48,7 +48,7 @@ var ProceduresVarCal = [
                 let tDefEst:VarCal.DefinicionEstructuralTabla = {
                     sourceBro : tua,
                     target: tua + VarCal.sufijo_tabla_calculada,
-                    pkString : table.pk_arr.join(', '),
+                    pks : table.pk_arr,
                     aliasAgg : tua + VarCal.sufijo_agregacion,
                 }
                 tDefEst.where = VarCal.generateConditions(tDefEst.sourceBro, tDefEst.target, table.pk_arr);
@@ -59,8 +59,8 @@ var ProceduresVarCal = [
                     // sourceAgg: 'personas_calc inner join personas ON personas_calc.operativo=personas.operativo and personas_calc.id_caso=personas.id_caso and personas_calc.p0=personas.p0',
                     tDefEst.sourceAgg = tDefEst.target + ` inner join ${tua} ON ` + VarCal.generateConditions(tDefEst.target, tua, table.pk_arr);
 
-                    //calculo pks del padre
-                    let pksPadre: string[] = table.pk_arr;
+                    //calculo pks del padre sacando de la lista completa de pks las agregadas por esta tabla hija
+                    let pksPadre: string[] = table.pk_arr.slice(); //copia por valor para no modificar la lista de pks completa
                     table.pk_agregada.split(',').forEach(pkAgregada => {
                         let index = pksPadre.indexOf(pkAgregada);
                         if (index){
@@ -110,22 +110,8 @@ var ProceduresVarCal = [
             var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) FROM tipovar`).fetchUniqueValue();
             var typeNameTipoVar = resTypeNameTipoVar.value;
 
-            this.sqls={
-                exprFieldUaPkPadre: `
-                coalesce((
-                    with recursive uas(operativo, profundidad, padre, pk) as (
-                        select ua.operativo, 1 as profundidad, ua.padre, null as pk
-                    union all
-                        select uas.operativo, profundidad+1, p.padre, p.pk_agregada
-                        from uas left join unidad_analisis p on p.unidad_analisis = uas.padre and p.operativo = uas.operativo
-                        where p.unidad_analisis is not null
-                    ) select array_agg(pk order by profundidad desc) from uas where pk is not null
-                    ),array[]::text[])`
-            }
-
             var resultUA = await context.client.query(`
-            select *, ${this.sqls.exprFieldUaPkPadre} as pk_padre,
-              (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
+            select *, (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
               from unidad_analisis ua
               where operativo = $1
             `, [operativo]).fetchAll();
@@ -137,9 +123,8 @@ var ProceduresVarCal = [
                 var tableName = estParaGenTabla.target;
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
                 var broDef = (<operativos.TableDefinitionFunction>be.tableStructures[estParaGenTabla.sourceBro])(be.getContextForDump())
-                var primaryKey = row.pk_padre.concat(row.pk_agregada);
-                primaryKey.unshift('operativo'); //TODO: DESHARDCODEAR pk
-                var prefixedPks = primaryKey.map((pk:string) => row.unidad_analisis + '.' + pk);
+                var pks = estParaGenTabla.pks;
+                var prefixedPks = pks.map((pk:string) => row.unidad_analisis + '.' + pk);
                 allPrefixedPks[row.unidad_analisis] = {
                     pks: prefixedPks,
                     pksString: prefixedPks.join(', ')
@@ -152,9 +137,9 @@ var ProceduresVarCal = [
                             : []
                     ),
                     editable: isAdmin,
-                    primaryKey: primaryKey,
+                    primaryKey: pks,
                     foreignKeys: [
-                        { references: estParaGenTabla.sourceBro, fields: primaryKey, onDelete: 'cascade', displayAllFields: true }
+                        { references: estParaGenTabla.sourceBro, fields: pks, onDelete: 'cascade', displayAllFields: true }
                     ],
                     detailTables: estParaGenTabla.detailTables,
                     sql: {
@@ -165,7 +150,7 @@ var ProceduresVarCal = [
                 be.tableStructures[tableName] = tableDefs[tableName] = function (context: operativos.Context):TableDefinition {
                     return context.be.tableDefAdapt(tableDefParteCtte, context);
                 };
-                var pkString = primaryKey.join(', ');
+                var pkString = pks.join(', ');
                 inserts.push(
                     "INSERT INTO " + db.quoteIdent(tableName) + " (" + pkString + ") " +
                     "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";"

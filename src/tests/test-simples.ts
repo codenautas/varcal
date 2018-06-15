@@ -118,7 +118,7 @@ describe("varcal", function () {
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 'personas',
                             where: 'personas_calc.id = personas.id and personas_calc.pk0=t0.pk0',
-                            pkString:'operativo, id_caso'
+                            pks:['operativo', 'id_caso']
                         }
                     }
                 })
