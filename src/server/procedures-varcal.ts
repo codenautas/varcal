@@ -51,14 +51,14 @@ var ProceduresVarCal = [
                     pkString : table.pk_arr.join(', '),
                     aliasAgg : tua + VarCal.sufijo_agregacion,
                 }
-                tDefEst.where = table.pk_arr.map((pk: string) =>
-                    `${tDefEst.sourceBro}.${pk} = ${tDefEst.target}.${pk}`
-                ).join(' and ');
-                tDefEst.sourceAgg = tDefEst.target;
-                
+                tDefEst.where = VarCal.generateConditions(tDefEst.sourceBro, tDefEst.target, table.pk_arr);
+              
                 tDefEst.whereAgg = {};
                 tDefEst.sourceJoin = '';
                 if (table.padre){
+                    // sourceAgg: 'personas_calc inner join personas ON personas_calc.operativo=personas.operativo and personas_calc.id_caso=personas.id_caso and personas_calc.p0=personas.p0',
+                    tDefEst.sourceAgg = tDefEst.target + ` inner join ${tua} ON ` + VarCal.generateConditions(tDefEst.target, tua, table.pk_arr);
+
                     //calculo pks del padre
                     let pksPadre: string[] = table.pk_arr;
                     table.pk_agregada.split(',').forEach(pkAgregada => {
@@ -68,11 +68,11 @@ var ProceduresVarCal = [
                         }
                     });
                     // Calculo whereAgg
-                    tDefEst.whereAgg[table.padre] = pksPadre.map((pk: string) =>
-                        `${table.padre}.${pk} = ${tDefEst.target}.${pk}`
-                    ).join(' and ');
+                    tDefEst.whereAgg[table.padre] = VarCal.generateConditions(table.padre, tDefEst.target, pksPadre);
                     // Calculo sourceJoin
                     tDefEst.sourceJoin = `inner join ${table.padre} using (${pksPadre.join(', ')})`;
+                }else {
+                    tDefEst.sourceAgg = tDefEst.target;
                 }
                 tDefEst.detailTables= [];
                 
@@ -113,19 +113,19 @@ var ProceduresVarCal = [
             this.sqls={
                 exprFieldUaPkPadre: `
                 coalesce((
-                            with recursive uas(operativo, profundidad, padre, pk) as (
-                              select ua.operativo, 1 as profundidad, ua.padre, null as pk
-                            union all
-                              select uas.operativo, profundidad+1, p.padre, p.pk_agregada
-                                from uas left join unidad_analisis p on p.unidad_analisis = uas.padre and p.operativo = uas.operativo
-                                where p.unidad_analisis is not null
-                            ) select array_agg(pk order by profundidad desc) from uas where pk is not null
-                          ),array[]::text[])`
+                    with recursive uas(operativo, profundidad, padre, pk) as (
+                        select ua.operativo, 1 as profundidad, ua.padre, null as pk
+                    union all
+                        select uas.operativo, profundidad+1, p.padre, p.pk_agregada
+                        from uas left join unidad_analisis p on p.unidad_analisis = uas.padre and p.operativo = uas.operativo
+                        where p.unidad_analisis is not null
+                    ) select array_agg(pk order by profundidad desc) from uas where pk is not null
+                    ),array[]::text[])`
             }
 
             var resultUA = await context.client.query(`
             select *, ${this.sqls.exprFieldUaPkPadre} as pk_padre,
-              (select jsonb_agg(to_jsonb(h.*)) from unidad_analisis h where ua.unidad_analisis=h.padre ) as details
+              (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
               from unidad_analisis ua
               where operativo = $1
             `, [operativo]).fetchAll();

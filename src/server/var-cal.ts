@@ -123,6 +123,12 @@ function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDef
     });
 }
 
+export function generateConditions (left:string, rigth:string, fields: string[]){
+    return fields.map((field: string) =>
+        `${left}.${field} = ${rigth}.${field}`
+    ).join(' and ');
+}
+
 export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL {
     var txtMargen = Array(margen + 1).join(' ');
     let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla]) ? defEst.tables[definicion.tabla] : null;
