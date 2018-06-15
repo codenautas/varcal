@@ -39,7 +39,6 @@ var ProceduresVarCal = [
                 tDefEst.whereAgg = {};
                 tDefEst.sourceJoin = '';
                 if (table.padre) {
-                    // sourceAgg: 'personas_calc inner join personas ON personas_calc.operativo=personas.operativo and personas_calc.id_caso=personas.id_caso and personas_calc.p0=personas.p0',
                     tDefEst.sourceAgg = tDefEst.target + ` inner join ${tua} ON ` + VarCal.generateConditions(tDefEst.target, tua, table.pk_arr);
                     //calculo pks del padre sacando de la lista completa de pks las agregadas por esta tabla hija
                     let pksPadre = table.pk_arr.slice(); //copia por valor para no modificar la lista de pks completa
@@ -89,8 +88,7 @@ var ProceduresVarCal = [
             var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) FROM tipovar`).fetchUniqueValue();
             var typeNameTipoVar = resTypeNameTipoVar.value;
             var resultUA = await context.client.query(`
-            select *,
-              (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
+            select *, (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
               from unidad_analisis ua
               where operativo = $1
             `, [operativo]).fetchAll();

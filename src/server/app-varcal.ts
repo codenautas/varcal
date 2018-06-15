@@ -5,8 +5,6 @@ import {AppOperativos} from "operativos";
 
 import {ProceduresVarCal} from "./procedures-varcal";
 import { alias } from "./table-alias";
-import { personas } from "./table-personas";
-import { grupo_personas } from "./table-grupo_personas";
 
 export * from './types-varcal';
 export type Constructor<T> = new(...args: any[]) => T;
@@ -45,8 +43,6 @@ export function emergeAppVarCal<T extends Constructor<InstanceType<typeof AppOpe
             super.prepareGetTables();
             this.getTableDefinition={
                 ...this.getTableDefinition,
-                personas,
-                grupo_personas,
                 alias
             }
         }

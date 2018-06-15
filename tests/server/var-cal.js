@@ -46,6 +46,10 @@ function prefijarExpresion(v, variablesDefinidas) {
         }
     });
 }
+function generateConditions(left, rigth, fields) {
+    return fields.map((field) => `${left}.${field} = ${rigth}.${field}`).join(' and ');
+}
+exports.generateConditions = generateConditions;
 function sentenciaUpdate(definicion, margen, defEst, variablesDefinidas) {
     var txtMargen = Array(margen + 1).join(' ');
     let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla]) ? defEst.tables[definicion.tabla] : null;
@@ -84,7 +88,7 @@ function sentenciaUpdate(definicion, margen, defEst, variablesDefinidas) {
     let aliasLeftJoins = '';
     likear(aliasesUsados).forEach((aliasVars, aliasName) => {
         let alias = defEst.aliases[aliasName];
-        let selectFieldsAlias = defEst.tables[alias.tabla_datos].pkString.split(', ').concat([...aliasVars]).join(', ');
+        let selectFieldsAlias = defEst.tables[alias.tabla_datos].pks.concat([...aliasVars]).join(', ');
         if (alias) {
             aliasLeftJoins +=
                 `

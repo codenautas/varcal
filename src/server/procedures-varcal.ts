@@ -56,7 +56,6 @@ var ProceduresVarCal = [
                 tDefEst.whereAgg = {};
                 tDefEst.sourceJoin = '';
                 if (table.padre){
-                    // sourceAgg: 'personas_calc inner join personas ON personas_calc.operativo=personas.operativo and personas_calc.id_caso=personas.id_caso and personas_calc.p0=personas.p0',
                     tDefEst.sourceAgg = tDefEst.target + ` inner join ${tua} ON ` + VarCal.generateConditions(tDefEst.target, tua, table.pk_arr);
 
                     //calculo pks del padre sacando de la lista completa de pks las agregadas por esta tabla hija
