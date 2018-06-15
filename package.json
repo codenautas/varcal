@@ -13,18 +13,18 @@
     "unlogged"
   ],
   "dependencies": {
-    "backend-plus": "~0.21.6",
+    "backend-plus": "~0.21.13",
     "expre-parser": "~0.1.10",
     "mini-tools": "~1.0.1",
-    "operativos": "~0.1.11",
+    "operativos": "~0.1.12",
     "pg-promise-strict": "~0.4.7",
     "pg-triggers": "^0.2.1"
   },
   "devDependencies": {
     "types.d.ts": "^0.1.25",
-    "@types/node": "~10.3.1",
-    "@types/mocha": "~5.2.1",
-    "@types/fs-extra": "^5.0.2",
+    "@types/node": "~10.3.3",
+    "@types/mocha": "~5.2.2",
+    "@types/fs-extra": "^5.0.3",
     "discrepances": "~0.2.2",
     "mocha": "^5.2.0"
   },
