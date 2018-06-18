@@ -3,6 +3,7 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
+const operativos = require("operativos");
 const procedures_varcal_1 = require("./procedures-varcal");
 const table_alias_1 = require("./table-alias");
 __export(require("./types-varcal"));
@@ -41,4 +42,5 @@ function emergeAppVarCal(Base) {
     };
 }
 exports.emergeAppVarCal = emergeAppVarCal;
+exports.AppVarCal = emergeAppVarCal(operativos.emergeAppOperativos(operativos.AppBackend));
 //# sourceMappingURL=app-varcal.js.map
