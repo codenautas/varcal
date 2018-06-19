@@ -1,5 +1,4 @@
-/// <reference path="../node_modules/types.d.ts/modules/pg-promise-strict/index.d.ts" />
-/// <reference types="pg-promise-strict" />
+/// <reference path="../node_modules/pg-promise-strict/pg-promise-strict.d.ts" />
 import * as operativos from "operativos";
 import { AppOperativos } from "operativos";
 export * from './types-varcal';

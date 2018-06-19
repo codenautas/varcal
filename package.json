@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
   "main": "server/app-varcal.js",
@@ -14,16 +14,18 @@
   ],
   "dependencies": {
     "expre-parser": "~0.1.10",
-    "operativos": "~0.1.12",
-    "pg-triggers": "^0.2.1"
+    "operativos": "~0.1.14",
+    "pg-triggers": "^0.2.1",
+    "pg-promise-strict": "~0.4.9",
+    "like-ar": "~0.2.6"
   },
   "devDependencies": {
-    "types.d.ts": "^0.1.25",
-    "@types/node": "~10.3.3",
+    "types.d.ts": "~0.1.28",
     "@types/mocha": "~5.2.2",
     "@types/fs-extra": "^5.0.3",
-    "mini-tools": "~1.0.1",
-    "pg-promise-strict": "~0.4.7",
+    "@types/node": "~10.3.4",
+    "@types/express": "~4.16.0",
+    "mini-tools": "~1.0.2",
     "discrepances": "~0.2.2",
     "mocha": "^5.2.0"
   },
