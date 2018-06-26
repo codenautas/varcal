@@ -50,4 +50,3 @@ export function emergeAppVarCal<T extends Constructor<InstanceType<typeof AppOpe
 }
 
 export var AppVarCal = emergeAppVarCal(operativos.emergeAppOperativos(operativos.AppBackend));
-export type AppVarCalType = typeof AppVarCal;
