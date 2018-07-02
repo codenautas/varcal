@@ -32,7 +32,7 @@ export function emergeAppVarCal<T extends Constructor<InstanceType<typeof AppOpe
         getMenu():operativos.MenuDefinition{
             //TODO: es igual que en datos-ext llevarlo a operativos
             let myMenuPart:operativos.MenuInfo[]=[
-                {menuType:'proc', name:'generar', proc:'calculadas/generar'},
+                {menuType:'proc', name:'generar_calculadas',label:'Generar Calculadas', proc:'calculadas/generar'},
                 {menuType:'table', name:'alias'},
             ];
             let menu = {menu: super.getMenu().menu.concat(myMenuPart)}

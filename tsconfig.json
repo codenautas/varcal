@@ -7,7 +7,7 @@
         "lib":["es2015"],
         "target": "es2017",
         "module": "umd",
-        "typeRoots" : ["node_modules/@types", "node_modules/types.d.ts/modules"],
+        "typeRoots" : ["node_modules/@types"],
         "skipLibCheck": true, // para que no chequee los tipos de node_modules
         "noImplicitAny": true,
         "alwaysStrict": true,
