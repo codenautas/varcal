@@ -1,0 +1,12 @@
+.git
+.vscode/
+
+local-*
+*-local.*
+
+# Don't publish Typescript code
+src/
+
+# Always publish generated files (.js, .map. .d.ts)
+!server/
+!client/
