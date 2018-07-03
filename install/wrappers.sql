@@ -1,6 +1,4 @@
-﻿set search_path=varcal;
-set role to varcal_owner;
-
+﻿
 create or replace function generate_generics(p_tipo text, p_neutro text) returns text
   language plpgsql
 as
