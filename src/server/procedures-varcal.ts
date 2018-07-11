@@ -4,7 +4,7 @@ import * as VarCal from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition, Variable, VariableOpcion, UnidadDeAnalisis} from "operativos";
+import {TableDefinition, Variable, VariableOpcion, UnidadDeAnalisis, generateBaseTableDef, loadTableDef, TablaDatos} from "operativos";
 import { AliasDefEst } from "./types-varcal";
 
 export interface coreFunctionParameters{
@@ -96,7 +96,6 @@ var ProceduresVarCal = [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
         coreFunction: async function (context: operativos.ProcedureContext, parameters: coreFunctionParameters) {
-            parameters.operativo = 'REPSIC';
             var be: operativos.AppBackend = context.be;
             var db = be.db;
             var drops:string[]=[];
@@ -106,55 +105,39 @@ var ProceduresVarCal = [
                 [key:string]: {pks:string[], pksString: string}
             } = {};
             var tableDefs:operativos.TableDefinitions = {};
-            var resTypeNameTipoVar = await context.client.query(`SELECT jsonb_object(array_agg(tipovar), array_agg(type_name)) FROM tipovar`).fetchUniqueValue();
-            var typeNameTipoVar = resTypeNameTipoVar.value;
 
-            var resultUA = await context.client.query(`
-            select *, (select jsonb_agg(to_jsonb(v.*)) from variables v where v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.clase='calculada' and v.activa) as variables
-              from unidad_analisis ua
-              where operativo = $1
-            `, [operativo]).fetchAll();
-            
+            var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [operativo]).fetchAll();
             var estructuraParaGenerar: VarCal.DefinicionEstructural = await (be.procedure['definicion_estructural/armar'].coreFunction(context, {operativo}) as Promise<VarCal.DefinicionEstructural>)
-
-            resultUA.rows.forEach(function (row) {
-                var estParaGenTabla:VarCal.DefinicionEstructuralTabla = estructuraParaGenerar.tables[row.unidad_analisis];
-                var tableName = estParaGenTabla.target;
-                drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
-                var broDef = (<operativos.TableDefinitionFunction>be.tableStructures[estParaGenTabla.sourceBro])(be.getContextForDump())
-                var pks = estParaGenTabla.pks;
-                var prefixedPks = pks.map((pk:string) => row.unidad_analisis + '.' + pk);
-                allPrefixedPks[row.unidad_analisis] = {
-                    pks: prefixedPks,
-                    pksString: prefixedPks.join(', ')
-                }
-                var isAdmin = context.user.rol === 'admin';
-                var tableDefParteCtte:TableDefinition = {
-                    name: tableName,
-                    fields: broDef.fields.filter(field => field.isPk).concat(
-                        row.variables ? (row.variables.map((v: operativos.Variable) => { return { name: v.variable, typeName: typeNameTipoVar[v.tipovar], editable: false } }))
-                            : []
-                    ),
-                    editable: isAdmin,
-                    primaryKey: pks,
-                    foreignKeys: [
-                        { references: estParaGenTabla.sourceBro, fields: pks, onDelete: 'cascade', displayAllFields: true }
-                    ],
-                    detailTables: estParaGenTabla.detailTables,
-                    sql: {
-                        skipEnance: true,
-                        isReferable: true
+            
+            Promise.all(
+                resultUA.rows.map(row => generateBaseTableDef(context.client, <TablaDatos>{operativo:parameters.operativo, tabla_datos: row.unidad_analisis}, VarCal.sufijo_tabla_calculada))
+            ).then((tdefs: TableDefinition[]) => {
+                tdefs.forEach(function(tdef:TableDefinition){
+                    //saco el sufijo a tdef.name para obetener la unidad de analisis origen
+                    var tableName = tdef.name;
+                    let unidadAnalisis = tableName.replace(VarCal.sufijo_tabla_calculada, '');
+                    var estParaGenTabla:VarCal.DefinicionEstructuralTabla = estructuraParaGenerar.tables[unidadAnalisis];
+                    
+                    drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
+                    var pks = estParaGenTabla.pks;
+                    var prefixedPks = pks.map((pk:string) => unidadAnalisis + '.' + pk);
+                    allPrefixedPks[unidadAnalisis] = {
+                        pks: prefixedPks,
+                        pksString: prefixedPks.join(', ')
                     }
-                }
-                be.tableStructures[tableName] = tableDefs[tableName] = function (context: operativos.Context):TableDefinition {
-                    return context.be.tableDefAdapt(tableDefParteCtte, context);
-                };
-                var pkString = pks.join(', ');
-                inserts.push(
-                    "INSERT INTO " + db.quoteIdent(tableName) + " (" + pkString + ") " +
-                    "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";"
-                )
-            });
+                    var pkString = pks.join(', ');
+                    inserts.push(
+                        "INSERT INTO " + db.quoteIdent(tableName) + " (" + pkString + ") " +
+                        "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";"
+                    )
+
+                    tdef.foreignKeys = [{ references: estParaGenTabla.sourceBro, fields: pks, onDelete: 'cascade', displayAllFields: true }];
+                    tdef.detailTables = estParaGenTabla.detailTables;
+                    loadTableDef(tdef, be);
+                    tableDefs[tableName] = be.tableStructures[tableName];
+                });
+            })
+
             var sqls = await be.dumpDbSchemaPartial(tableDefs, {});
             creates = creates.concat(sqls.mainSql).concat(sqls.enancePart);
             var allSqls = drops.concat(creates).concat(inserts)

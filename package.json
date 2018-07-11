@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
   "main": "server/app-varcal.js",
@@ -14,13 +14,11 @@
   ],
   "dependencies": {
     "expre-parser": "~0.1.16",
-    "operativos": "~0.1.18",
-    "pg-triggers": "^0.2.1",
-    "like-ar": "~0.2.7"
+    "operativos": "~0.1.19"
   },
   "devDependencies": {
-    "pg-promise-strict": "~0.4.12",
-    "@types/fs-extra": "^5.0.3",
+    "pg-promise-strict": "~0.4.13",
+    "@types/fs-extra": "^5.0.4",
     "@types/mocha": "~5.2.4",
     "mini-tools": "~1.0.2",
     "discrepances": "~0.2.3",
@@ -34,7 +32,8 @@
     "test": "(npm run prepublish || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks tests/tests/*.js",
     "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks tests/tests/",
     "start": "node server/server-varcal.js",
-    "prepublish": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-tests.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")"
+    "prepublish": "npm run build",
+    "build": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-tests.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")"
   },
   "qa-control": {
     "package-version": "0.3.0",
