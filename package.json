@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "license": "MIT",
   "main": "server/app-varcal.js",
@@ -14,7 +14,7 @@
   ],
   "dependencies": {
     "expre-parser": "~0.1.16",
-    "operativos": "~0.1.19"
+    "operativos": "~0.1.20"
   },
   "devDependencies": {
     "pg-promise-strict": "~0.4.13",

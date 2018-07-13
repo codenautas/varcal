@@ -4,8 +4,9 @@ import * as VarCal from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition, Variable, VariableOpcion, UnidadDeAnalisis, generateBaseTableDef, loadTableDef, TablaDatos} from "operativos";
-import { AliasDefEst } from "./types-varcal";
+import {TableDefinition, Variable, VariableOpcion} from "operativos";
+import { ProcedureContext } from "./types-varcal";
+import { VarCalType } from "./app-varcal";
 
 export interface coreFunctionParameters{
     operativo: string
@@ -13,90 +14,15 @@ export interface coreFunctionParameters{
 
 export type CoreFunction = (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<VarCal.DefinicionEstructural>;
 
-const operativo = 'REPSIC';
 var ProceduresVarCal = [
-    {
-        action: 'definicion_estructural/armar',
-        parameters: [
-            {name:'operativo'     ,references:'operativos',  typeName:'text'},
-        ],
-        coreFunction: async function(context:operativos.ProcedureContext, parameters: coreFunctionParameters){
-            var sqlParams=[parameters.operativo];
-            var results={
-                aliases: await context.client.query(
-                    `Select alias, (to_jsonb(alias.*)) alias_def_est
-                    From alias
-                    Where operativo=$1`
-                    , sqlParams
-                ).fetchAll(),
-                tables: await context.client.query(
-                    `SELECT ua.*, to_jsonb(array_agg(v.variable order by v.orden)) pk_arr
-                    FROM unidad_analisis ua join variables v on v.operativo=ua.operativo and v.unidad_analisis=ua.unidad_analisis and v.es_pk
-                    where ua.operativo=$1
-                    group by ua.operativo, ua.unidad_analisis`
-                    , sqlParams
-                ).fetchAll()
-            };
-            let defEst: VarCal.DefinicionEstructural ={
-                aliases: {},
-                tables: {}
-            }
-            results.aliases.rows.forEach(function(a:{alias:string, alias_def_est:AliasDefEst}){ defEst.aliases[a.alias]=a.alias_def_est });
-            //falta trabajar results para obtener la pinta de  defEst
-            results.tables.rows.forEach(function(table: UnidadDeAnalisis & {pk_arr: string[]}){
-                let tua = table.unidad_analisis;
-                let tDefEst:VarCal.DefinicionEstructuralTabla = {
-                    sourceBro : tua,
-                    target: tua + VarCal.sufijo_tabla_calculada,
-                    pks : table.pk_arr,
-                    aliasAgg : tua + VarCal.sufijo_agregacion,
-                }
-                tDefEst.where = VarCal.generateConditions(tDefEst.sourceBro, tDefEst.target, table.pk_arr);
-              
-                tDefEst.whereAgg = {};
-                tDefEst.sourceJoin = '';
-                if (table.padre){
-                    tDefEst.sourceAgg = tDefEst.target + ` inner join ${tua} ON ` + VarCal.generateConditions(tDefEst.target, tua, table.pk_arr);
-
-                    //calculo pks del padre sacando de la lista completa de pks las agregadas por esta tabla hija
-                    let pksPadre: string[] = table.pk_arr.slice(); //copia por valor para no modificar la lista de pks completa
-                    table.pk_agregada.split(',').forEach(pkAgregada => {
-                        let index = pksPadre.indexOf(pkAgregada);
-                        if (index){
-                            pksPadre.splice(index, 1);
-                        }
-                    });
-                    // Calculo whereAgg
-                    tDefEst.whereAgg[table.padre] = VarCal.generateConditions(table.padre, tDefEst.target, pksPadre);
-                    // Calculo sourceJoin
-                    tDefEst.sourceJoin = `inner join ${table.padre} using (${pksPadre.join(', ')})`;
-                }else {
-                    tDefEst.sourceAgg = tDefEst.target;
-                }
-                tDefEst.detailTables= [];
-                
-                defEst.tables[tua] = tDefEst;
-            });
-            
-            //Seteo de detail tables a los padres de las tablas que tienen padre
-            results.tables.rows.filter(t => t.padre).forEach(function(table: UnidadDeAnalisis & {pk_arr: string[]}){
-                // TODO: completar la tabla hija
-                defEst.tables[table.padre].detailTables.push({
-                    table: table.unidad_analisis,
-                    fields: table.pk_arr,
-                    abr: table.unidad_analisis.substr(0,1).toUpperCase()
-                });
-            });
-            return defEst;
-        }
-    },
     {
         action: 'calculadas/generar',
         parameters: [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
-        coreFunction: async function (context: operativos.ProcedureContext, parameters: coreFunctionParameters) {
-            var be: operativos.AppBackend = context.be;
+        coreFunction: async function (context: ProcedureContext, parameters: coreFunctionParameters) {
+            var be: VarCalType = context.be as VarCalType;
+            let operativo = parameters.operativo;
             var db = be.db;
             var drops:string[]=[];
             var creates:string[]=[];
@@ -106,17 +32,16 @@ var ProceduresVarCal = [
             } = {};
             var tableDefs:operativos.TableDefinitions = {};
 
-            var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [operativo]).fetchAll();
-            var estructuraParaGenerar: VarCal.DefinicionEstructural = await (be.procedure['definicion_estructural/armar'].coreFunction(context, {operativo}) as Promise<VarCal.DefinicionEstructural>)
+            var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [parameters.operativo]).fetchAll();
             
-            Promise.all(
-                resultUA.rows.map(row => generateBaseTableDef(context.client, <TablaDatos>{operativo:parameters.operativo, tabla_datos: row.unidad_analisis}, VarCal.sufijo_tabla_calculada))
+            await Promise.all(
+                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis+VarCal.sufijo_tabla_calculada, unidad_analisis: row.unidad_analisis}))
             ).then((tdefs: TableDefinition[]) => {
                 tdefs.forEach(function(tdef:TableDefinition){
                     //saco el sufijo a tdef.name para obetener la unidad de analisis origen
                     var tableName = tdef.name;
                     let unidadAnalisis = tableName.replace(VarCal.sufijo_tabla_calculada, '');
-                    var estParaGenTabla:VarCal.DefinicionEstructuralTabla = estructuraParaGenerar.tables[unidadAnalisis];
+                    var estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEstructural.tables[unidadAnalisis];
                     
                     drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
                     var pks = estParaGenTabla.pks;
@@ -130,11 +55,8 @@ var ProceduresVarCal = [
                         "INSERT INTO " + db.quoteIdent(tableName) + " (" + pkString + ") " +
                         "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";"
                     )
-
-                    tdef.foreignKeys = [{ references: estParaGenTabla.sourceBro, fields: pks, onDelete: 'cascade', displayAllFields: true }];
-                    tdef.detailTables = estParaGenTabla.detailTables;
-                    loadTableDef(tdef, be);
-                    tableDefs[tableName] = be.tableStructures[tableName];
+                    
+                    tableDefs[tableName] = be.loadTableDef(tdef);
                 });
             })
 
@@ -186,12 +108,12 @@ var ProceduresVarCal = [
             likear(allPrefixedPks).forEach(function (prefixedPk, ua) {
                 prefixedPk.pks.forEach(pk => allVariables[pk] = { tabla: ua })
             });
-            var grupoVariables = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), estructuraParaGenerar);
+            var grupoVariables = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), be.defEstructural);
             var parametrosGeneracion = {
                 nombreFuncionGeneradora: 'gen_fun_var_calc',
                 esquema: be.config.db.schema,
             };
-            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, estructuraParaGenerar, allVariables);
+            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, be.defEstructural, allVariables);
             allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + be.config.db.schema + ';'].concat(allSqls).concat(funcionGeneradora, 'perform gen_fun_var_calc();', 'end\n$SQL_DUMP$');
             let localMiroPorAhora = './local-miro-por-ahora.sql';
             var now = new Date();
