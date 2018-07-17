@@ -1,6 +1,5 @@
 import * as ExpresionParser from 'expre-parser';
 import * as typesVarcal from "./types-varcal";
-export declare const sufijo_tabla_calculada: string;
 export declare const sufijo_agregacion: string;
 export { CompilerOptions } from 'expre-parser';
 export interface DefinicionVariable {

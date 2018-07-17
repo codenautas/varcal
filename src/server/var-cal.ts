@@ -4,8 +4,8 @@ import * as ExpresionParser from 'expre-parser';
 import * as likear          from 'like-ar';
 
 import * as typesVarcal from "./types-varcal";
+import { tiposTablaDato } from 'operativos';
 
-export const sufijo_tabla_calculada:string='_calc';
 export const sufijo_agregacion:string='_agg';
 
 export {CompilerOptions} from 'expre-parser';
@@ -109,7 +109,7 @@ function regexpReplace(guno:string, gdos:string, gtres:string, sourceStr:string,
 function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas){
     v.insumos.variables.forEach(varInsumo => {
         if ( ! hasTablePrefix(varInsumo) && ( ! v.insumos.funciones || v.insumos.funciones.indexOf(varInsumo) == -1) && variablesDefinidas[varInsumo]){
-            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? variablesDefinidas[varInsumo].tabla + sufijo_tabla_calculada : variablesDefinidas[varInsumo].tabla;
+            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? variablesDefinidas[varInsumo].tabla + tiposTablaDato.calculada : variablesDefinidas[varInsumo].tabla;
             let varWithPrefix = prefix + '.' + varInsumo;
 
             // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos

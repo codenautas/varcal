@@ -4,7 +4,7 @@ import * as VarCal from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition, Variable, VariableOpcion} from "operativos";
+import {TableDefinition, Variable, VariableOpcion, tiposTablaDato} from "operativos";
 import { ProcedureContext } from "./types-varcal";
 import { VarCalType } from "./app-varcal";
 
@@ -35,12 +35,12 @@ var procedures = [
             var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [parameters.operativo]).fetchAll();
             
             await Promise.all(
-                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis+VarCal.sufijo_tabla_calculada, unidad_analisis: row.unidad_analisis}))
+                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis, unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
             ).then((tdefs: TableDefinition[]) => {
                 tdefs.forEach(function(tdef:TableDefinition){
                     //saco el sufijo a tdef.name para obetener la unidad de analisis origen
                     var tableName = tdef.name;
-                    let unidadAnalisis = tableName.replace(VarCal.sufijo_tabla_calculada, '');
+                    let unidadAnalisis = tableName.replace(tiposTablaDato.calculada, '');
                     var estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEstructural.tables[unidadAnalisis];
                     
                     drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");

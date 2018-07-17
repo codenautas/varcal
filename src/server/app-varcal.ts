@@ -5,8 +5,8 @@ import * as operativos from "operativos";
 import {procedures} from "./procedures-varcal";
 import { alias } from "./table-alias";
 import { Client } from "pg-promise-strict";
-import { TablaDatos, UnidadDeAnalisis, Request, sufijoTablaDato } from "operativos";
-import { DefinicionEstructural, DefinicionEstructuralTabla, sufijo_tabla_calculada, sufijo_agregacion, generateConditions } from "./var-cal";
+import { TablaDatos, UnidadDeAnalisis, Request, tiposTablaDato } from "operativos";
+import { DefinicionEstructural, DefinicionEstructuralTabla, sufijo_agregacion, generateConditions } from "./var-cal";
 import { AliasDefEst } from "./types-varcal";
 
 
@@ -35,7 +35,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
         async generateBaseTableDef(client: Client, tablaDatos:TablaDatos){
             let td = await super.generateBaseTableDef(client, tablaDatos);
             //TODO: dejar de preguntar por el postfix agregar un campo "esCalculada" a tablaDatos 
-            if (tablaDatos.sufijo == sufijoTablaDato.calculada){
+            if (tablaDatos.tipo == tiposTablaDato.calculada){
                 let estParaGenTabla:DefinicionEstructuralTabla = this.defEstructural.tables[tablaDatos.unidad_analisis];
                 td.foreignKeys = [{ references: estParaGenTabla.sourceBro, fields: estParaGenTabla.pks, onDelete: 'cascade', displayAllFields: true }];
                 td.detailTables = estParaGenTabla.detailTables;
@@ -72,7 +72,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                 let tua = table.unidad_analisis;
                 let tDefEst:DefinicionEstructuralTabla = {
                     sourceBro : tua,
-                    target: tua + sufijo_tabla_calculada,
+                    target: tua + tiposTablaDato.calculada,
                     pks : table.pk_arr,
                     aliasAgg : tua + sufijo_agregacion,
                 }
