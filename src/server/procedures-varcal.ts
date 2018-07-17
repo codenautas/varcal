@@ -14,7 +14,7 @@ export interface coreFunctionParameters{
 
 export type CoreFunction = (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<VarCal.DefinicionEstructural>;
 
-var ProceduresVarCal = [
+var procedures = [
     {
         action: 'calculadas/generar',
         parameters: [
@@ -125,4 +125,4 @@ var ProceduresVarCal = [
     }
 ];
 
-export {ProceduresVarCal};
+export {procedures};
