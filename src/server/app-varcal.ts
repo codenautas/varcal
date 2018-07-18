@@ -87,7 +87,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                     let pksPadre: string[] = table.pk_arr.slice(); //copia por valor para no modificar la lista de pks completa
                     table.pk_agregada.split(',').forEach(pkAgregada => {
                         let index = pksPadre.indexOf(pkAgregada);
-                        if (index){
+                        if (index > -1){
                             pksPadre.splice(index, 1);
                         }
                     });

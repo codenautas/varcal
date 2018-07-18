@@ -35,7 +35,7 @@ var procedures = [
             var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [parameters.operativo]).fetchAll();
             
             await Promise.all(
-                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis, unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
+                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis+'_'+tiposTablaDato.calculada, unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
             ).then((tdefs: TableDefinition[]) => {
                 tdefs.forEach(function(tdef:TableDefinition){
                     //saco el sufijo a tdef.name para obetener la unidad de analisis origen

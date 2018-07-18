@@ -60,16 +60,16 @@ describe("varcal", function () {
                     insumos:{variables:['j']}
                 }]
             }, 2, {tables:{t1:{
-                    target: 't1_calc',
+                    target: 't1_calculada',
                     sourceJoin: 'inner join t0 using(pk0)',
                     sourceBro: 't1',
-                    where: 't1_calc.t1 = t1.t1 and t1_calc.pk0=t0.pk0',
+                    where: 't1_calculada.t1 = t1.t1 and t1_calculada.pk0=t0.pk0',
             }}},{
                 dato1:{tabla:'t1'},
                 dato2:{tabla:'t1', clase:'calculada'},
                 j:{tabla:'t1'},
             })
-            var sentenciaEsperada = '  UPDATE t1_calc\n    SET x = t1.dato1 * 2 + t1_calc.dato2,\n        pepe = f(t1.j)\n    FROM t1 inner join t0 using(pk0)\n    WHERE t1_calc.t1 = t1.t1 and t1_calc.pk0=t0.pk0';
+            var sentenciaEsperada = '  UPDATE t1_calculada\n    SET x = t1.dato1 * 2 + t1_calculada.dato2,\n        pepe = f(t1.j)\n    FROM t1 inner join t0 using(pk0)\n    WHERE t1_calculada.t1 = t1.t1 and t1_calculada.pk0=t0.pk0';
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
@@ -86,14 +86,14 @@ describe("varcal", function () {
             }, 2, {
                     tables: {
                         t1: {
-                            target: 't1_calc',
+                            target: 't1_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 't1',
-                            where: 't1_calc.t1 = t1.t1 and t1_calc.pk0=t0.pk0',
+                            where: 't1_calculada.t1 = t1.t1 and t1_calculada.pk0=t0.pk0',
                         }
                     }
                 })
-            var sentenciaEsperada = '  UPDATE t1_calc\n    SET x = dato1 * 2 + dato2,\n        pepe = f(j)\n    FROM t1 inner join t0 using(pk0)\n    WHERE t1_calc.t1 = t1.t1 and t1_calc.pk0=t0.pk0';
+            var sentenciaEsperada = '  UPDATE t1_calculada\n    SET x = dato1 * 2 + dato2,\n        pepe = f(j)\n    FROM t1 inner join t0 using(pk0)\n    WHERE t1_calculada.t1 = t1.t1 and t1_calculada.pk0=t0.pk0';
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
@@ -114,16 +114,16 @@ describe("varcal", function () {
                     },
                     tables: {
                         personas: {
-                            target: 'personas_calc',
+                            target: 'personas_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 'personas',
-                            where: 'personas_calc.id = personas.id and personas_calc.pk0=t0.pk0',
+                            where: 'personas_calculada.id = personas.id and personas_calculada.pk0=t0.pk0',
                             pks:['operativo', 'id_caso']
                         }
                     }
                 })
             var sentenciaEsperada =
-                `              UPDATE personas_calc
+                `              UPDATE personas_calculada
                 SET x = ingreso * 2 + ingreso2,
                     dif_edad_padre = padre.edad - edad
                 FROM personas inner join t0 using(pk0)
@@ -131,7 +131,7 @@ describe("varcal", function () {
                         SELECT operativo, id_caso, padre.edad
                           FROM personas padre
                     ) padre ON padre.id = personas.id AND padre.p0 = personas.p11
-                WHERE personas_calc.id = personas.id and personas_calc.pk0=t0.pk0`;
+                WHERE personas_calculada.id = personas.id and personas_calculada.pk0=t0.pk0`;
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
@@ -185,16 +185,16 @@ describe("varcal", function () {
             }, 14, {
                     tables: {
                         hogares: {
-                            target: 'hogares_calc',
+                            target: 'hogares_calculada',
                             sourceJoin: 'inner join viviendas using(v)',
                             sourceBro: 'hogares',
-                            where: 'hogares_calc.h = hogares.h and hogares_calc.v=hogares.v',
+                            where: 'hogares_calculada.h = hogares.h and hogares_calculada.v=hogares.v',
                         },
                         personas: {
                             aliasAgg: 'personas_agg',
-                            sourceAgg: 'personas_calc inner join personas ON personas_calc.v=personas.v and personas_calc.h=personas.h and personas_calc.p=personas.p',
+                            sourceAgg: 'personas_calculada inner join personas ON personas_calculada.v=personas.v and personas_calculada.h=personas.h and personas_calculada.p=personas.p',
                             whereAgg:{ 
-                                hogares: 'personas_calc.h = hogares.h and personas_calc.v = hogares.v'
+                                hogares: 'personas_calculada.h = hogares.h and personas_calculada.v = hogares.v'
                             }    
                         },
                         visitas: {
@@ -207,7 +207,7 @@ describe("varcal", function () {
                     }
                 })
             var sentenciaEsperada =
-                `              UPDATE hogares_calc
+                `              UPDATE hogares_calculada
                 SET cantidad_mujeres = personas_agg.cantidad_mujeres,
                     cant_revisitas = visitas_agg.cant_revisitas,
                     ingresos_hogar = personas_agg.ingresos_hogar,
@@ -217,8 +217,8 @@ describe("varcal", function () {
                     SELECT
                         count(nullif(sexo=2,false)) as cantidad_mujeres,
                         sum(ingreso_personal) as ingresos_hogar
-                      FROM personas_calc inner join personas ON personas_calc.v=personas.v and personas_calc.h=personas.h and personas_calc.p=personas.p
-                      WHERE personas_calc.h = hogares.h and personas_calc.v = hogares.v
+                      FROM personas_calculada inner join personas ON personas_calculada.v=personas.v and personas_calculada.h=personas.h and personas_calculada.p=personas.p
+                      WHERE personas_calculada.h = hogares.h and personas_calculada.v = hogares.v
                   ) personas_agg, 
                   LATERAL (
                     SELECT
@@ -226,7 +226,7 @@ describe("varcal", function () {
                       FROM visitas
                       WHERE visitas.h = hogares.h and visitas.v = hogares.v
                   ) visitas_agg
-                WHERE hogares_calc.h = hogares.h and hogares_calc.v=hogares.v`;
+                WHERE hogares_calculada.h = hogares.h and hogares_calculada.v=hogares.v`;
             discrepances.showAndThrow(sqlGenerado, sentenciaEsperada);
             this.timeout(50000);
         });
@@ -258,10 +258,10 @@ describe("varcal", function () {
                 }, {
                     tables: {
                         datos: {
-                            target: 't1_calc',
+                            target: 't1_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 't1',
-                            where: 't1_calc.t1 = t1.t1 and t1_calc.pk0=t0.pk0',
+                            where: 't1_calculada.t1 = t1.t1 and t1_calculada.pk0=t0.pk0',
                         }
                     }
                 });
@@ -290,16 +290,16 @@ describe("varcal", function () {
                 }, {
                     tables: {
                         datos: {
-                            target: 't1_calc',
+                            target: 't1_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 't1',
-                            where: 't1_calc.t1 = datos.t1 and t1_calc.pk0=t0.pk0',
+                            where: 't1_calculada.t1 = datos.t1 and t1_calculada.pk0=t0.pk0',
                         },
                         datos2: {
-                            target: 't2_calc',
-                            sourceJoin: 'inner join t0 using(pk0) join t1_calc using(pk0)',
+                            target: 't2_calculada',
+                            sourceJoin: 'inner join t0 using(pk0) join t1_calculada using(pk0)',
                             sourceBro: 't2',
-                            where: 't2_calc.t2 = datos2.t2 and t2_calc.pk0=t0.pk0 and t2_calc.pk0=t1_calc.pk0',
+                            where: 't2_calculada.t2 = datos2.t2 and t2_calculada.pk0=t0.pk0 and t2_calculada.pk0=t1_calculada.pk0',
                         }
                     }
                 });
