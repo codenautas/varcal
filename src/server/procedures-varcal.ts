@@ -40,7 +40,7 @@ var procedures = [
                 tdefs.forEach(function(tdef:TableDefinition){
                     //saco el sufijo a tdef.name para obetener la unidad de analisis origen
                     var tableName = tdef.name;
-                    let unidadAnalisis = tableName.replace(tiposTablaDato.calculada, '');
+                    let unidadAnalisis = tableName.replace('_' + tiposTablaDato.calculada, '');
                     var estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEstructural.tables[unidadAnalisis];
                     
                     drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");

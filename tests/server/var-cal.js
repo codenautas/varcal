@@ -34,7 +34,7 @@ function regexpReplace(guno, gdos, gtres, sourceStr, replaceStr) {
 function prefijarExpresion(v, variablesDefinidas) {
     v.insumos.variables.forEach(varInsumo => {
         if (!hasTablePrefix(varInsumo) && (!v.insumos.funciones || v.insumos.funciones.indexOf(varInsumo) == -1) && variablesDefinidas[varInsumo]) {
-            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada') ? variablesDefinidas[varInsumo].tabla + operativos_1.tiposTablaDato.calculada : variablesDefinidas[varInsumo].tabla;
+            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada') ? variablesDefinidas[varInsumo].tabla + '_' + operativos_1.tiposTablaDato.calculada : variablesDefinidas[varInsumo].tabla;
             let varWithPrefix = prefix + '.' + varInsumo;
             // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
             // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada

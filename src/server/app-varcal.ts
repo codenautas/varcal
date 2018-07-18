@@ -72,7 +72,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                 let tua = table.unidad_analisis;
                 let tDefEst:DefinicionEstructuralTabla = {
                     sourceBro : tua,
-                    target: tua + tiposTablaDato.calculada,
+                    target: tua + '_' + tiposTablaDato.calculada,
                     pks : table.pk_arr,
                     aliasAgg : tua + sufijo_agregacion,
                 }
