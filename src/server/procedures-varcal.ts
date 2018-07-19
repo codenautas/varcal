@@ -38,7 +38,8 @@ var procedures = [
                 resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis+'_'+tiposTablaDato.calculada, unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
             ).then((tdefs: TableDefinition[]) => {
                 tdefs.forEach(function(tdef:TableDefinition){
-                    //saco el sufijo a tdef.name para obetener la unidad de analisis origen
+                    //TODO: actualmente saco el sufijo a tdef.name para obetener la unidad de analisis origen
+                    // cambiar esto y que cada generateBaseTableDef tenga el then
                     var tableName = tdef.name;
                     let unidadAnalisis = tableName.replace('_' + tiposTablaDato.calculada, '');
                     var estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEstructural.tables[unidadAnalisis];
