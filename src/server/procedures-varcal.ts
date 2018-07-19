@@ -31,12 +31,13 @@ var procedures = [
                 [key:string]: {pks:string[], pksString: string}
             } = {};
             var tableDefs:operativos.TableDefinitions = {};
-
+            let tdefinitions: TableDefinition[];
             var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [parameters.operativo]).fetchAll();
             
             await Promise.all(
                 resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis+'_'+tiposTablaDato.calculada, unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
             ).then((tdefs: TableDefinition[]) => {
+                tdefinitions = tdefs;
                 tdefs.forEach(function(tdef:TableDefinition){
                     //TODO: actualmente saco el sufijo a tdef.name para obetener la unidad de analisis origen
                     // cambiar esto y que cada generateBaseTableDef tenga el then
@@ -57,11 +58,16 @@ var procedures = [
                         "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";"
                     )
                     
-                    tableDefs[tableName] = be.loadTableDef(tdef);
+                    be.loadTableDef(tdef);
                 });
             })
 
+            tdefinitions.forEach((tdef:TableDefinition) => {
+                tdef.allow = {...tdef.allow, insert: true, update: true};
+                tableDefs[tdef.name] = be.getTableDefFunction(tdef);
+            });
             var sqls = await be.dumpDbSchemaPartial(tableDefs, {});
+
             creates = creates.concat(sqls.mainSql).concat(sqls.enancePart);
             var allSqls = drops.concat(creates).concat(inserts)
             // await context.client.executeSentences(allSqls);

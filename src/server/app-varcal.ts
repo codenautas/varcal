@@ -40,7 +40,6 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                 td.foreignKeys = [{ references: estParaGenTabla.sourceBro, fields: estParaGenTabla.pks, onDelete: 'cascade', displayAllFields: true }];
                 td.detailTables = estParaGenTabla.detailTables;
                 td.sql.isReferable = true;
-                td.allow = {...td.allow, insert: true, update: true}
             }
             return td
         }
