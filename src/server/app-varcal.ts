@@ -2,7 +2,7 @@
 
 import * as operativos from "operativos";
 
-import {procedures} from "./procedures-varcal";
+import { procedures } from "./procedures-varcal";
 import { alias } from "./table-alias";
 import { Client } from "pg-promise-strict";
 import { TablaDatos, UnidadDeAnalisis, Request, tiposTablaDato } from "operativos";
@@ -16,12 +16,14 @@ export type Constructor<T> = new(...args: any[]) => T;
 export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosType>>(Base:T){
     
     return class AppVarCal extends Base{
-        constructor(...args:any[]){
-            super(...args);
-            this.myProcedures = this.myProcedures.concat(procedures);
-            this.myClientFileName = 'varcal';
-        }
         defEstructural:DefinicionEstructural;
+        myProcedures: operativos.ProcedureDef[] = procedures;
+        myClientFileName: string = 'varcal';
+
+        constructor(...args:any[]){
+            super(args);
+            this.initialize();
+        }
 
         async postConfig(){
             var be=this;
