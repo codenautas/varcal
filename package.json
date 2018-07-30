@@ -14,7 +14,8 @@
   ],
   "dependencies": {
     "expre-parser": "~0.1.16",
-    "operativos": "~0.1.24"
+    "operativos": "~0.1.24",
+    "best-globals": "~0.10.5"
   },
   "devDependencies": {
     "pg-promise-strict": "~0.4.13",

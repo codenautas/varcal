@@ -4,15 +4,20 @@ import * as VarCal from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition, Variable, VariableOpcion, tiposTablaDato} from "operativos";
+import {TableDefinition, Variable, VariableOpcion, tiposTablaDato, UnidadDeAnalisis} from "operativos";
 import { ProcedureContext } from "./types-varcal";
 import { VarCalType } from "./app-varcal";
+import * as bg from "best-globals";
 
 export interface coreFunctionParameters{
     operativo: string
 }
 
 export type CoreFunction = (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<VarCal.DefinicionEstructural>;
+
+function sufijarUACalculada(ua:string){
+    return ua + '_' + tiposTablaDato.calculada;
+}
 
 var procedures = [
     {
@@ -31,41 +36,36 @@ var procedures = [
                 [key:string]: {pks:string[], pksString: string}
             } = {};
             var tableDefs:operativos.TableDefinitions = {};
-            let tdefinitions: TableDefinition[];
-            var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [parameters.operativo]).fetchAll();
-            
+            var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [operativo]).fetchAll();
+            await be.armarDefEstructural(context.client, operativo);
+            resultUA.rows.forEach((row:UnidadDeAnalisis) => {
+                let ua = row.unidad_analisis
+                let tableName = sufijarUACalculada(ua);
+                let estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEst.tables[ua];
+                drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
+                var pks = estParaGenTabla.pks;
+                var prefixedPks = pks.map((pk:string) => ua + '.' + pk);
+                allPrefixedPks[ua] = {
+                    pks: prefixedPks,
+                    pksString: prefixedPks.join(', ')
+                }
+                var pkString = pks.join(', ');
+                inserts.push(
+                    "INSERT INTO " + db.quoteIdent(tableName) + " (" + pkString + ") " +
+                    "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";"
+                )    
+            });
+
             await Promise.all(
-                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:parameters.operativo, tabla_datos: row.unidad_analisis+'_'+tiposTablaDato.calculada, unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
+                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:operativo, tabla_datos: sufijarUACalculada(row.unidad_analisis), unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
             ).then((tdefs: TableDefinition[]) => {
-                tdefinitions = tdefs;
                 tdefs.forEach(function(tdef:TableDefinition){
-                    //TODO: actualmente saco el sufijo a tdef.name para obetener la unidad de analisis origen
-                    // cambiar esto y que cada generateBaseTableDef tenga el then
-                    var tableName = tdef.name;
-                    let unidadAnalisis = tableName.replace('_' + tiposTablaDato.calculada, '');
-                    var estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEstructural.tables[unidadAnalisis];
-                    
-                    drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
-                    var pks = estParaGenTabla.pks;
-                    var prefixedPks = pks.map((pk:string) => unidadAnalisis + '.' + pk);
-                    allPrefixedPks[unidadAnalisis] = {
-                        pks: prefixedPks,
-                        pksString: prefixedPks.join(', ')
-                    }
-                    var pkString = pks.join(', ');
-                    inserts.push(
-                        "INSERT INTO " + db.quoteIdent(tableName) + " (" + pkString + ") " +
-                        "SELECT " + pkString + " FROM " + estParaGenTabla.sourceBro + ' ' + estParaGenTabla.sourceJoin + ";"
-                    )
-                    
-                    be.loadTableDef(tdef);
+                    be.loadTableDef(tdef); //carga el tableDef para las grillas (las grillas de calculadas NO deben permitir insert o update)
+                    let newTDef = bg.changing(tdef, {allow: {insert: true, update: true}}); // modifica los allows para el dumpSchemaPartial (necesita insert y update)
+                    tableDefs[newTDef.name] = be.getTableDefFunction(newTDef);
                 });
             })
 
-            tdefinitions.forEach((tdef:TableDefinition) => {
-                tdef.allow = {...tdef.allow, insert: true, update: true};
-                tableDefs[tdef.name] = be.getTableDefFunction(tdef);
-            });
             var sqls = await be.dumpDbSchemaPartial(tableDefs, {});
 
             creates = creates.concat(sqls.mainSql).concat(sqls.enancePart);
@@ -115,12 +115,12 @@ var procedures = [
             likear(allPrefixedPks).forEach(function (prefixedPk, ua) {
                 prefixedPk.pks.forEach(pk => allVariables[pk] = { tabla: ua })
             });
-            var grupoVariables = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), be.defEstructural);
+            var grupoVariables = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), be.defEst);
             var parametrosGeneracion = {
                 nombreFuncionGeneradora: 'gen_fun_var_calc',
                 esquema: be.config.db.schema,
             };
-            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, be.defEstructural, allVariables);
+            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, be.defEst, allVariables);
             allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + be.config.db.schema + ';'].concat(allSqls).concat(funcionGeneradora, 'perform gen_fun_var_calc();', 'end\n$SQL_DUMP$');
             let localMiroPorAhora = './local-miro-por-ahora.sql';
             var now = new Date();

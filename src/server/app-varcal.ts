@@ -16,7 +16,7 @@ export type Constructor<T> = new(...args: any[]) => T;
 export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosType>>(Base:T){
     
     return class AppVarCal extends Base{
-        defEstructural:DefinicionEstructural;
+        defEst:DefinicionEstructural;
         myProcedures: operativos.ProcedureDef[] = procedures;
         myClientFileName: string = 'varcal';
 
@@ -29,7 +29,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
             var be=this;
             await be.inTransaction({} as Request, async function(client:Client){
                 //TODO deshardcodear 'REPSIC' recorrer todos los operativos
-                be.defEstructural = await be.armarDefEstructural(client, 'REPSIC');
+                await be.armarDefEstructural(client, 'REPSIC');
             });
             await super.postConfig();
         }
@@ -38,7 +38,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
             let td = await super.generateBaseTableDef(client, tablaDatos);
             //TODO: dejar de preguntar por el postfix agregar un campo "esCalculada" a tablaDatos 
             if (tablaDatos.tipo == tiposTablaDato.calculada){
-                let estParaGenTabla:DefinicionEstructuralTabla = this.defEstructural.tables[tablaDatos.unidad_analisis];
+                let estParaGenTabla:DefinicionEstructuralTabla = this.defEst.tables[tablaDatos.unidad_analisis];
                 td.foreignKeys = [{ references: estParaGenTabla.sourceBro, fields: estParaGenTabla.pks, onDelete: 'cascade', displayAllFields: true }];
                 td.detailTables = estParaGenTabla.detailTables;
                 td.sql.isReferable = true;
@@ -47,6 +47,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
         }
 
         async armarDefEstructural(client: Client, operativo: string){
+            let be:AppVarCal = this;
             var sqlParams=[operativo];
             var results={
                 aliases: await client.query(
@@ -63,11 +64,11 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                     , sqlParams
                 ).fetchAll()
             };
-            let defEst: DefinicionEstructural ={
+            this.defEst ={
                 aliases: {},
                 tables: {}
             }
-            results.aliases.rows.forEach(function(a:{alias:string, alias_def_est:AliasDefEst}){ defEst.aliases[a.alias]=a.alias_def_est });
+            results.aliases.rows.forEach(function(a:{alias:string, alias_def_est:AliasDefEst}){ be.defEst.aliases[a.alias]=a.alias_def_est });
             //falta trabajar results para obtener la pinta de  defEst
             results.tables.rows.forEach(function(table: UnidadDeAnalisis & {pk_arr: string[]}){
                 let tua = table.unidad_analisis;
@@ -101,19 +102,19 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                 }
                 tDefEst.detailTables= [];
                 
-                defEst.tables[tua] = tDefEst;
+                be.defEst.tables[tua] = tDefEst;
             });
             
-            //Seteo de detail tables a los padres de las tablas que tienen padre
+            //Seteo de detail tables a los padres de las tablas que tienen padre, se hace por separado para que todos los padres ya esten completos
             results.tables.rows.filter(t => t.padre).forEach(function(table: UnidadDeAnalisis & {pk_arr: string[]}){
                 // TODO: completar la tabla hija
-                defEst.tables[table.padre].detailTables.push({
+                // TODO: Ver si como detailTable se pone la tabla datos o la calculada (¿target o bro?)
+                be.defEst.tables[table.padre].detailTables.push({
                     table: table.unidad_analisis,
-                    fields: table.pk_arr,
+                    fields: be.defEst.tables[table.padre].pks,
                     abr: table.unidad_analisis.substr(0,1).toUpperCase()
                 });
             });
-            return defEst;
         }
 
         getMenu():operativos.MenuDefinition{
