@@ -15,10 +15,6 @@ export interface coreFunctionParameters{
 
 export type CoreFunction = (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<VarCal.DefinicionEstructural>;
 
-function sufijarUACalculada(ua:string){
-    return ua + '_' + tiposTablaDato.calculada;
-}
-
 var procedures = [
     {
         action: 'calculadas/generar',
@@ -37,11 +33,11 @@ var procedures = [
             } = {};
             var tableDefs:operativos.TableDefinitions = {};
             var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [operativo]).fetchAll();
-            await be.armarDefEstructural(context.client, operativo);
+            await be.armarDefEstructural(context.client, operativo); //actualizo las defEst porque desde que se levantó node pueden haber cambiado
             resultUA.rows.forEach((row:UnidadDeAnalisis) => {
                 let ua = row.unidad_analisis
-                let tableName = sufijarUACalculada(ua);
-                let estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEst.tables[ua];
+                let tableName = be.sufijarUACalculada(ua);
+                let estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEsts[operativo].tables[ua];
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
                 var pks = estParaGenTabla.pks;
                 var prefixedPks = pks.map((pk:string) => ua + '.' + pk);
@@ -56,8 +52,9 @@ var procedures = [
                 )    
             });
 
+            //TODO: asignar el promise.all a una variable (tdfes?) y sacar el then, (analizar si no combiene pasarlo a operativos)
             await Promise.all(
-                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:operativo, tabla_datos: sufijarUACalculada(row.unidad_analisis), unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
+                resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:operativo, tabla_datos: be.sufijarUACalculada(row.unidad_analisis), unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
             ).then((tdefs: TableDefinition[]) => {
                 tdefs.forEach(function(tdef:TableDefinition){
                     be.loadTableDef(tdef); //carga el tableDef para las grillas (las grillas de calculadas NO deben permitir insert o update)
@@ -115,12 +112,12 @@ var procedures = [
             likear(allPrefixedPks).forEach(function (prefixedPk, ua) {
                 prefixedPk.pks.forEach(pk => allVariables[pk] = { tabla: ua })
             });
-            var grupoVariables = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), be.defEst);
+            var grupoVariables = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), be.defEsts[operativo]);
             var parametrosGeneracion = {
                 nombreFuncionGeneradora: 'gen_fun_var_calc',
                 esquema: be.config.db.schema,
             };
-            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, be.defEst, allVariables);
+            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, be.defEsts[operativo], allVariables);
             allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + be.config.db.schema + ';'].concat(allSqls).concat(funcionGeneradora, 'perform gen_fun_var_calc();', 'end\n$SQL_DUMP$');
             let localMiroPorAhora = './local-miro-por-ahora.sql';
             var now = new Date();
