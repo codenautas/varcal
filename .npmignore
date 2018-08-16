@@ -10,3 +10,4 @@ src/
 # Always publish generated files (.js, .map. .d.ts)
 !server/
 !client/
+!tests/
