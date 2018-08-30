@@ -35,7 +35,7 @@ begin
   if p_denominador=0 then
     raise 'ERROR DIVISION POR CERO EN %', pk;
   end if;
-  return p_numerador/p_denominador;
+  return 1.0*p_numerador/p_denominador;
 end;
 $sql$;
 
