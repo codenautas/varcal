@@ -136,6 +136,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
             let menu = {menu: super.getMenu().menu.concat(myMenuPart)}
             return menu;
         }
+
         prepareGetTables(){
             //TODO: es igual que en datos-ext llevarlo a operativos
             super.prepareGetTables();
@@ -143,6 +144,11 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                 ...this.getTableDefinition,
                 alias
             }
+            this.appendToTableDefinition('operativos', function(tableDef){
+                tableDef.fields.push(
+                    {name:'calculada', typeName:'date', editable:true}
+                );
+            });
         }
     }
 }
