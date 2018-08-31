@@ -117,10 +117,15 @@ var procedures = [
                 nombreFuncionGeneradora: 'gen_fun_var_calc',
                 esquema: be.config.db.schema,
             };
-            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, be.defEsts[operativo], allVariables);
-            allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + be.config.db.schema + ';'].concat(allSqls).concat(funcionGeneradora, 'perform gen_fun_var_calc();', 'end\n$SQL_DUMP$');
-            let localMiroPorAhora = './local-miro-por-ahora.sql';
             var now = new Date();
+            let updateFechaCalculada = `
+                UPDATE operativos
+                    SET calculada='${now.toLocaleDateString()}'
+                WHERE operativo='${operativo}'
+            `;
+            var funcionGeneradora = VarCal.funcionGeneradora(grupoVariables, parametrosGeneracion, be.defEsts[operativo], allVariables);
+            allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + be.config.db.schema + ';'].concat(allSqls).concat(funcionGeneradora, 'perform gen_fun_var_calc();', updateFechaCalculada,  'end\n$SQL_DUMP$');
+            let localMiroPorAhora = './local-miro-por-ahora.sql';
             var todoElScript = allSqls.join('\n----\n') + '--- generado: ' + now.toISOString() + '\n';
             fs.writeFileSync(localMiroPorAhora, todoElScript, { encoding: 'utf8' })
             await context.client.query(todoElScript).execute();
