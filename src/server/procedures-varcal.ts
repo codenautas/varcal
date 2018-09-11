@@ -4,7 +4,7 @@ import * as VarCal from "./var-cal";
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
 import * as operativos from "operativos";
-import {TableDefinition, Variable, VariableOpcion, tiposTablaDato, UnidadDeAnalisis} from "operativos";
+import {TableDefinition, VariableOpcion, tiposTablaDato, UnidadDeAnalisis} from "operativos";
 import { ProcedureContext } from "./types-varcal";
 import { VarCalType } from "./app-varcal";
 import * as bg from "best-globals";
@@ -22,11 +22,12 @@ var procedures = [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
         coreFunction: async function (context: ProcedureContext, parameters: coreFunctionParameters) {
+            //TODO deshardcodear y pasar a algun archivo
+            let compilerOptions: VarCal.CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
             var be: VarCalType = context.be as VarCalType;
             let operativo = parameters.operativo;
             var db = be.db;
             var drops:string[]=[];
-            var creates:string[]=[];
             var inserts:string[]=[];
             var allPrefixedPks:{
                 [key:string]: {pks:string[], pksString: string}
@@ -52,7 +53,7 @@ var procedures = [
                 )    
             });
 
-            //TODO: asignar el promise.all a una variable (tdfes?) y sacar el then, (analizar si no combiene pasarlo a operativos)
+            //TODO: asignar el promise.all a una variable (tdfes?) y sacar el then, (analizar si no conviene pasarlo a operativos)
             await Promise.all(
                 resultUA.rows.map(row => be.generateBaseTableDef(context.client, {operativo:operativo, tabla_datos: be.sufijarUACalculada(row.unidad_analisis), unidad_analisis: row.unidad_analisis, tipo: tiposTablaDato.calculada}))
             ).then((tdefs: TableDefinition[]) => {
@@ -64,9 +65,7 @@ var procedures = [
             })
 
             var sqls = await be.dumpDbSchemaPartial(tableDefs, {});
-
-            creates = creates.concat(sqls.mainSql).concat(sqls.enancePart);
-            var allSqls = drops.concat(creates).concat(inserts)
+            var allSqls = drops.concat(sqls.mainSql).concat(sqls.enancePart).concat(inserts)
             // await context.client.executeSentences(allSqls);
             var variablesDatoResult = await context.client.query(`SELECT
                v.*, (
@@ -78,20 +77,23 @@ var procedures = [
                  AND v.clase = 'calculada'
                  AND v.activa
             `, [operativo]).fetchAll();
+            //TODO sacar esta funcion
             function wrapExpression(expression:string|number, pkExpression:string) {
-                var opts:VarCal.CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
-                return VarCal.getWrappedExpression(expression, pkExpression, opts);
+                return VarCal.getWrappedExpression(expression, pkExpression, compilerOptions);
             }
-            var variablesACalcular = variablesDatoResult.rows.map(function (v:Variable & {opciones: VariableOpcion[]}) {
+            var variablesACalcular = variablesDatoResult.rows.map(function (v:VarCal.VariableComplete) {
                 let expresionValidada;
                 var pkList = allPrefixedPks[v.unidad_analisis].pksString;
                 if (v.opciones && v.opciones.length) {
                     expresionValidada = 'CASE ' + v.opciones.map(function (opcion:VariableOpcion) {
                         return '\n          WHEN ' + wrapExpression(opcion.expresion_condicion, pkList) +
-                            ' THEN ' + wrapExpression(opcion.expresion_valor || opcion.opcion, pkList)
+                        ' THEN ' + wrapExpression(opcion.expresion_valor || opcion.opcion, pkList)
                     }).join('') + (v.expresion ? '\n          ELSE ' + wrapExpression(v.expresion, pkList) : '') + ' END'
                 } else {
                     expresionValidada = wrapExpression(v.expresion, pkList);
+                }
+                if (v.filtro){
+                    expresionValidada = 'CASE WHEN ' + v.filtro + ' THEN ' + expresionValidada + ' ELSE NULL END'
                 }
                 let insumos = VarCal.getInsumos(expresionValidada);
                 return {
@@ -103,6 +105,9 @@ var procedures = [
                     tabla_agregada: v.tabla_agregada
                 }
             });
+            //var variablesACalcular = VarCal.getVariablesACalcular(variablesDatoResult.rows, allPrefixedPks, compilerOptions);
+
+            //TODO nombre de variable duplicado, ademas se está haciendo una query parecida, hacer una sola y filtrarla después
             var variablesDatoResult = await context.client.query(`
                 SELECT variable, unidad_analisis, clase from variables
                 WHERE operativo = $1 AND activa
