@@ -8,7 +8,6 @@ db:
   database: varcal_db
   schema: varcal
   user: varcal_user
-  password: la_clavasdf93939kdkx.sdlf2342sdaf####109
   search_path: 
   - varcal
 install:
@@ -40,7 +39,6 @@ login:
     maxAge-10-day: 864000000
     allowHttpLogin: true
     fileStore: false
-    secret: secret some in blah blah
     skipCheckAlreadyLoggedIn: true
     loginForm:
       formTitle: VarCal
