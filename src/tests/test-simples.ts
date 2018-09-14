@@ -1,11 +1,12 @@
 import * as MiniTools from 'mini-tools';
-import * as discrepances from 'discrepances';
 import * as pg from 'pg-promise-strict';
 import * as fs from 'fs-extra';
 
+import * as discrepances from 'discrepances';
 import 'mocha';
 
 import * as VarCal from '../server/var-cal';
+import { Insumos, CompilerOptions, BloqueVariablesGenerables, PrefixedPks, VariableComplete, VariableGenerable} from "../server/types-varcal";
 
 (pg as { easy: boolean }).easy = true;
 
@@ -18,6 +19,50 @@ var config = {
         password: 'test_pass',
     }
 }
+
+// TODO pasar esto a otro archivo de mocks
+// mock constants for general use
+let compilerOptionsMock: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
+let allPrefixedPksMock: PrefixedPks = {
+    "grupo_personas": {
+        "pks": ["grupo_personas.operativo", "grupo_personas.id_caso"],
+        "pksString": "grupo_personas.operativo, grupo_personas.id_caso"
+    },
+    "personas": {
+        "pks":["personas.operativo", "personas.id_caso", "personas.p0"],
+        "pksString": "personas.operativo, personas.id_caso, personas.p0"
+    }
+};
+let variableDatoResultMock: VariableComplete[] = [
+    {
+        "operativo": "REPSIC",
+        "tabla_datos":"grupo_personas_calculada", "variable": "cant_f2", "abr": null, "nombre": "cantidad p", "tipovar": "numero",
+        "unidad_analisis": "grupo_personas", "clase": "calculada", "es_pk": null, "es_nombre_unico": null, "activa": true,
+        "filtro": null, "expresion": "true", "cascada": null, "nsnc_atipico": null, "cerrada": null, "funcion_agregacion": "contar",
+        "tabla_agregada": "personas", "grupo": "prueba", "orden": null, "opciones": null
+    }, {
+        "operativo": "REPSIC", "tabla_datos": "grupo_personas_calculada",
+        "variable": "con_cod_lugar", "abr": null, "nombre": null, "tipovar": "opciones", "unidad_analisis": "grupo_personas",
+        "clase": "calculada", "es_pk": null, "es_nombre_unico": null, "activa": true, "filtro": null, "expresion": null, "cascada": null,
+        "nsnc_atipico": null, "cerrada": null, "funcion_agregacion": null, "tabla_agregada": null, "grupo": "prueba", "orden": null,
+        "opciones": [
+            {
+                "orden": 10, "nombre": "en lugar", "opcion": 1, "variable": "con_cod_lugar", "operativo": "REPSIC",
+                "tabla_datos": "grupo_personas_calculada", "expresion_valor": null,
+                "expresion_condicion": "o2 = 6 or o2 = 7 or o2 = 8"
+            },
+            {
+                "orden": 20, "nombre": "sin lugar", "opcion": 2, "variable": "con_cod_lugar", "operativo": "REPSIC", "tabla_datos": "grupo_personas_calculada",
+                "expresion_valor": null, "expresion_condicion": "o2<6 or o2>8"
+            }]
+    }, 
+    {
+        "operativo": "REPSIC", "tabla_datos": "grupo_personas_calculada", "variable": "suma_edad", "abr": null, "nombre": "suma edades", "tipovar": "numero",
+        "unidad_analisis": "grupo_personas", "clase": "calculada", "es_pk": null, "es_nombre_unico": null, "activa": true, "filtro": null, "expresion": "p3",
+        "cascada": null, "nsnc_atipico": null, "cerrada": null, "funcion_agregacion": "sumar", "tabla_agregada": "personas", "grupo": "prueba", "orden": null,
+        "opciones": null
+    }
+]
 
 describe("varcal", function () {
     var client: pg.Client;
@@ -53,11 +98,11 @@ describe("varcal", function () {
                 variables: [{
                     nombreVariable: 'x',
                     expresionValidada: 'dato1 * 2 + dato2',
-                    insumos:{variables:['dato1', 'dato2']}
+                    insumos:{variables:['dato1', 'dato2'], aliases:[], funciones:[]}
                 }, {
                     nombreVariable: 'pepe',
                     expresionValidada: 'f(j)',
-                    insumos:{variables:['j']}
+                    insumos:{variables:['j'],aliases:[], funciones:[]}
                 }]
             }, 2, {tables:{t1:{
                     target: 't1_calculada',
@@ -101,9 +146,9 @@ describe("varcal", function () {
             var sqlGenerado = VarCal.sentenciaUpdate({
                 tabla: 'personas',
                 variables: [{
-                    nombreVariable: 'x', expresionValidada: 'ingreso * 2 + ingreso2', insumos: { variables: ['ingreso', 'ingreso2'] }
+                    nombreVariable: 'x', expresionValidada: 'ingreso * 2 + ingreso2', insumos: { variables: ['ingreso', 'ingreso2'], aliases: [], funciones:[] }
                 }, {
-                    nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.edad - edad', insumos: { variables: ['padre.edad', 'edad'], aliases: ['padre'] }
+                    nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.edad - edad', insumos: { variables: ['padre.edad', 'edad'], aliases: ['padre'], funciones:[] }
                 }]
             }, 14, {
                     aliases: {
@@ -233,7 +278,7 @@ describe("varcal", function () {
     });
     describe("prueba get Insumos", function () {
         it("genera funciones y variales", function () {
-            let expectedInsumos: VarCal.Insumos = { variables: ['a', 't.c'], aliases: ['t'], funciones: ['f', 'max'] }
+            let expectedInsumos: Insumos = { variables: ['a', 't.c'], aliases: ['t'], funciones: ['f', 'max'] }
             discrepances.showAndThrow(VarCal.getInsumos('a + t.c AND f(max(a, t.c))'), expectedInsumos);
         });
     });
@@ -307,6 +352,29 @@ describe("varcal", function () {
             discrepances.showAndThrow(funcionGenerada, funcionEsperada);
         });
     });
+    describe("getVariablesACalcular", function () {
+        it("devuelve las variables a calcular", function () {
+            let varsToCalculate = VarCal.getVariablesACalcular(variableDatoResultMock, allPrefixedPksMock, compilerOptionsMock)
+            let expectedVars: VariableGenerable[] = [{
+                "tabla": "grupo_personas",
+                "nombreVariable": "cant_f2", "expresionValidada": "true", "funcion_agregacion": "contar", "tabla_agregada": "personas",
+                "insumos": { "variables": [], "aliases": [], "funciones": [] }
+            },
+            {
+                "tabla": "grupo_personas",
+                "nombreVariable": "con_cod_lugar",
+                "expresionValidada": "CASE \n          WHEN null2zero(o2) = 6 or null2zero(o2) = 7 or null2zero(o2) = 8 THEN 1\n          WHEN null2zero(o2) < 6 or null2zero(o2) > 8 THEN 2 END",
+                "funcion_agregacion": null, 
+                "tabla_agregada": null,
+                "insumos": { "variables": ["o2"], "aliases": [], "funciones": ["null2zero"] }
+            }, {
+                "tabla": "grupo_personas",
+                "nombreVariable": "suma_edad", "expresionValidada": "null2zero(p3)", "funcion_agregacion": "sumar", "tabla_agregada": "personas", 
+                "insumos": { "variables": ["p3"], "aliases": [], "funciones": ["null2zero"] }
+            }]
+            discrepances.showAndThrow(varsToCalculate, expectedVars);
+        });
+    });
     describe("calcularNiveles", function () {
         it("separa en listas por nivel", async function () {
             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
@@ -314,17 +382,17 @@ describe("varcal", function () {
                 { tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] } },
                 { tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } }
             ], ['dato1', 'dato2']);
-            var listaEsperada: VarCal.BloqueVariablesGenerables[] = [{
+            var listaEsperada: BloqueVariablesGenerables[] = [{
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
                 }],
             }, {
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
                 }, {
-                    nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
                 }],
             }];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
@@ -336,22 +404,22 @@ describe("varcal", function () {
                 { tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
                 { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } }
             ], ['dato1', 'dato2']);
-            var listaEsperada: VarCal.BloqueVariablesGenerables[] = [{
+            var listaEsperada: BloqueVariablesGenerables[] = [{
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
                 }],
             }, {
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
                 }, {
-                    nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
                 }],
             }, {
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'cal0', expresionValidada: 'doble_y_suma + cal1', insumos: { variables: ['doble_y_suma', 'cal1'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal0', expresionValidada: 'doble_y_suma + cal1', insumos: { variables: ['doble_y_suma', 'cal1'], aliases: [], funciones: [] }
                 }],
             }];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
@@ -369,15 +437,15 @@ describe("varcal", function () {
                     },
                     tables: {}
                 });
-            var listaEsperada: VarCal.BloqueVariablesGenerables[] = [{
+            var listaEsperada: BloqueVariablesGenerables[] = [{
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
                 }],
             }, {
                 tabla: 'personas',
                 variables: [{
-                    nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.p3 - p3', insumos: { variables: ['padre.p3', 'p3'], aliases: ['padre'], funciones: [] }
+                    tabla: 'personas', nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.p3 - p3', insumos: { variables: ['padre.p3', 'p3'], aliases: ['padre'], funciones: [] }
                 }],
             }];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
@@ -390,10 +458,10 @@ describe("varcal", function () {
                         grupo_personas: {}
                     }
                 });
-            var listaEsperada: VarCal.BloqueVariablesGenerables[] = [{
+            var listaEsperada: BloqueVariablesGenerables[] = [{
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'promedio_edad', expresionValidada: 'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos: { variables: ['suma_edad', 'cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases: ['grupo_personas'], funciones: ['div0err', 'null2zero'] }
+                    tabla: 'datos', nombreVariable: 'promedio_edad', expresionValidada: 'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos: { variables: ['suma_edad', 'cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases: ['grupo_personas'], funciones: ['div0err', 'null2zero'] }
                 }],
             }];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
@@ -428,23 +496,23 @@ describe("varcal", function () {
                 { tabla: 'datos', nombreVariable: 'cal2', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }], expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
                 { tabla: 'datos', nombreVariable: 'cal3', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }], expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
             ], ['dato1', 'dato2']);
-            var listaEsperada: VarCal.BloqueVariablesGenerables[] = [{
+            var listaEsperada: BloqueVariablesGenerables[] = [{
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
                 }],
             }, {
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
                 }, {
-                    nombreVariable: 'cal3', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal3', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
                 }],
                 joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }]
             }, {
                 tabla: 'datos',
                 variables: [{
-                    nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                    tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
                 }],
                 joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }]
             }];
@@ -461,32 +529,28 @@ describe("varcal", function () {
                 { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },
                 { tabla: 'datos', nombreVariable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },
             ], ['o']);
-            var listaEsperada: VarCal.BloqueVariablesGenerables[] = [{
+            var listaEsperada: BloqueVariablesGenerables[] = [
+            {
                 tabla: 'datos',
                 variables: [
-                    { nombreVariable: 'a', expresionValidada: 'o', insumos: { variables: [], aliases: [], funciones: [] } },
-                    { nombreVariable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },
+                    { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'o', insumos: { variables: [], aliases: [], funciones: [] } },
+                    { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },
                 ],
             }, {
                 tabla: 'equis',
                 variables: [
-                    { nombreVariable: 'ab', expresionValidada: 'a+b', insumos: { variables: ['a', 'b'], aliases: [], funciones: [] } },
-                ],
-                //},{
-                //    tabla:'datos',
-                //    variables:[
-                //        {nombreVariable:'aa'    , expresionValidada:'a+a'    , insumos:{variables:['a'],aliases:[], funciones:[]}}, 
-                //    ],
-            }, {
-                tabla: 'datos',
-                variables: [
-                    { nombreVariable: 'aab', expresionValidada: 'a+ab', insumos: { variables: ['a', 'ab'], aliases: [], funciones: [] } },
-                    { nombreVariable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },
+                    {tabla: 'equis',  nombreVariable: 'ab', expresionValidada: 'a+b', insumos: { variables: ['a', 'b'], aliases: [], funciones: [] } },
                 ],
             }, {
                 tabla: 'datos',
                 variables: [
-                    { nombreVariable: 'abbaab', expresionValidada: 'abb+aab', insumos: { variables: ['aab', 'abb'], aliases: [], funciones: [] } },
+                    {tabla: 'datos',  nombreVariable: 'aab', expresionValidada: 'a+ab', insumos: { variables: ['a', 'ab'], aliases: [], funciones: [] } },
+                    {tabla: 'datos',  nombreVariable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },
+                ],
+            }, {
+                tabla: 'datos',
+                variables: [
+                    { tabla: 'datos', nombreVariable: 'abbaab', expresionValidada: 'abb+aab', insumos: { variables: ['aab', 'abb'], aliases: [], funciones: [] } },
                 ],
             }];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);

@@ -35,12 +35,12 @@
             // Type of configuration. Possible values: "node", "mono".
             "type": "node",
             // Workspace relative or absolute path to the program.
-            "preLaunchTask": "tsc",
+            "preLaunchTask": "build-all",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             // Automatically stop program after launch.
             "stopOnEntry": false,
             // Command line arguments passed to the program.
-            "args": ["lib/test/*.js"],
+            "args": ["tests/tests/*.js"],
             // Workspace relative or absolute path to the working directory of the program being debugged. Default is the current workspace.
             "cwd": "${workspaceFolder}",
             // Workspace relative or absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.
@@ -48,7 +48,7 @@
             // Environment variables passed to the program.
             "env": { "NODE_ENV": "testing"},
             "outFiles": [
-                "${workspaceFolder}/lib/**/*.js"
+                "${workspaceFolder}/tests/tests/**/*.js"
             ]
         }        
     ]

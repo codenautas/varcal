@@ -3,91 +3,37 @@
 import * as ExpresionParser from 'expre-parser';
 import * as likear          from 'like-ar';
 
-import * as typesVarcal from "./types-varcal";
-import { tiposTablaDato } from 'operativos';
+import { tiposTablaDato, VariableOpcion } from 'operativos';
+import { CompilerOptions } from 'expre-parser';
+import { DefinicionEstructural, VariableGenerable, VariablesDefinidas, VariableComplete, 
+    PrefixedPks, BloqueVariablesGenerables, TextoSQL, ParametrosGeneracion, Joins } from "./types-varcal";
 
-export const sufijo_agregacion:string='_agg';
-
-export {CompilerOptions} from 'expre-parser';
-
-export interface DefinicionVariable {
-    tabla: string
-    nombreVariable: string
-    expresionValidada: string
-};
-
-export interface Joins {
-    tabla: string,
-    clausulaJoin: string
-};
-
-export interface DefinicionVariableAnalizada extends DefinicionVariable {
-    insumos: ExpresionParser.Insumos
-    joins?: Joins[]
+function hasTablePrefix(variable: string){
+    return variable.match(/^.+\..+$/);
 }
 
-export interface VariableGenerable {
-    nombreVariable: string
-    expresionValidada: string
-    funcion_agregacion?: 'contar' | 'sumar'
-    tabla_agregada?: string
-    insumos?: {
-        variables?: string[]
-        aliases?: string[]
-        funciones?: string[]
+function checkInsumos(defVariable: VariableGenerable, vardef: string[], definicionesOrd: VariableGenerable[], nvardef: VariableGenerable[], defEst: DefinicionEstructural): boolean {
+    var { nombreVariable, insumos } = defVariable;
+    var cantDef: number = 0;
+    insumos.variables.forEach(function (varInsumos) {
+        // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
+        if (hasTablePrefix(varInsumos) && defEst) {
+            var [prefix, varName] = varInsumos.split('.');
+            if (vardef.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
+                vardef.push(varInsumos);// then agrego esta variable a vardef
+            }
+        }
+        cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
+    });
+    if (cantDef == insumos.variables.length) {
+        vardef.push(nombreVariable);
+        definicionesOrd.push(defVariable);
+        if (nvardef.indexOf(defVariable) >= 0) {
+            nvardef.splice(nvardef.indexOf(defVariable), 1)
+        }
     }
+    return cantDef == insumos.variables.length;
 }
-
-export type ParametrosGeneracion = {
-    nombreFuncionGeneradora: string,
-    esquema: string
-}
-
-export type TextoSQL = string;
-
-export type BloqueVariablesGenerables = {
-    tabla: string
-    variables: VariableGenerable[]
-    joins?: Joins[]
-};
-
-export type DefinicionEstructuralTabla = {
-    target?: string;
-    sourceBro?: string;
-    pks?:string[];
-    sourceJoin?: string;
-    where?: string;
-    aliasAgg?: string;
-    sourceAgg?: string;
-    whereAgg?:{ 
-        [key: string]: string
-    }    
-    detailTables?: typesVarcal.DetailTable[];
-};
-
-export type Tables = {
-    [key: string]: DefinicionEstructuralTabla
-}
-
-export type DefinicionEstructural = {
-    aliases?: Aliases
-    tables: Tables
-}
-
-export interface VariableDefinida{
-    tabla: string
-    clase?: string
-}
-
-export interface VariablesDefinidas{
-    [key:string]: VariableDefinida
-}
-
-export interface Aliases {
-    [key: string]: typesVarcal.AliasDefEst
-}
-
-//export type  ListaVariablesAnalizadasOut=ListaVariablesAnalizadas[];
 
 function getAggregacion(f: string, exp: string) {
     switch (f) {
@@ -102,7 +48,7 @@ function getAggregacion(f: string, exp: string) {
 
 // construye una sola regex con 3 partes (grupos de captura) de regex diferentes, y hace el reemplazo que se pide por parametro
 function regexpReplace(guno:string, gdos:string, gtres:string, sourceStr:string, replaceStr:string){
-    let completeRegex = guno+gdos+gtres;
+        let completeRegex = guno+gdos+gtres;
     return sourceStr.replace(new RegExp(completeRegex, 'g'), '$1'+ replaceStr+'$3');
 }
 
@@ -119,6 +65,33 @@ function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDef
             v.expresionValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza casi todas las ocurrencias en la exp validada
             v.expresionValidada = regexpReplace('^()', baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al principio
             v.expresionValidada = regexpReplace(noWordRegex, baseRegex, '()$', v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al final
+        }
+    });
+}
+
+export function getVariablesACalcular(variablesDatos:VariableComplete[], allPrefixedPks: PrefixedPks, CompilerOptions:CompilerOptions):VariableGenerable[] {
+    return variablesDatos.map(function (v:VariableComplete) {
+        let expresionValidada;
+        var pkList = allPrefixedPks[v.unidad_analisis].pksString;
+        if (v.opciones && v.opciones.length) {
+            expresionValidada = 'CASE ' + v.opciones.map(function (opcion:VariableOpcion) {
+                return '\n          WHEN ' + getWrappedExpression(opcion.expresion_condicion, pkList, CompilerOptions) +
+                ' THEN ' + getWrappedExpression(opcion.expresion_valor || opcion.opcion, pkList, CompilerOptions)
+            }).join('') + (v.expresion ? '\n          ELSE ' + getWrappedExpression(v.expresion, pkList, CompilerOptions) : '') + ' END'
+        } else {
+            expresionValidada = getWrappedExpression(v.expresion, pkList, CompilerOptions);
+        }
+        if (v.filtro){
+            expresionValidada = 'CASE WHEN ' + v.filtro + ' THEN ' + expresionValidada + ' ELSE NULL END'
+        }
+        let insumos = getInsumos(expresionValidada);
+        return <VariableGenerable>{
+            tabla: v.unidad_analisis,
+            nombreVariable: v.variable,
+            expresionValidada,
+            funcion_agregacion: v.funcion_agregacion,
+            tabla_agregada: v.tabla_agregada,
+            insumos
         }
     });
 }
@@ -243,49 +216,22 @@ export function getWrappedExpression(expression: string|number, pkExpression: st
     return compiler.toCode(ExpresionParser.parse(expression), pkExpression);
 }
 
-function hasTablePrefix(variable: string){
-    return variable.match(/^.+\..+$/);
-}
-
-let checkInsumos = function (defVariable: DefinicionVariableAnalizada, vardef: string[], definicionesOrd: DefinicionVariableAnalizada[], nvardef: DefinicionVariableAnalizada[], defEst: DefinicionEstructural): boolean {
-    var { nombreVariable, insumos } = defVariable;
-    var cantDef: number = 0;
-    insumos.variables.forEach(function (varInsumos) {
-        // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
-        if (hasTablePrefix(varInsumos) && defEst) {
-            var [prefix, varName] = varInsumos.split('.');
-            if (vardef.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
-                vardef.push(varInsumos);// then agrego esta variable a vardef
-            }
-        }
-        cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
-    });
-    if (cantDef == insumos.variables.length) {
-        vardef.push(nombreVariable);
-        definicionesOrd.push(defVariable);
-        if (nvardef.indexOf(defVariable) >= 0) {
-            nvardef.splice(nvardef.indexOf(defVariable), 1)
-        }
-    }
-    return cantDef == insumos.variables.length;
-}
 
 /**
  * @param nvardef son las que variables a calcular cuyos insumos no están en vardef
  * @param variablesDefinidas variables con insumos definidos
  */
-export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnalizada[], variablesDefinidas: string[], defESt?: DefinicionEstructural): BloqueVariablesGenerables[] {
-    var listaOut: BloqueVariablesGenerables[];
-    listaOut = [];
+export function separarEnGruposPorNivelYOrigen(nvardef: VariableGenerable[], variablesDefinidas: string[], defESt?: DefinicionEstructural): BloqueVariablesGenerables[] {
+    var listaOut: BloqueVariablesGenerables[] = [];
     var lenAnt: number;
-    var definicionesOrd: DefinicionVariableAnalizada[] = [];
+    var definicionesOrd: VariableGenerable[] = [];
     var compararJoins = function (joins1: Joins[], joins2: Joins[]) {
         return (joins1 === undefined && joins2 === undefined ||
             JSON.stringify(joins1) === JSON.stringify(joins2)) ? true : false;
     };
-    var nuevoBloqueListaOut = function (defVariable: DefinicionVariableAnalizada): BloqueVariablesGenerables {
-        var { tabla, joins, ...varAnalizada } = defVariable;
-        var nuevo: BloqueVariablesGenerables = { tabla, variables: [varAnalizada] };
+    var nuevoBloqueListaOut = function (defVariable: VariableGenerable): BloqueVariablesGenerables {
+        var {joins, ...varAnalizada } = defVariable;
+        var nuevo: BloqueVariablesGenerables = { tabla: defVariable.tabla, variables: [varAnalizada] };
         if (joins !== undefined) {
             nuevo.joins = joins;
         }
@@ -303,8 +249,9 @@ export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnaliz
     if (nvardef.length > 0) {
         throw new Error("Error, no se pudo determinar el orden de la variable '" + nvardef[0].nombreVariable + "' y otras")
     }
-    definicionesOrd.forEach(function (defVariable: DefinicionVariableAnalizada) {
-        var { tabla, joins, ...varAnalizada } = defVariable;
+    definicionesOrd.forEach(function (defVariable: VariableGenerable) {
+        var {joins, ...varAnalizada } = defVariable;
+        let tabla = defVariable.tabla;
         if (listaOut.length == 0) {
             listaOut.push(nuevoBloqueListaOut(defVariable));
         } else {
@@ -335,5 +282,4 @@ export function separarEnGruposPorNivelYOrigen(nvardef: DefinicionVariableAnaliz
     return listaOut;
 }
 
-// re-exports
-export { Insumos } from 'expre-parser';
+export const sufijo_agregacion:string='_agg';

@@ -6,15 +6,15 @@ import { procedures } from "./procedures-varcal";
 import { alias } from "./table-alias";
 import { Client } from "pg-promise-strict";
 import { TablaDatos, UnidadDeAnalisis, Request, tiposTablaDato, Operativo } from "operativos";
-import { DefinicionEstructural, DefinicionEstructuralTabla, sufijo_agregacion, generateConditions } from "./var-cal";
-import { AliasDefEst } from "./types-varcal";
+import { generateConditions, sufijo_agregacion } from "./var-cal";
+import { AliasDefEst, DefinicionEstructural, DefinicionEstructuralTabla} from "./types-varcal";
 
-
+// re-export my file of types for external modules
 export * from './types-varcal';
+
 export type Constructor<T> = new(...args: any[]) => T;
 
-export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosType>>(Base:T){
-    
+export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosType>>(Base:T){    
     return class AppVarCal extends Base{
         defEsts:{[key:string]: DefinicionEstructural} = {};
         myProcedures: operativos.ProcedureDef[] = procedures;

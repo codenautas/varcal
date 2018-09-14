@@ -1,19 +1,22 @@
 "use strict";
 
+import * as operativos from "operativos";
+import {TableDefinition, tiposTablaDato, UnidadDeAnalisis} from "operativos";
 import * as VarCal from "./var-cal";
+import { ProcedureContext, DefinicionEstructural, PrefixedPks, DefinicionEstructuralTabla, VariablesDefinidas, 
+    VariableComplete, BloqueVariablesGenerables } from "./types-varcal";
+import { VarCalType } from "./app-varcal";
+
 import * as fs from "fs-extra";
 import * as likear from "like-ar";
-import * as operativos from "operativos";
-import {TableDefinition, VariableOpcion, tiposTablaDato, UnidadDeAnalisis} from "operativos";
-import { ProcedureContext } from "./types-varcal";
-import { VarCalType } from "./app-varcal";
 import * as bg from "best-globals";
+import { CompilerOptions } from "expre-parser";
 
 export interface coreFunctionParameters{
     operativo: string
 }
 
-export type CoreFunction = (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<VarCal.DefinicionEstructural>;
+export type CoreFunction = (context: operativos.ProcedureContext, parameters: coreFunctionParameters) => Promise<DefinicionEstructural>;
 
 var procedures = [
     {
@@ -23,22 +26,20 @@ var procedures = [
         ],
         coreFunction: async function (context: ProcedureContext, parameters: coreFunctionParameters) {
             //TODO deshardcodear y pasar a algun archivo
-            let compilerOptions: VarCal.CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
+            let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
             var be: VarCalType = context.be as VarCalType;
             let operativo = parameters.operativo;
             var db = be.db;
             var drops:string[]=[];
             var inserts:string[]=[];
-            var allPrefixedPks:{
-                [key:string]: {pks:string[], pksString: string}
-            } = {};
+            var allPrefixedPks:PrefixedPks = {};
             var tableDefs:operativos.TableDefinitions = {};
             var resultUA = await context.client.query('select * from unidad_analisis ua where operativo = $1', [operativo]).fetchAll();
             await be.armarDefEstructural(context.client, operativo); //actualizo las defEst porque desde que se levantó node pueden haber cambiado
             resultUA.rows.forEach((row:UnidadDeAnalisis) => {
                 let ua = row.unidad_analisis
                 let tableName = be.sufijarUACalculada(ua);
-                let estParaGenTabla:VarCal.DefinicionEstructuralTabla = be.defEsts[operativo].tables[ua];
+                let estParaGenTabla:DefinicionEstructuralTabla = be.defEsts[operativo].tables[ua];
                 drops.unshift("drop table if exists " + db.quoteIdent(tableName) + ";");
                 var pks = estParaGenTabla.pks;
                 var prefixedPks = pks.map((pk:string) => ua + '.' + pk);
@@ -77,47 +78,19 @@ var procedures = [
                  AND v.clase = 'calculada'
                  AND v.activa
             `, [operativo]).fetchAll();
-            //TODO sacar esta funcion
-            function wrapExpression(expression:string|number, pkExpression:string) {
-                return VarCal.getWrappedExpression(expression, pkExpression, compilerOptions);
-            }
-            var variablesACalcular = variablesDatoResult.rows.map(function (v:VarCal.VariableComplete) {
-                let expresionValidada;
-                var pkList = allPrefixedPks[v.unidad_analisis].pksString;
-                if (v.opciones && v.opciones.length) {
-                    expresionValidada = 'CASE ' + v.opciones.map(function (opcion:VariableOpcion) {
-                        return '\n          WHEN ' + wrapExpression(opcion.expresion_condicion, pkList) +
-                        ' THEN ' + wrapExpression(opcion.expresion_valor || opcion.opcion, pkList)
-                    }).join('') + (v.expresion ? '\n          ELSE ' + wrapExpression(v.expresion, pkList) : '') + ' END'
-                } else {
-                    expresionValidada = wrapExpression(v.expresion, pkList);
-                }
-                if (v.filtro){
-                    expresionValidada = 'CASE WHEN ' + v.filtro + ' THEN ' + expresionValidada + ' ELSE NULL END'
-                }
-                let insumos = VarCal.getInsumos(expresionValidada);
-                return {
-                    tabla: v.unidad_analisis,
-                    nombreVariable: v.variable,
-                    expresionValidada,
-                    insumos,
-                    funcion_agregacion: v.funcion_agregacion,
-                    tabla_agregada: v.tabla_agregada
-                }
-            });
-            //var variablesACalcular = VarCal.getVariablesACalcular(variablesDatoResult.rows, allPrefixedPks, compilerOptions);
-
+            var variablesACalcular = VarCal.getVariablesACalcular(<VariableComplete[]> variablesDatoResult.rows, allPrefixedPks, compilerOptions);
+            
             //TODO nombre de variable duplicado, ademas se está haciendo una query parecida, hacer una sola y filtrarla después
             var variablesDatoResult = await context.client.query(`
                 SELECT variable, unidad_analisis, clase from variables
                 WHERE operativo = $1 AND activa
             `, [operativo]).fetchAll();
-            var allVariables: VarCal.VariablesDefinidas = {};
+            var allVariables: VariablesDefinidas = {};
             variablesDatoResult.rows.forEach((vDato:operativos.Variable) => allVariables[vDato.variable] = { tabla: vDato.unidad_analisis, clase: vDato.clase });
             likear(allPrefixedPks).forEach(function (prefixedPk, ua) {
                 prefixedPk.pks.forEach(pk => allVariables[pk] = { tabla: ua })
             });
-            var grupoVariables = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), be.defEsts[operativo]);
+            var grupoVariables: BloqueVariablesGenerables[] = VarCal.separarEnGruposPorNivelYOrigen(variablesACalcular, Object.keys(likear(allVariables).filter(v => v.clase != 'calculada')), be.defEsts[operativo]);
             var parametrosGeneracion = {
                 nombreFuncionGeneradora: 'gen_fun_var_calc',
                 esquema: be.config.db.schema,

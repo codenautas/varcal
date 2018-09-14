@@ -31,7 +31,7 @@
   },
   "scripts": {
     "x-test": "tsc || echo \"continue with errors\" && mocha --reporter spec --bail --check-leaks tests\\tests\\*.js",
-    "test": "(npm run prepublish || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks tests/tests/*.js",
+    "test": "(npm run build || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks tests/tests/*.js",
     "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks tests/tests/",
     "start": "node server/server-varcal.js",
     "prepublish": "npm run build",
