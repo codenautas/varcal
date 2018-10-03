@@ -7,10 +7,11 @@ export function alias(context:TableContext):TableDefinition{
     return {
         name:'alias',
         elementName:'alias',
+        title:'relaciones',
         editable:admin,
         fields:[
             {name:"operativo"     , typeName:'text'  ,              },
-            {name:"alias"         , typeName:'text'  ,              },
+            {name:"alias"         , typeName:'text'  ,title:'relación'              },
             {name:"tabla_datos"   , typeName:'text'  ,nullable:false},
             {name:"on"            , typeName:'text'  ,nullable:false},
             {name:"where"         , typeName:'text'                 },

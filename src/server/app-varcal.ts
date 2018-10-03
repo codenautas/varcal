@@ -131,7 +131,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
             //TODO: es igual que en datos-ext llevarlo a operativos
             let myMenuPart:operativos.MenuInfo[]=[
                 {menuType:'proc', name:'generar_calculadas',label:'generar calculadas', proc:'calculadas/generar'},
-                {menuType:'table', name:'alias'},
+                {menuType:'table', name:'relaciones',table:'alias'},
             ];
             let menu = {menu: super.getMenu().menu.concat(myMenuPart)}
             return menu;
