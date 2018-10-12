@@ -5,9 +5,9 @@ import * as operativos from "operativos";
 import { procedures } from "./procedures-varcal";
 import { alias } from "./table-alias";
 import { Client } from "pg-promise-strict";
-import { TablaDatos, UnidadDeAnalisis, Request, tiposTablaDato, Operativo, TablaDatosDB } from "operativos";
+import { TablaDatos, Request, tiposTablaDato, Operativo, TablaDatosDB } from "operativos";
 import { buildONClausule, sufijo_agregacion } from "./var-cal";
-import { AliasDefEst, DefinicionEstructural, DefinicionEstructuralTabla} from "./types-varcal";
+import { AliasDefEst, DefinicionEstructural, DefinicionEstructuralTabla, ComposedTablaDatos} from "./types-varcal";
 
 // re-export my file of types for external modules
 export * from './types-varcal';
@@ -26,12 +26,14 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
         }
 
         async postConfig(){
-            await super.postConfig();
             var be=this;
             await be.inTransaction({} as Request, async function(client:Client){
                 let operativos = await client.query('SELECT * from operativos').fetchAll();
                 await Promise.all(operativos.rows.map((ope: Operativo) => be.armarDefEstructural(client, ope.operativo)));
             });
+            // El post config de operativos depende de la armarDefEstructural de Varcal,
+            // por eso se hace luego...
+            await super.postConfig();
         }
 
         async generateBaseTableDef(client: Client, tablaDatosDB:TablaDatosDB){
@@ -76,7 +78,9 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
             }
             results.aliases.rows.forEach(function(a:{alias:string, alias_def_est:AliasDefEst}){ defEst.aliases[a.alias]=a.alias_def_est });
             //falta trabajar results para obtener la pinta de  defEst
-            results.tables.rows.forEach(function(table: UnidadDeAnalisis & TablaDatos & {pk_arr: string[]}){
+
+            let tables = <ComposedTablaDatos[]> results.tables.rows;
+            tables.forEach(function(table){
                 let tua = table.operativo.toLowerCase() + '_' + table.unidad_analisis;
                 let tDefEst:DefinicionEstructuralTabla = {
                     operativo: operativo,
@@ -113,15 +117,15 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
             });
             
             //Seteo de detail tables a los padres de las tablas que tienen padre, se hace por separado para que todos los padres ya esten completos
-            results.tables.rows.filter(t => t.padre).forEach(function(table: UnidadDeAnalisis & {pk_arr: string[]}){
+            tables.filter(table => table.padre).forEach(function(table){
                 // se agregan como detalles ambas tablas la calculada (puede no existir) y la tabla datos
                 defEst.tables[table.padre].detailTables.push({
-                    table: table.unidad_analisis,
+                    table: table.operativo.toLowerCase() + '_' + table.unidad_analisis,
                     fields: defEst.tables[table.padre].pks,
                     abr: table.unidad_analisis.substr(0,1).toUpperCase()
                 });
                 defEst.tables[table.padre].detailTables.push({
-                    table: AppVarCal.sufijarCalculada(table.unidad_analisis),
+                    table: table.operativo.toLowerCase() + '_' + AppVarCal.sufijarCalculada(table.unidad_analisis),
                     fields: defEst.tables[table.padre].pks,
                     abr: table.unidad_analisis.substr(0,1).toUpperCase() + '-C'
                 });
