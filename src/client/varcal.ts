@@ -2,14 +2,18 @@
 
 import {html} from "js-to-html";
 import * as myOwn from "myOwn";
+import { TablaDatos } from "operativos";
 
 myOwn.clientSides.verTabla = {
     prepare: function (depot:myOwn.Depot, fieldName: string) {
         //TODO sacar hardcode "calculada" (requiere importar operativos en cliente)
-        if (depot.row.tipo == 'calculada' || depot.row.estructura_cerrada){
+        let tabla_datos = <TablaDatos & {estructura_cerrada: string}> depot.row;
+        if (tabla_datos.tipo == 'calculada' || tabla_datos.estructura_cerrada){
             var link = html.a().create();
             var td = depot.rowControls[fieldName];
-            link.href='#w=table&table=' + depot.row.tabla_datos;
+            // TODO: se debería poder usar método de instancia getTableName pero desde el navegador no funciona
+            // link.href='#w=table&table=' + TablaDatos.construirConObj(tabla_datos).getTableName();
+            link.href='#w=table&table=' + tabla_datos.operativo.toLowerCase() + '_' + tabla_datos.tabla_datos;;
             link.textContent='ir a tabla';
             td.appendChild(link);
         }
