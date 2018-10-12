@@ -105,6 +105,7 @@ describe("varcal", function () {
                     insumos:{variables:['j'],aliases:[], funciones:[]}
                 }]
             }, 2, {tables:{t1:{
+                    operativo: 'repsic',
                     target: 't1_calculada',
                     sourceJoin: 'inner join t0 using(pk0)',
                     sourceBro: 't1',
@@ -131,6 +132,7 @@ describe("varcal", function () {
             }, 2, {
                     tables: {
                         t1: {
+                            operativo: 'repsic',
                             target: 't1_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 't1',
@@ -159,6 +161,7 @@ describe("varcal", function () {
                     },
                     tables: {
                         personas: {
+                            operativo: 'repsic',
                             target: 'personas_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 'personas',
@@ -230,12 +233,14 @@ describe("varcal", function () {
             }, 14, {
                     tables: {
                         hogares: {
+                            operativo: 'repsic',
                             target: 'hogares_calculada',
                             sourceJoin: 'inner join viviendas using(v)',
                             sourceBro: 'hogares',
                             where: 'hogares_calculada.h = hogares.h and hogares_calculada.v=hogares.v',
                         },
                         personas: {
+                            operativo: 'repsic',
                             aliasAgg: 'personas_agg',
                             sourceAgg: 'personas_calculada inner join personas ON personas_calculada.v=personas.v and personas_calculada.h=personas.h and personas_calculada.p=personas.p',
                             whereAgg:{ 
@@ -243,6 +248,7 @@ describe("varcal", function () {
                             }    
                         },
                         visitas: {
+                            operativo: 'repsic',
                             aliasAgg: 'visitas_agg',
                             sourceAgg: 'visitas',
                             whereAgg:{
@@ -303,6 +309,7 @@ describe("varcal", function () {
                 }, {
                     tables: {
                         datos: {
+                            operativo: 'repsic',
                             target: 't1_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 't1',
@@ -335,12 +342,14 @@ describe("varcal", function () {
                 }, {
                     tables: {
                         datos: {
+                            operativo: 'repsic',
                             target: 't1_calculada',
                             sourceJoin: 'inner join t0 using(pk0)',
                             sourceBro: 't1',
                             where: 't1_calculada.t1 = datos.t1 and t1_calculada.pk0=t0.pk0',
                         },
                         datos2: {
+                            operativo: 'repsic',
                             target: 't2_calculada',
                             sourceJoin: 'inner join t0 using(pk0) join t1_calculada using(pk0)',
                             sourceBro: 't2',
