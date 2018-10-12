@@ -1,12 +1,12 @@
 "use strict";
 
 import * as ExpresionParser from 'expre-parser';
-import * as likear          from 'like-ar';
-
-import { tiposTablaDato, VariableOpcion } from 'operativos';
 import { CompilerOptions } from 'expre-parser';
-import { DefinicionEstructural, VariableGenerable, VariablesDefinidas, VariableComplete, 
-    PrefixedPks, BloqueVariablesGenerables, TextoSQL, ParametrosGeneracion, Joins } from "./types-varcal";
+import * as likear from 'like-ar';
+import { VariableOpcion } from 'operativos';
+import { BloqueVariablesGenerables, DefinicionEstructural, Join, ParametrosGeneracion, PrefixedPks, TextoSQL, VariableComplete, VariableGenerable, VariablesDefinidas, DefinicionEstructuralTabla } from "./types-varcal";
+import { AppVarCal } from './app-varcal';
+
 
 function hasTablePrefix(variable: string){
     return variable.match(/^.+\..+$/);
@@ -41,6 +41,8 @@ function getAggregacion(f: string, exp: string) {
             return 'sum(' + exp + ')';
         case 'contar':
             return 'count(nullif(' + exp + ',false))';
+        case 'promediar':
+            return 'avg(' + exp + ')';
         default:
             return f + '(' + exp + ')';
     }
@@ -52,11 +54,12 @@ function regexpReplace(guno:string, gdos:string, gtres:string, sourceStr:string,
     return sourceStr.replace(new RegExp(completeRegex, 'g'), '$1'+ replaceStr+'$3');
 }
 
-function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas){
+function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDefinidas, tableDefEst: DefinicionEstructuralTabla){
     v.insumos.variables.forEach(varInsumo => {
         if ( ! hasTablePrefix(varInsumo) && ( ! v.insumos.funciones || v.insumos.funciones.indexOf(varInsumo) == -1) && variablesDefinidas[varInsumo]){
-            let prefix = (variablesDefinidas[varInsumo].clase == 'calculada')? variablesDefinidas[varInsumo].tabla + '_' + tiposTablaDato.calculada : variablesDefinidas[varInsumo].tabla;
-            let varWithPrefix = prefix + '.' + varInsumo;
+            let definedVar = variablesDefinidas[varInsumo];
+            let varPrefix = (definedVar.clase == 'calculada')? AppVarCal.sufijarCalculada(definedVar.tabla) : definedVar.tabla;
+            let varWithPrefix = tableDefEst.operativo.toLowerCase() + '_' + varPrefix + '.' + varInsumo;
 
             // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
             // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada
@@ -86,7 +89,9 @@ export function getVariablesACalcular(variablesDatos:VariableComplete[], allPref
         }
         let insumos = getInsumos(expresionValidada);
         return <VariableGenerable>{
-            tabla: v.unidad_analisis,
+            tabla: v.operativo.toLowerCase() + '_' + v.tabla_datos,
+            operativo: v.operativo,
+            ua: v.unidad_analisis,
             nombreVariable: v.variable,
             expresionValidada,
             funcion_agregacion: v.funcion_agregacion,
@@ -96,15 +101,15 @@ export function getVariablesACalcular(variablesDatos:VariableComplete[], allPref
     });
 }
 
-export function generateConditions (left:string, rigth:string, fields: string[]){
-    return fields.map((field: string) =>
-        `${left}.${field} = ${rigth}.${field}`
+export function buildONClausule(leftAlias:string, rigthAlias:string, columnsToJoin: string[]){
+    return columnsToJoin.map((col: string) =>
+        `${leftAlias}.${col} = ${rigthAlias}.${col}`
     ).join(' and ');
 }
 
 export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: number, defEst?: DefinicionEstructural, variablesDefinidas?: VariablesDefinidas): TextoSQL {
     var txtMargen = Array(margen + 1).join(' ');
-    let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.tabla]) ? defEst.tables[definicion.tabla] : null;
+    let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.ua]) ? defEst.tables[definicion.ua] : null;
     let defJoinExist: boolean = !!(definicion.joins && definicion.joins.length);
     let tablesToFromClausule: string[] = [];
     let completeWhereConditions: string = '';
@@ -117,7 +122,7 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     if (variablesDefinidas){
         definicion.variables.forEach((v:VariableGenerable) => {
             if (v.insumos){
-                prefijarExpresion(v, variablesDefinidas)
+                prefijarExpresion(v, variablesDefinidas, tableDefEst)
             }
         });
     }
@@ -144,13 +149,13 @@ export function sentenciaUpdate(definicion: BloqueVariablesGenerables, margen: n
     let aliasLeftJoins = '';
     likear(aliasesUsados).forEach((aliasVars,aliasName) => {
         let alias = defEst.aliases[aliasName];
-        let selectFieldsAlias=defEst.tables[alias.tabla_datos].pks.concat([...aliasVars]).join(', ');
+        let selectFieldsAlias = defEst.tables[alias.tabla_datos].pks.concat([...aliasVars]).join(', ');
         if (alias) {
             aliasLeftJoins +=
 `
 ${txtMargen}      LEFT JOIN (
 ${txtMargen}          SELECT ${selectFieldsAlias}
-${txtMargen}            FROM ${alias.tabla_datos} ${aliasName}`;
+${txtMargen}            FROM ${tableDefEst.operativo.toLowerCase() + '_' + alias.tabla_datos} ${aliasName}`;
             aliasLeftJoins +=alias.where?
 `
 ${txtMargen}            WHERE ${alias.where}`:'';
@@ -160,8 +165,11 @@ ${txtMargen}      ) ${aliasName} ON ${alias.on}`;
 
         }
     });
-    tablesToFromClausule = tablesToFromClausule.concat((tableDefEst && tableDefEst.sourceBro) ? tableDefEst.sourceBro + ' ' + tableDefEst.sourceJoin + aliasLeftJoins: []);
-    tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(def => def.tabla) : []);
+        
+    if (tableDefEst && tableDefEst.sourceBro){
+        tablesToFromClausule.push(tableDefEst.sourceBro + ' ' + tableDefEst.sourceJoin + aliasLeftJoins);
+    } 
+    tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? definicion.joins.map(join => join.tabla) : []);
 
     //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
     let tablasAgregadas = [...(new Set(definicion.variables.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
@@ -173,7 +181,7 @@ ${txtMargen}    LATERAL (
 ${txtMargen}      SELECT
 ${txtMargen}          ${vars.map(v => `${getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.nombreVariable}`).join(',\n          ' + txtMargen)}
 ${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg}
-${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg[definicion.tabla]}
+${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg[definicion.ua]}
 ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
         );
     });
@@ -221,17 +229,17 @@ export function getWrappedExpression(expression: string|number, pkExpression: st
  * @param nvardef son las que variables a calcular cuyos insumos no están en vardef
  * @param variablesDefinidas variables con insumos definidos
  */
-export function separarEnGruposPorNivelYOrigen(nvardef: VariableGenerable[], variablesDefinidas: string[], defESt?: DefinicionEstructural): BloqueVariablesGenerables[] {
+export function separarEnGruposPorNivelYOrigen(nvardef: VariableGenerable[], variablesDefinidas: string[], defEst?: DefinicionEstructural): BloqueVariablesGenerables[] {
     var listaOut: BloqueVariablesGenerables[] = [];
     var lenAnt: number;
     var definicionesOrd: VariableGenerable[] = [];
-    var compararJoins = function (joins1: Joins[], joins2: Joins[]) {
+    var compararJoins = function (joins1: Join[], joins2: Join[]) {
         return (joins1 === undefined && joins2 === undefined ||
             JSON.stringify(joins1) === JSON.stringify(joins2)) ? true : false;
     };
     var nuevoBloqueListaOut = function (defVariable: VariableGenerable): BloqueVariablesGenerables {
         var {joins, ...varAnalizada } = defVariable;
-        var nuevo: BloqueVariablesGenerables = { tabla: defVariable.tabla, variables: [varAnalizada] };
+        var nuevo: BloqueVariablesGenerables = { tabla: defVariable.tabla, variables: [varAnalizada], ua: defVariable.ua };
         if (joins !== undefined) {
             nuevo.joins = joins;
         }
@@ -241,7 +249,7 @@ export function separarEnGruposPorNivelYOrigen(nvardef: VariableGenerable[], var
         lenAnt = nvardef.length;
         var i = 0;
         while (i < nvardef.length) {
-            if (!checkInsumos(nvardef[i], variablesDefinidas, definicionesOrd, nvardef, defESt)) {
+            if (!checkInsumos(nvardef[i], variablesDefinidas, definicionesOrd, nvardef, defEst)) {
                 i++;
             }
         };
