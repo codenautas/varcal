@@ -1,5 +1,5 @@
 import * as ExpresionParser from 'expre-parser';
-import { DetailTable } from 'operativos';
+import { DetailTable, ProcedureContext } from 'operativos';
 
 // re-exports
 export { Insumos, CompilerOptions} from 'expre-parser';
@@ -20,19 +20,20 @@ export interface Alias extends AliasDefEst{
 
 export type PrefixedPks = {[key:string]: {pks:string[], pksString: string}};
 
-export interface Joins {
+export interface Join {
     tabla: string,
     clausulaJoin: string
 };
 
 export interface VariableGenerable{
+    ua?: string
     tabla?: string
     nombreVariable: string
     expresionValidada: string
-    funcion_agregacion?: 'contar' | 'sumar'
+    funcion_agregacion?: 'contar' | 'sumar' | 'promediar'
     tabla_agregada?: string
     insumos?: ExpresionParser.Insumos
-    joins?: Joins[]
+    joins?: Join[]
     aliases?: Aliases
 }
 
@@ -46,10 +47,12 @@ export type TextoSQL = string;
 export type BloqueVariablesGenerables = {
     tabla: string
     variables: VariableGenerable[]
-    joins?: Joins[]
+    ua?: string
+    joins?: Join[]
 };
 
 export type DefinicionEstructuralTabla = {
+    operativo?: string;
     target?: string;
     sourceBro?: string;
     pks?:string[];
@@ -84,3 +87,9 @@ export interface VariablesDefinidas{
 export interface Aliases {
     [key: string]: AliasDefEst
 }
+
+export interface coreFunctionParameters{
+    operativo: string
+}
+
+export type CoreFunction = (context: ProcedureContext, parameters: coreFunctionParameters) => Promise<DefinicionEstructural>;
