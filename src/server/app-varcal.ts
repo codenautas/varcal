@@ -107,7 +107,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                     // Calculo whereAgg
                     tDefEst.whereAgg[table.padre] = buildONClausule(padrePrefijado, tDefEst.target, pksPadre);
                     // Calculo sourceJoin
-                    tDefEst.sourceJoin = `inner join ${padrePrefijado} using (${pksPadre.join(', ')})`;
+                    tDefEst.sourceJoin = `inner join ${padrePrefijado} using (${pksPadre.join(', ')}) inner join ${padrePrefijado}_calculada using (${pksPadre.join(', ')})`;
                 }else {
                     tDefEst.sourceAgg = tDefEst.target;
                 }
