@@ -1,5 +1,5 @@
 import * as ExpresionParser from 'expre-parser';
-import { DetailTable, ProcedureContext } from 'operativos';
+import { DetailTable, ProcedureContext, UnidadDeAnalisis, TablaDatos } from 'operativos';
 
 // re-exports
 export { Insumos, CompilerOptions} from 'expre-parser';
@@ -30,7 +30,7 @@ export interface VariableGenerable{
     tabla?: string
     nombreVariable: string
     expresionValidada: string
-    funcion_agregacion?: 'contar' | 'sumar' | 'promediar'
+    funcion_agregacion?: 'contar' | 'sumar' | 'promediar' | 'min' | 'max'
     tabla_agregada?: string
     insumos?: ExpresionParser.Insumos
     joins?: Join[]
@@ -93,3 +93,5 @@ export interface coreFunctionParameters{
 }
 
 export type CoreFunction = (context: ProcedureContext, parameters: coreFunctionParameters) => Promise<DefinicionEstructural>;
+
+export type ComposedTablaDatos = UnidadDeAnalisis & TablaDatos & {pk_arr: string[]}

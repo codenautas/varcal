@@ -39,6 +39,10 @@ function getAggregacion(f: string, exp: string) {
     switch (f) {
         case 'sumar':
             return 'sum(' + exp + ')';
+        case 'min':
+            return 'min(' + exp + ')';
+        case 'max':
+            return 'max(' + exp + ')';
         case 'contar':
             return 'count(nullif(' + exp + ',false))';
         case 'promediar':
