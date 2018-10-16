@@ -242,7 +242,7 @@ describe("varcal", function () {
                         personas: {
                             operativo: 'repsic',
                             aliasAgg: 'personas_agg',
-                            sourceAgg: 'personas_calculada inner join personas ON personas_calculada.v=personas.v and personas_calculada.h=personas.h and personas_calculada.p=personas.p',
+                            sourceAgg: 'personas_calculada inner join personas USING (v, h, p)',
                             whereAgg:{ 
                                 hogares: 'personas_calculada.h = hogares.h and personas_calculada.v = hogares.v'
                             }    
@@ -268,7 +268,7 @@ describe("varcal", function () {
                     SELECT
                         count(nullif(sexo=2,false)) as cantidad_mujeres,
                         sum(ingreso_personal) as ingresos_hogar
-                      FROM personas_calculada inner join personas ON personas_calculada.v=personas.v and personas_calculada.h=personas.h and personas_calculada.p=personas.p
+                      FROM personas_calculada inner join personas USING (v, h, p)
                       WHERE personas_calculada.h = hogares.h and personas_calculada.v = hogares.v
                   ) personas_agg, 
                   LATERAL (

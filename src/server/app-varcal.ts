@@ -6,7 +6,7 @@ import { procedures } from "./procedures-varcal";
 import { alias } from "./table-alias";
 import { Client } from "pg-promise-strict";
 import { TablaDatos, Request, tiposTablaDato, Operativo, TablaDatosDB } from "operativos";
-import { buildONClausule, sufijo_agregacion } from "./var-cal";
+import { buildWhereConditions, sufijo_agregacion } from "./var-cal";
 import { AliasDefEst, DefinicionEstructural, DefinicionEstructuralTabla, ComposedTablaDatos} from "./types-varcal";
 
 // re-export my file of types for external modules
@@ -66,7 +66,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                 ).fetchAll(),
                 tables: await client.query(
                     `SELECT ua.*, to_jsonb(array_agg(v.variable order by v.orden)) pk_arr
-                    FROM unidad_analisis ua JOIN tabla_datos td ON ua.operativo = td.operativo AND ua.unidad_analisis = td.unidad_analisis JOIN variables v on v.operativo=ua.operativo and v.tabla_datos=td.tabla_datos and v.es_pk
+                    FROM unidad_analisis ua JOIN tabla_datos td using (operativo, unidad_analisis) JOIN variables v on v.operativo=td.operativo and v.tabla_datos=td.tabla_datos and v.es_pk
                     where ua.operativo=$1
                     group by ua.operativo, ua.unidad_analisis`
                     , sqlParams
@@ -89,12 +89,12 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                     pks : table.pk_arr,
                     aliasAgg : tua + sufijo_agregacion,
                 }
-                tDefEst.where = buildONClausule(tDefEst.sourceBro, tDefEst.target, table.pk_arr);
+                tDefEst.where = buildWhereConditions(tDefEst.sourceBro, tDefEst.target, table.pk_arr);
                 
                 tDefEst.whereAgg = {};
                 tDefEst.sourceJoin = '';
                 if (table.padre){
-                    tDefEst.sourceAgg = tDefEst.target + ` inner join ${tDefEst.sourceBro} ON ` + buildONClausule(tDefEst.target, tDefEst.sourceBro, table.pk_arr);
+                    tDefEst.sourceAgg = tDefEst.target + ` inner join ${tDefEst.sourceBro} USING (${table.pk_arr.join(',')})`;
                     let padrePrefijado = table.operativo.toLowerCase() + '_' + table.padre;
                     //calculo pks del padre sacando de la lista completa de pks las agregadas por esta tabla hija
                     let pksPadre: string[] = table.pk_arr.slice(); //copia por valor para no modificar la lista de pks completa
@@ -105,7 +105,7 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
                         }
                     });
                     // Calculo whereAgg
-                    tDefEst.whereAgg[table.padre] = buildONClausule(padrePrefijado, tDefEst.target, pksPadre);
+                    tDefEst.whereAgg[table.padre] = buildWhereConditions(padrePrefijado, tDefEst.target, pksPadre);
                     // Calculo sourceJoin
                     tDefEst.sourceJoin = `inner join ${padrePrefijado} using (${pksPadre.join(', ')}) inner join ${padrePrefijado}_calculada using (${pksPadre.join(', ')})`;
                 }else {

@@ -105,7 +105,7 @@ export function getVariablesACalcular(variablesDatos:VariableComplete[], allPref
     });
 }
 
-export function buildONClausule(leftAlias:string, rigthAlias:string, columnsToJoin: string[]){
+export function buildWhereConditions(leftAlias:string, rigthAlias:string, columnsToJoin: string[]){
     return columnsToJoin.map((col: string) =>
         `${leftAlias}.${col} = ${rigthAlias}.${col}`
     ).join(' and ');
