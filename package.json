@@ -3,6 +3,7 @@
   "description": "Módulo de variables calculadas",
   "version": "0.1.43",
   "author": "Codenautas <codenautas@googlegroups.com>",
+  "repository": "codenautas/varcal",
   "license": "MIT",
   "main": "server/app-varcal.js",
   "types": "server/app-varcal.d.ts",
