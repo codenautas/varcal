@@ -78,6 +78,11 @@ function prefijarExpresion(v: VariableGenerable, variablesDefinidas:VariablesDef
 
 export function getVariablesACalcular(variablesDatos:VariableComplete[], allPrefixedPks: PrefixedPks, CompilerOptions:CompilerOptions):VariableGenerable[] {
     return variablesDatos.map(function (v:VariableComplete) {
+
+        if ((!v.opciones || !v.opciones.length) && !v.expresion){
+            throw new Error('La variable ' + v.variable + ' no puede tener expresión y opciones nulas simultaneamente');
+        }
+
         let expresionValidada;
         var pkList = allPrefixedPks[v.unidad_analisis].pksString;
         if (v.opciones && v.opciones.length) {
@@ -92,6 +97,8 @@ export function getVariablesACalcular(variablesDatos:VariableComplete[], allPref
             expresionValidada = 'CASE WHEN ' + v.filtro + ' THEN ' + expresionValidada + ' ELSE NULL END'
         }
         let insumos = getInsumos(expresionValidada);
+        // TODO no usar una estructura casi identica (VariableGenerable), en su lugar devolver una Variable 
+        // en todo caso agregar una clase "VariableCalculada" que tenga un campo "expresiónValidada"
         return <VariableGenerable>{
             tabla: v.operativo.toLowerCase() + '_' + v.tabla_datos,
             operativo: v.operativo,
