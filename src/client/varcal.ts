@@ -6,7 +6,7 @@ import { TablaDatos } from "operativos";
 
 myOwn.clientSides.verTabla = {
     prepare: function (depot:myOwn.Depot, fieldName: string) {
-        //TODO sacar hardcode "calculada" (requiere importar operativos en cliente)
+        //TODO sacar hardcode 'calculada' (requiere importar operativos en cliente)
         let tabla_datos = <TablaDatos & {estructura_cerrada: string}> depot.row;
         if (tabla_datos.tipo == 'calculada' || tabla_datos.estructura_cerrada){
             var link = html.a().create();
