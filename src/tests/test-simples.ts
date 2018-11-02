@@ -1,27 +1,26 @@
-// import * as MiniTools from 'mini-tools';
-// import * as pg from 'pg-promise-strict';
-// import * as fs from 'fs-extra';
+import * as discrepances from 'discrepances';
+import * as MiniTools from 'mini-tools';
+import 'mocha';
+import * as pg from 'pg-promise-strict';
+import * as VarCal from '../server/var-cal';
+import { BloqueVariablesGenerables } from '../server/var-cal';
 
-// import * as discrepances from 'discrepances';
-// import 'mocha';
 
-// import * as VarCal from '../server/var-cal';
-// import { Insumos, CompilerOptions, BloqueVariablesGenerables, PrefixedPks, VariableComplete, VariableGenerable} from "../server/types-varcal";
 
-// (pg as { easy: boolean }).easy = true;
+(pg as { easy: boolean }).easy = true;
 
-// var config = {
-//     db: {
-//         motor: 'postgres',
-//         database: 'test_db',
-//         schema: 'varcal',
-//         user: 'test_user',
-//         password: 'test_pass',
-//     }
-// }
+var config = {
+    db: {
+        motor: 'postgres',
+        database: 'test_db',
+        schema: 'varcal',
+        user: 'test_user',
+        password: 'test_pass',
+    }
+}
 
-// // TODO pasar esto a otro archivo de mocks
-// // mock constants for general use
+// TODO pasar esto a otro archivo de mocks
+// mock constants for general use
 // let compilerOptionsMock: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
 // let allPrefixedPksMock: PrefixedPks = {
 //     "grupo_personas": {
@@ -64,18 +63,18 @@
 //     }
 // ]
 
-// describe("varcal", function () {
-//     var client: pg.Client;
-//     before(async function () {
-//         this.timeout(50000);
-//         config = await MiniTools.readConfig(
-//             [config, 'src/tests/local-config'],
-//             { whenNotExist: 'ignore' }
-//         ) as typeof config;
-//         client = await pg.connect(config.db);
-//         await client.executeSqlScript('src/tests/fixtures/initial_db.sql');
-//         console.log('system ready');
-//     });
+describe("varcal", function () {
+    var client: pg.Client;
+    before(async function () {
+        this.timeout(50000);
+        config = await MiniTools.readConfig(
+            [config, 'src/tests/local-config'],
+            { whenNotExist: 'ignore' }
+        ) as typeof config;
+        client = await pg.connect(config.db);
+        await client.executeSqlScript('src/tests/fixtures/initial_db.sql');
+        console.log('system ready');
+    });
 //     describe("sentenciaUpdate", function () {
 //         it("genera un update basado en 2 variables", async function () {
 //             var sqlGenerado = VarCal.sentenciaUpdate({
@@ -384,193 +383,193 @@
 //             discrepances.showAndThrow(varsToCalculate, expectedVars);
 //         });
 //     });
-//     describe("calcularNiveles", function () {
-//         it("separa en listas por nivel", async function () {
-//             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-//                 { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } }
-//             ], ['dato1', 'dato2']);
-//             var listaEsperada: BloqueVariablesGenerables[] = [{
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//             }, {
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
-//                 }, {
-//                     tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//             }];
-//             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
-//         });
-//         it("separa en listas por nivel con orden inverso", async function () {
-//             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-//                 { tabla: 'datos', nombreVariable: 'cal0', expresionValidada: 'doble_y_suma + cal1', insumos: { variables: ['doble_y_suma', 'cal1'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } }
-//             ], ['dato1', 'dato2']);
-//             var listaEsperada: BloqueVariablesGenerables[] = [{
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//             }, {
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
-//                 }, {
-//                     tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//             }, {
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'cal0', expresionValidada: 'doble_y_suma + cal1', insumos: { variables: ['doble_y_suma', 'cal1'], aliases: [], funciones: [] }
-//                 }],
-//             }];
-//             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
-//         });
-//         it("separa en listas por nivel usando alias", async function () {
-//             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-//                 { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } },
-//                 { tabla: 'personas', nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.p3 - p3', insumos: { variables: ['padre.p3', 'p3'], aliases: ['padre'], funciones: [] } }
-//             ], ['p3', 'dato1', 'dato2'], {
-//                     aliases: {
-//                         padre: {
-//                             tabla_datos: 'personas',
-//                             on: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
-//                         }
-//                     },
-//                     tables: {}
-//                 });
-//             var listaEsperada: BloqueVariablesGenerables[] = [{
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//             }, {
-//                 tabla: 'personas',
-//                 variables: [{
-//                     tabla: 'personas', nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.p3 - p3', insumos: { variables: ['padre.p3', 'p3'], aliases: ['padre'], funciones: [] }
-//                 }],
-//             }];
-//             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
-//         });
-//         it("separa en listas por nivel que usa prefijos de tablas (no de aliases), por ej unidades de análisis con wrappers", async function () {
-//             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-//                 { tabla: 'datos', nombreVariable: 'promedio_edad', expresionValidada: 'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos: { variables: ['suma_edad', 'cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases: ['grupo_personas'], funciones: ['div0err', 'null2zero'] } },
-//             ], ['suma_edad', 'cant_f2', 'operativo', 'id_caso'], {
-//                     tables: {
-//                         grupo_personas: {}
-//                     }
-//                 });
-//             var listaEsperada: BloqueVariablesGenerables[] = [{
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'promedio_edad', expresionValidada: 'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos: { variables: ['suma_edad', 'cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases: ['grupo_personas'], funciones: ['div0err', 'null2zero'] }
-//                 }],
-//             }];
-//             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
-//         });
-//         it("protesta si no se puede por abrazo mortal", async function () {
-//             try {
-//                 VarCal.separarEnGruposPorNivelYOrigen([
-//                     { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'b', insumos: { variables: ['b'], aliases: [], funciones: [] } },
-//                     { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'a', insumos: { variables: ['a'], aliases: [], funciones: [] } },
-//                 ], ['dato1', 'dato2']);
-//                 throw new Error('Tenía que dar error por abrazo mortal');
-//             } catch (err) {
-//                 discrepances.showAndThrow(err.message, "Error, no se pudo determinar el orden de la variable 'a' y otras")
-//             }
-//             this.timeout(50000);
-//         });
-//         it("protesta si no se puede porque no encuentra el prefijo en la definición estructural", async function () {
-//             try {
-//                 VarCal.separarEnGruposPorNivelYOrigen([
-//                     { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'prefix_alias.dato2 + 4', insumos: { variables: ['prefix_alias.dato2'], aliases: ['prefix_alias'], funciones: [] } },
-//                 ], ['dato1', 'dato2']);
-//                 throw new Error('Tenía que dar error por abrazo mortal');
-//             } catch (err) {
-//                 discrepances.showAndThrow(err.message, "Error, no se pudo determinar el orden de la variable 'a' y otras")
-//             }
-//             this.timeout(50000);
-//         });
-//         it("separa en listas por nivel y obtiene el join", async function () {
-//             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-//                 { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'cal1', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }], expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'cal2', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }], expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'cal3', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }], expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
-//             ], ['dato1', 'dato2']);
-//             var listaEsperada: BloqueVariablesGenerables[] = [{
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//             }, {
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
-//                 }, {
-//                     tabla: 'datos', nombreVariable: 'cal3', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//                 joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }]
-//             }, {
-//                 tabla: 'datos',
-//                 variables: [{
-//                     tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
-//                 }],
-//                 joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }]
-//             }];
-//             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
-//             this.timeout(50000);
-//         });
-//         it("separa con dependencias complejas", async function () {
-//             var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
-//                 { tabla: 'datos', nombreVariable: 'abbaab', expresionValidada: 'abb+aab', insumos: { variables: ['aab', 'abb'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'o', insumos: { variables: [], aliases: [], funciones: [] } },
-//                 { tabla: 'equis', nombreVariable: 'ab', expresionValidada: 'a+b', insumos: { variables: ['a', 'b'], aliases: [], funciones: [] } },
-//                 // {tabla:'datos', nombreVariable:'aa'    , expresionValidada:'a+a'    , insumos:{variables:['a'],aliases:[], funciones:[]}}, 
-//                 { tabla: 'datos', nombreVariable: 'aab', expresionValidada: 'a+ab', insumos: { variables: ['a', 'ab'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },
-//                 { tabla: 'datos', nombreVariable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },
-//             ], ['o']);
-//             var listaEsperada: BloqueVariablesGenerables[] = [
-//             {
-//                 tabla: 'datos',
-//                 variables: [
-//                     { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'o', insumos: { variables: [], aliases: [], funciones: [] } },
-//                     { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },
-//                 ],
-//             }, {
-//                 tabla: 'equis',
-//                 variables: [
-//                     {tabla: 'equis',  nombreVariable: 'ab', expresionValidada: 'a+b', insumos: { variables: ['a', 'b'], aliases: [], funciones: [] } },
-//                 ],
-//             }, {
-//                 tabla: 'datos',
-//                 variables: [
-//                     {tabla: 'datos',  nombreVariable: 'aab', expresionValidada: 'a+ab', insumos: { variables: ['a', 'ab'], aliases: [], funciones: [] } },
-//                     {tabla: 'datos',  nombreVariable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },
-//                 ],
-//             }, {
-//                 tabla: 'datos',
-//                 variables: [
-//                     { tabla: 'datos', nombreVariable: 'abbaab', expresionValidada: 'abb+aab', insumos: { variables: ['aab', 'abb'], aliases: [], funciones: [] } },
-//                 ],
-//             }];
-//             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
-//             this.timeout(50000);
-//         });
-//     });
-//     after(async function () {
-//         client.done();
-//     });
-// });
+    describe("calcularNiveles", function () {
+        it("separa en listas por nivel", async function () {
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } }
+            ], ['dato1', 'dato2']);
+            var listaEsperada: VarCal.BloqueVariablesGenerables[] = [{
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                }],
+            }, {
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
+                }, {
+                    tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                }],
+            }];
+            discrepances.showAndThrow(resultadoNiveles, listaEsperada);
+        });
+        it("separa en listas por nivel con orden inverso", async function () {
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                { tabla: 'datos', nombreVariable: 'cal0', expresionValidada: 'doble_y_suma + cal1', insumos: { variables: ['doble_y_suma', 'cal1'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } }
+            ], ['dato1', 'dato2']);
+            var listaEsperada: BloqueVariablesGenerables[] = [{
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                }],
+            }, {
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
+                }, {
+                    tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                }],
+            }, {
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'cal0', expresionValidada: 'doble_y_suma + cal1', insumos: { variables: ['doble_y_suma', 'cal1'], aliases: [], funciones: [] }
+                }],
+            }];
+            discrepances.showAndThrow(resultadoNiveles, listaEsperada);
+        });
+        it("separa en listas por nivel usando alias", async function () {
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } },
+                { tabla: 'personas', nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.p3 - p3', insumos: { variables: ['padre.p3', 'p3'], aliases: ['padre'], funciones: [] } }
+            ], ['p3', 'dato1', 'dato2'], {
+                    aliases: {
+                        padre: {
+                            tabla_datos: 'personas',
+                            on: 'padre.id_caso = personas.id_caso AND padre.p0 = personas.p11 AND padre.operativo = personas.operativo',
+                        }
+                    },
+                    tables: {}
+                });
+            var listaEsperada: BloqueVariablesGenerables[] = [{
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                }],
+            }, {
+                tabla: 'personas',
+                variables: [{
+                    tabla: 'personas', nombreVariable: 'dif_edad_padre', expresionValidada: 'padre.p3 - p3', insumos: { variables: ['padre.p3', 'p3'], aliases: ['padre'], funciones: [] }
+                }],
+            }];
+            discrepances.showAndThrow(resultadoNiveles, listaEsperada);
+        });
+        it("separa en listas por nivel que usa prefijos de tablas (no de aliases), por ej unidades de análisis con wrappers", async function () {
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                { tabla: 'datos', nombreVariable: 'promedio_edad', expresionValidada: 'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos: { variables: ['suma_edad', 'cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases: ['grupo_personas'], funciones: ['div0err', 'null2zero'] } },
+            ], ['suma_edad', 'cant_f2', 'operativo', 'id_caso'], {
+                    tables: {
+                        grupo_personas: {}
+                    }
+                });
+            var listaEsperada: BloqueVariablesGenerables[] = [{
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'promedio_edad', expresionValidada: 'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos: { variables: ['suma_edad', 'cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases: ['grupo_personas'], funciones: ['div0err', 'null2zero'] }
+                }],
+            }];
+            discrepances.showAndThrow(resultadoNiveles, listaEsperada);
+        });
+        it("protesta si no se puede por abrazo mortal", async function () {
+            try {
+                VarCal.separarEnGruposPorNivelYOrigen([
+                    { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'b', insumos: { variables: ['b'], aliases: [], funciones: [] } },
+                    { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'a', insumos: { variables: ['a'], aliases: [], funciones: [] } },
+                ], ['dato1', 'dato2']);
+                throw new Error('Tenía que dar error por abrazo mortal');
+            } catch (err) {
+                discrepances.showAndThrow(err.message, "Error, no se pudo determinar el orden de la variable 'a' y otras")
+            }
+            this.timeout(50000);
+        });
+        it("protesta si no se puede porque no encuentra el prefijo en la definición estructural", async function () {
+            try {
+                VarCal.separarEnGruposPorNivelYOrigen([
+                    { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'prefix_alias.dato2 + 4', insumos: { variables: ['prefix_alias.dato2'], aliases: ['prefix_alias'], funciones: [] } },
+                ], ['dato1', 'dato2']);
+                throw new Error('Tenía que dar error por abrazo mortal');
+            } catch (err) {
+                discrepances.showAndThrow(err.message, "Error, no se pudo determinar el orden de la variable 'a' y otras")
+            }
+            this.timeout(50000);
+        });
+        it("separa en listas por nivel y obtiene el join", async function () {
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                { tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'cal1', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }], expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'cal2', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }], expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'cal3', joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }], expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },
+            ], ['dato1', 'dato2']);
+            var listaEsperada: BloqueVariablesGenerables[] = [{
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
+                }],
+            }, {
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
+                }, {
+                    tabla: 'datos', nombreVariable: 'cal3', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                }],
+                joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }, { tabla: 't2', clausulaJoin: 't2.y=t1.y' }]
+            }, {
+                tabla: 'datos',
+                variables: [{
+                    tabla: 'datos', nombreVariable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
+                }],
+                joins: [{ tabla: 't1', clausulaJoin: 't1.x=datos.x' }]
+            }];
+            discrepances.showAndThrow(resultadoNiveles, listaEsperada);
+            this.timeout(50000);
+        });
+        it("separa con dependencias complejas", async function () {
+            var resultadoNiveles = VarCal.separarEnGruposPorNivelYOrigen([
+                { tabla: 'datos', nombreVariable: 'abbaab', expresionValidada: 'abb+aab', insumos: { variables: ['aab', 'abb'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'o', insumos: { variables: [], aliases: [], funciones: [] } },
+                { tabla: 'equis', nombreVariable: 'ab', expresionValidada: 'a+b', insumos: { variables: ['a', 'b'], aliases: [], funciones: [] } },
+                // {tabla:'datos', nombreVariable:'aa'    , expresionValidada:'a+a'    , insumos:{variables:['a'],aliases:[], funciones:[]}}, 
+                { tabla: 'datos', nombreVariable: 'aab', expresionValidada: 'a+ab', insumos: { variables: ['a', 'ab'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },
+                { tabla: 'datos', nombreVariable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },
+            ], ['o']);
+            var listaEsperada: BloqueVariablesGenerables[] = [
+            {
+                tabla: 'datos',
+                variables: [
+                    { tabla: 'datos', nombreVariable: 'a', expresionValidada: 'o', insumos: { variables: [], aliases: [], funciones: [] } },
+                    { tabla: 'datos', nombreVariable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },
+                ],
+            }, {
+                tabla: 'equis',
+                variables: [
+                    {tabla: 'equis',  nombreVariable: 'ab', expresionValidada: 'a+b', insumos: { variables: ['a', 'b'], aliases: [], funciones: [] } },
+                ],
+            }, {
+                tabla: 'datos',
+                variables: [
+                    {tabla: 'datos',  nombreVariable: 'aab', expresionValidada: 'a+ab', insumos: { variables: ['a', 'ab'], aliases: [], funciones: [] } },
+                    {tabla: 'datos',  nombreVariable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },
+                ],
+            }, {
+                tabla: 'datos',
+                variables: [
+                    { tabla: 'datos', nombreVariable: 'abbaab', expresionValidada: 'abb+aab', insumos: { variables: ['aab', 'abb'], aliases: [], funciones: [] } },
+                ],
+            }];
+            discrepances.showAndThrow(resultadoNiveles, listaEsperada);
+            this.timeout(50000);
+        });
+    });
+    after(async function () {
+        client.done();
+    });
+});
 
-// process.on('unhandledRejection', (reason, p) => {
-//     console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
-// });
+process.on('unhandledRejection', (reason, p) => {
+    console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+});

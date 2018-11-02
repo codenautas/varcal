@@ -16,7 +16,7 @@ var procedures = [
             varCalculator.generateDropsAndInserts();
             await varCalculator.generateSchemaAndLoadTableDefs();
             varCalculator.parseCalcVarExpressions();
-            varCalculator.separarEnGruposPorNivelYOrigen();
+            // varCalculator.separarEnGruposPorNivelYOrigen();
             // varCalculator.armarFuncionGeneradora();
             let todoElScript:string = varCalculator.getFinalSql();
             
