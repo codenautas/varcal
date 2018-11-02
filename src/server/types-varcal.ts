@@ -1,5 +1,5 @@
 import { CompilerOptions, Insumos } from 'expre-parser';
-import { OperativoGenerator, tiposTablaDato, Variable, VariableOpcion } from 'operativos';
+import { OperativoGenerator, tiposTablaDato, Variable, VariableOpcion, VariableDB } from 'operativos';
 import { AppVarCalType } from "./app-varcal";
 import { getInsumos, getWrappedExpression } from './var-cal';
 import { Client } from 'pg-promise-strict';
@@ -12,7 +12,7 @@ export class VariableCalculada extends Variable {
     insumos: Insumos
     expresionValidada: string
 
-    static buildFromDBJSON(dbJson: Variable) {
+    static buildFromDBJSON(dbJson: VariableDB) {
         return Object.assign(new VariableCalculada, dbJson);
     }
 

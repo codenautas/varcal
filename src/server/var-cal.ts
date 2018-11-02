@@ -1,6 +1,7 @@
 "use strict";
 
 import * as ExpresionParser from 'expre-parser';
+import { VariableCalculada } from './types-varcal';
 
 
 export function getAggregacion(f: string, exp: string) {
@@ -66,16 +67,15 @@ export interface Join {
     clausulaJoin: string
 };
 
-export interface VariableGenerable{
-    tabla?: string
-    nombreVariable: string
-    expresionValidada: string
-    funcion_agregacion?: 'contar' | 'sumar' | 'promediar'
-    tabla_agregada?: string
-    insumos?: ExpresionParser.Insumos
-    joins?: Join[]
-    aliases?: Aliases
-}
+// export interface VariableGenerable{
+//     tabla?: string
+//     nombreVariable: string
+//     expresionValidada: string
+//     funcion_agregacion?: 'contar' | 'sumar' | 'promediar'
+//     tabla_agregada?: string
+//     insumos?: ExpresionParser.Insumos
+//     aliases?: Aliases
+// }
 
 export type ParametrosGeneracion = {
     nombreFuncionGeneradora: string,
@@ -84,10 +84,9 @@ export type ParametrosGeneracion = {
 
 export type TextoSQL = string;
 
-export type BloqueVariablesGenerables = {
+export type BloqueVariablesACalcular = {
     tabla: string
-    variables: VariableGenerable[]
-    joins?: Join[]
+    variables: VariableCalculada[]
 };
 export type DefinicionEstructuralTabla = {
     operativo?: string;
@@ -112,24 +111,14 @@ export type DefinicionEstructural = {
     tables: Tables
 }
 
-export interface VariableDefinida{
-    tabla: string
-    clase?: string
-}
-
-export interface VariablesDefinidas{
-    [key:string]: VariableDefinida
-}
-
 export interface Aliases {
     [key: string]: AliasDefEst
 }
 
 
-function checkInsumos(defVariable: VariableGenerable, vardef: string[], definicionesOrd: VariableGenerable[], nvardef: VariableGenerable[], defEst: DefinicionEstructural): boolean {
-    var { nombreVariable, insumos } = defVariable;
+function checkInsumos(vCalc: VariableCalculada, vardef: string[], definicionesOrd: VariableCalculada[], nvardef: VariableCalculada[], defEst: DefinicionEstructural): boolean {
     var cantDef: number = 0;
-    insumos.variables.forEach(function (varInsumos) {
+    vCalc.insumos.variables.forEach(function (varInsumos) {
         // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
         if (hasTablePrefix(varInsumos) && defEst) {
             var [prefix, varName] = varInsumos.split('.');
@@ -139,14 +128,14 @@ function checkInsumos(defVariable: VariableGenerable, vardef: string[], definici
         }
         cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
     });
-    if (cantDef == insumos.variables.length) {
-        vardef.push(nombreVariable);
-        definicionesOrd.push(defVariable);
-        if (nvardef.indexOf(defVariable) >= 0) {
-            nvardef.splice(nvardef.indexOf(defVariable), 1)
+    if (cantDef == vCalc.insumos.variables.length) {
+        vardef.push(vCalc.variable);
+        definicionesOrd.push(vCalc);
+        if (nvardef.indexOf(vCalc) >= 0) {
+            nvardef.splice(nvardef.indexOf(vCalc), 1)
         }
     }
-    return cantDef == insumos.variables.length;
+    return cantDef == vCalc.insumos.variables.length;
 }
 
 function hasTablePrefix(variable: string){
@@ -157,22 +146,10 @@ function hasTablePrefix(variable: string){
  * @param nvardef son las que variables a calcular cuyos insumos no están en vardef
  * @param variablesDefinidas variables con insumos definidos
  */
-export function separarEnGruposPorNivelYOrigen(nvardef: VariableGenerable[], variablesDefinidas: string[], defEst?: DefinicionEstructural): BloqueVariablesGenerables[] {
-    var listaOut: BloqueVariablesGenerables[] = [];
+export function separarEnGruposPorNivelYOrigen(nvardef: VariableCalculada[], variablesDefinidas: string[], defEst?: DefinicionEstructural): BloqueVariablesACalcular[] {
+    var listaOut: BloqueVariablesACalcular[] = [];
     var lenAnt: number;
-    var definicionesOrd: VariableGenerable[] = [];
-    var compararJoins = function (joins1: Join[], joins2: Join[]) {
-        return (joins1 === undefined && joins2 === undefined ||
-            JSON.stringify(joins1) === JSON.stringify(joins2)) ? true : false;
-    };
-    var nuevoBloqueListaOut = function (defVariable: VariableGenerable): BloqueVariablesGenerables {
-        var {joins, ...varAnalizada } = defVariable;
-        var nuevo: BloqueVariablesGenerables = { tabla: defVariable.tabla, variables: [varAnalizada] };
-        if (joins !== undefined) {
-            nuevo.joins = joins;
-        }
-        return nuevo;
-    };
+    var definicionesOrd: VariableCalculada[] = [];
     do {
         lenAnt = nvardef.length;
         var i = 0;
@@ -183,37 +160,35 @@ export function separarEnGruposPorNivelYOrigen(nvardef: VariableGenerable[], var
         };
     } while (nvardef.length > 0 && nvardef.length != lenAnt);
     if (nvardef.length > 0) {
-        throw new Error("Error, no se pudo determinar el orden de la variable '" + nvardef[0].nombreVariable + "' y otras")
+        throw new Error("Error, no se pudo determinar el orden de la variable '" + nvardef[0].variable + "' y otras")
     }
-    definicionesOrd.forEach(function (defVariable: VariableGenerable) {
-        var {joins, ...varAnalizada } = defVariable;
-        let tabla = defVariable.tabla;
+    definicionesOrd.forEach(function (defVariable: VariableCalculada) {
         if (listaOut.length == 0) {
-            listaOut.push(nuevoBloqueListaOut(defVariable));
+            listaOut.push({ tabla: defVariable.tabla_datos, variables: [defVariable] });
         } else {
             var enNivel = defVariable.insumos.variables.length ? defVariable.insumos.variables.map(function (varInsumo) {
                 return listaOut.findIndex(function (nivel) {
                     return nivel.variables.findIndex(function (vvar) {
-                        return vvar.nombreVariable == varInsumo
+                        return vvar.variable == varInsumo
                     }) == -1 ? false : true
                 })
             }).reduce(function (elem: number, anterior: number) {
                 return elem > anterior ? elem : anterior;
             }) : 0;
             if (enNivel >= 0 && listaOut.length === enNivel + 1) {
-                listaOut.push(nuevoBloqueListaOut(defVariable));
+                listaOut.push({ tabla: defVariable.tabla_datos, variables: [defVariable] });
             } else {
-                var nivelTabla = listaOut[enNivel + 1].tabla == tabla && compararJoins(listaOut[enNivel + 1].joins, joins) ? enNivel + 1 : listaOut.findIndex(function (nivel, i) {
-                    return nivel.tabla == tabla && compararJoins(nivel.joins, joins) && i > enNivel + 1
+                let tabla = defVariable.tabla_datos;
+                var nivelTabla = listaOut[enNivel + 1].tabla == tabla ? enNivel + 1 : listaOut.findIndex(function (nivel, i) {
+                    return nivel.tabla == tabla && i > enNivel + 1
                 });
                 if (nivelTabla >= 0) {
-                    listaOut[nivelTabla].variables.push(varAnalizada);
+                    listaOut[nivelTabla].variables.push(defVariable);
                 } else {
-                    listaOut.push(nuevoBloqueListaOut(defVariable));
+                    listaOut.push({ tabla: defVariable.tabla_datos, variables: [defVariable] });
                 }
             }
         }
     });
-    //console.log(JSON.stringify(listaOut));
     return listaOut;
 }
