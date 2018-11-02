@@ -391,19 +391,19 @@ describe("varcal", function () {
                 {operativo:'d', clase:'calculada', tabla_datos: 'datos', variable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }, tipovar:'a' },
                 {operativo:'d', clase:'calculada', tabla_datos: 'datos', variable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }, tipovar:'a' }
             ].map((v:VariableDB)=>VariableCalculada.buildFromDBJSON(v)), ['dato1', 'dato2']);
-            var listaEsperada: VarCal.BloqueVariablesACalcular[] = [{
+            var listaEsperada: VarCal.BloqueVariablesACalcular[] = [ Object.setPrototypeOf({
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     operativo:'d', clase:'calculada', tabla_datos: 'datos', variable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: []}, tipovar:'a' 
                 }, VariableCalculada.prototype)],
-            }, {
+            }, BloqueVariablesACalcular.prototype), Object.setPrototypeOf( {
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     operativo:'d', clase:'calculada', tabla_datos: 'datos', variable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: []}, tipovar:'a' 
                 }, VariableCalculada.prototype), Object.setPrototypeOf({
                     operativo:'d', clase:'calculada', tabla_datos: 'datos', variable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: []}, tipovar:'a' 
                 }, VariableCalculada.prototype)],
-            }];
+            }, BloqueVariablesACalcular.prototype)];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
         });
         it("separa en listas por nivel con orden inverso", async function () {
@@ -413,24 +413,24 @@ describe("varcal", function () {
                 Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },VariableCalculada.prototype),
                 Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] } },VariableCalculada.prototype)
             ], ['dato1', 'dato2']);
-            var listaEsperada: BloqueVariablesACalcular[] = [{
+            var listaEsperada: BloqueVariablesACalcular[] = [ Object.setPrototypeOf({
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
                 },VariableCalculada.prototype)],
-            }, {
+            },  BloqueVariablesACalcular.prototype), Object.setPrototypeOf({
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
                 }, VariableCalculada.prototype), Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
                 }, VariableCalculada.prototype)],
-            }, {
+            }, BloqueVariablesACalcular.prototype), Object.setPrototypeOf( {
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'cal0', expresionValidada: 'doble_y_suma + cal1', insumos: { variables: ['doble_y_suma', 'cal1'], aliases: [], funciones: [] }
                 }, VariableCalculada.prototype)],
-            }];
+            }, BloqueVariablesACalcular.prototype) ];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
         });
         it("separa en listas por nivel usando alias", async function () {
@@ -446,17 +446,17 @@ describe("varcal", function () {
                     },
                     tables: {}
                 });
-            var listaEsperada: BloqueVariablesACalcular[] = [{
+            var listaEsperada: BloqueVariablesACalcular[] = [Object.setPrototypeOf({
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
                 }, VariableCalculada.prototype)],
-            }, {
+            },  BloqueVariablesACalcular.prototype), Object.setPrototypeOf({
                 tabla: 'personas',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'personas', variable: 'dif_edad_padre', expresionValidada: 'padre.p3 - p3', insumos: { variables: ['padre.p3', 'p3'], aliases: ['padre'], funciones: [] }
                 }, VariableCalculada.prototype)],
-            }];
+            }, BloqueVariablesACalcular.prototype)];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
         });
         it("separa en listas por nivel que usa prefijos de tablas (no de aliases), por ej unidades de análisis con wrappers", async function () {
@@ -467,12 +467,12 @@ describe("varcal", function () {
                         grupo_personas: {}
                     }
                 });
-            var listaEsperada: BloqueVariablesACalcular[] = [{
+            var listaEsperada: BloqueVariablesACalcular[] = [ Object.setPrototypeOf({
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'promedio_edad', expresionValidada: 'div0err(null2zero(suma_edad), null2zero(cant_f2), grupo_personas.operativo, grupo_personas.id_caso)', insumos: { variables: ['suma_edad', 'cant_f2', 'grupo_personas.operativo', 'grupo_personas.id_caso'], aliases: ['grupo_personas'], funciones: ['div0err', 'null2zero'] }
                 },VariableCalculada.prototype)],
-            }];
+            }, BloqueVariablesACalcular.prototype)];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
         });
         it("protesta si no se puede por abrazo mortal", async function () {
@@ -505,12 +505,12 @@ describe("varcal", function () {
                 Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'cal2', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },VariableCalculada.prototype),
                 Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'cal3', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] } },VariableCalculada.prototype),
             ], ['dato1', 'dato2']);
-            var listaEsperada: BloqueVariablesACalcular[] = [{
+            var listaEsperada: BloqueVariablesACalcular[] = [ Object.setPrototypeOf({
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'doble_y_suma', expresionValidada: 'dato1 * 2 + dato2', insumos: { variables: ['dato1', 'dato2'], aliases: [], funciones: [] }
                 },VariableCalculada.prototype)],
-            }, {
+            },  BloqueVariablesACalcular.prototype), Object.setPrototypeOf({
                 tabla: 'datos',
                 variables: [Object.setPrototypeOf({
                     tabla_datos: 'datos', variable: 'cal1', expresionValidada: 'doble_y_suma + dato1', insumos: { variables: ['doble_y_suma', 'dato1'], aliases: [], funciones: [] }
@@ -522,7 +522,7 @@ describe("varcal", function () {
                     tabla_datos: 'datos', variable: 'cal3', expresionValidada: 'doble_y_suma + dato2', insumos: { variables: ['doble_y_suma', 'dato2'], aliases: [], funciones: [] }
                 }, VariableCalculada.prototype)
                 ]
-            }];
+            }, BloqueVariablesACalcular.prototype)];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
             this.timeout(50000);
         });
@@ -537,29 +537,29 @@ describe("varcal", function () {
                 Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },VariableCalculada.prototype),
             ], ['o']);
             var listaEsperada: BloqueVariablesACalcular[] = [
-                {
+                Object.setPrototypeOf({
                     tabla: 'datos',
                     variables: [
                         Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'a', expresionValidada: 'o', insumos: { variables: [], aliases: [], funciones: [] } },VariableCalculada.prototype),
                         Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'b', expresionValidada: 'o', insumos: { variables: ['o'], aliases: [], funciones: [] } },VariableCalculada.prototype),
                     ],
-                }, {
+                }, BloqueVariablesACalcular.prototype), Object.setPrototypeOf({
                     tabla: 'equis',
                     variables: [
                         Object.setPrototypeOf({ tabla_datos: 'equis', variable: 'ab', expresionValidada: 'a+b', insumos: { variables: ['a', 'b'], aliases: [], funciones: [] } },VariableCalculada.prototype),
                     ],
-                }, {
+                }, BloqueVariablesACalcular.prototype), Object.setPrototypeOf({
                     tabla: 'datos',
                     variables: [
                         Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'aab', expresionValidada: 'a+ab', insumos: { variables: ['a', 'ab'], aliases: [], funciones: [] } },VariableCalculada.prototype),
                         Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'abb', expresionValidada: 'ab+b', insumos: { variables: ['ab', 'b'], aliases: [], funciones: [] } },VariableCalculada.prototype),
                     ],
-                }, {
+                }, BloqueVariablesACalcular.prototype), Object.setPrototypeOf( {
                     tabla: 'datos',
                     variables: [
                         Object.setPrototypeOf({ tabla_datos: 'datos', variable: 'abbaab', expresionValidada: 'abb+aab', insumos: { variables: ['aab', 'abb'], aliases: [], funciones: [] } },VariableCalculada.prototype),
                     ],
-                }];
+                }, BloqueVariablesACalcular.prototype)];
             discrepances.showAndThrow(resultadoNiveles, listaEsperada);
             this.timeout(50000);
         });

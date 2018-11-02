@@ -84,9 +84,14 @@ export type ParametrosGeneracion = {
 
 export type TextoSQL = string;
 
-export type BloqueVariablesACalcular = {
+export class BloqueVariablesACalcular {
     tabla: string
     variables: VariableCalculada[]
+
+    constructor(vCalc:VariableCalculada){
+        this.tabla= vCalc.tabla_datos;
+        this.variables=[vCalc];
+    }
 };
 export type DefinicionEstructuralTabla = {
     operativo?: string;
@@ -115,58 +120,57 @@ export interface Aliases {
     [key: string]: AliasDefEst
 }
 
+function hasTablePrefix(variable: string){
+    return variable.match(/^.+\..+$/);
+}
 
-function checkInsumos(vCalc: VariableCalculada, vardef: string[], definicionesOrd: VariableCalculada[], nvardef: VariableCalculada[], defEst: DefinicionEstructural): boolean {
+function checkInsumos(vCalc: VariableCalculada, definedVars: string[], definicionesOrd: VariableCalculada[], nonDefinedVars: VariableCalculada[], defEst: DefinicionEstructural): boolean {
     var cantDef: number = 0;
-    vCalc.insumos.variables.forEach(function (varInsumos) {
+    vCalc.insumos.variables.forEach(function (varInsumosName) {
         // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
-        if (hasTablePrefix(varInsumos) && defEst) {
-            var [prefix, varName] = varInsumos.split('.');
-            if (vardef.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
-                vardef.push(varInsumos);// then agrego esta variable a vardef
+        if (hasTablePrefix(varInsumosName) && defEst) {
+            var [prefix, varName] = varInsumosName.split('.');
+            if (definedVars.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
+                definedVars.push(varInsumosName);// then agrego esta variable a definedVars
             }
         }
-        cantDef = vardef.indexOf(varInsumos) >= 0 ? cantDef + 1 : cantDef;
+        cantDef = definedVars.indexOf(varInsumosName) >= 0 ? cantDef + 1 : cantDef;
     });
     if (cantDef == vCalc.insumos.variables.length) {
-        vardef.push(vCalc.variable);
+        definedVars.push(vCalc.variable);
         definicionesOrd.push(vCalc);
-        if (nvardef.indexOf(vCalc) >= 0) {
-            nvardef.splice(nvardef.indexOf(vCalc), 1)
+        if (nonDefinedVars.indexOf(vCalc) >= 0) {
+            nonDefinedVars.splice(nonDefinedVars.indexOf(vCalc), 1)
         }
     }
     return cantDef == vCalc.insumos.variables.length;
 }
 
-function hasTablePrefix(variable: string){
-    return variable.match(/^.+\..+$/);
-}
-
 /**
- * @param nvardef son las que variables a calcular cuyos insumos no están en vardef
- * @param variablesDefinidas variables con insumos definidos
+ * @param nonDefinedVars son las que variables a calcular cuyos insumos no están en definedVars
+ * @param definedVars variables con insumos definidos
  */
-export function separarEnGruposPorNivelYOrigen(nvardef: VariableCalculada[], variablesDefinidas: string[], defEst?: DefinicionEstructural): BloqueVariablesACalcular[] {
+export function separarEnGruposPorNivelYOrigen(nonDefinedVars: VariableCalculada[], definedVars: string[], defEst?: DefinicionEstructural): BloqueVariablesACalcular[] {
     var listaOut: BloqueVariablesACalcular[] = [];
     var lenAnt: number;
     var definicionesOrd: VariableCalculada[] = [];
     do {
-        lenAnt = nvardef.length;
+        lenAnt = nonDefinedVars.length;
         var i = 0;
-        while (i < nvardef.length) {
-            if (!checkInsumos(nvardef[i], variablesDefinidas, definicionesOrd, nvardef, defEst)) {
+        while (i < nonDefinedVars.length) {
+            if (!checkInsumos(nonDefinedVars[i], definedVars, definicionesOrd, nonDefinedVars, defEst)) {
                 i++;
             }
         };
-    } while (nvardef.length > 0 && nvardef.length != lenAnt);
-    if (nvardef.length > 0) {
-        throw new Error("Error, no se pudo determinar el orden de la variable '" + nvardef[0].variable + "' y otras")
+    } while (nonDefinedVars.length > 0 && nonDefinedVars.length != lenAnt);
+    if (nonDefinedVars.length > 0) {
+        throw new Error("Error, no se pudo determinar el orden de la variable '" + nonDefinedVars[0].variable + "' y otras")
     }
-    definicionesOrd.forEach(function (defVariable: VariableCalculada) {
+    definicionesOrd.forEach(function (vCalc: VariableCalculada) {
         if (listaOut.length == 0) {
-            listaOut.push({ tabla: defVariable.tabla_datos, variables: [defVariable] });
+            listaOut.push(new BloqueVariablesACalcular(vCalc));
         } else {
-            var enNivel = defVariable.insumos.variables.length ? defVariable.insumos.variables.map(function (varInsumo) {
+            var enNivel = vCalc.insumos.variables.length ? vCalc.insumos.variables.map(function (varInsumo) {
                 return listaOut.findIndex(function (nivel) {
                     return nivel.variables.findIndex(function (vvar) {
                         return vvar.variable == varInsumo
@@ -176,16 +180,16 @@ export function separarEnGruposPorNivelYOrigen(nvardef: VariableCalculada[], var
                 return elem > anterior ? elem : anterior;
             }) : 0;
             if (enNivel >= 0 && listaOut.length === enNivel + 1) {
-                listaOut.push({ tabla: defVariable.tabla_datos, variables: [defVariable] });
+                listaOut.push(new BloqueVariablesACalcular(vCalc));
             } else {
-                let tabla = defVariable.tabla_datos;
+                let tabla = vCalc.tabla_datos;
                 var nivelTabla = listaOut[enNivel + 1].tabla == tabla ? enNivel + 1 : listaOut.findIndex(function (nivel, i) {
                     return nivel.tabla == tabla && i > enNivel + 1
                 });
                 if (nivelTabla >= 0) {
-                    listaOut[nivelTabla].variables.push(defVariable);
+                    listaOut[nivelTabla].variables.push(vCalc);
                 } else {
-                    listaOut.push({ tabla: defVariable.tabla_datos, variables: [defVariable] });
+                    listaOut.push(new BloqueVariablesACalcular(vCalc));
                 }
             }
         }
