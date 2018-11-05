@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.1.44",
+  "version": "0.1.45",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "repository": "codenautas/varcal",
   "license": "MIT",
@@ -14,12 +14,12 @@
     "unlogged"
   ],
   "dependencies": {
-    "expre-parser": "~0.1.16",
-    "operativos": "~0.1.35",
+    "expre-parser": "~0.1.17",
+    "operativos": "~0.2.1",
     "best-globals": "~0.10.5"
   },
   "devDependencies": {
-    "pg-promise-strict": "~0.4.14",
+    "pg-promise-strict": "~0.4.16",
     "@types/fs-extra": "^5.0.4",
     "@types/mocha": "~5.2.5",
     "mini-tools": "~1.0.4",
