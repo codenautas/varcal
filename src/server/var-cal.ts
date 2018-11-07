@@ -163,7 +163,7 @@ export function separarEnGruposPorNivelYOrigen(nonDefinedVars: VariableCalculada
     return separarEnGrupos(orderedCalcVars);
 }
 
-function separarEnGrupos(orderedCalcVars: VariableCalculada[]) {
+export function separarEnGrupos(orderedCalcVars: VariableCalculada[]) {
     let listaOut: BloqueVariablesACalcular[] = [];
     orderedCalcVars.forEach(function (vCalc: VariableCalculada) {
         if (listaOut.length == 0) {
@@ -199,7 +199,7 @@ function separarEnGrupos(orderedCalcVars: VariableCalculada[]) {
     return listaOut;
 }
 
-function sortCalcVariablesByDependency(nonDefinedVars: VariableCalculada[], definedVars: string[], defEst: DefinicionEstructural) {
+export function sortCalcVariablesByDependency(nonDefinedVars: VariableCalculada[], definedVars: string[], defEst: DefinicionEstructural) {
     var orderedCalcVars: VariableCalculada[] = [];
     var prevNonDefVarsLength: number;
     do {

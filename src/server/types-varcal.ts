@@ -47,7 +47,7 @@ export class VarCalculator extends OperativoGenerator {
     funGeneradora: string
 
     constructor(public app: AppVarCalType, operativo: string) {
-        super(app, operativo);
+        super(operativo);
     }
 
     async fetchDataFromDB(client: Client) {
@@ -65,7 +65,7 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     /** No calculadas */
-    getVarsDefinidas() {
+    getRelevamientoVars() {
         return this.myVars.filter(v => !v.esCalculada());
     }
 
@@ -110,7 +110,7 @@ export class VarCalculator extends OperativoGenerator {
         $BODY$
         BEGIN
         `+
-            this.bloquesVariablesACalcular.map(bloqueVars => bloqueVars.sentenciaUpdate(2, this.getVarsDefinidas()) + ';').join('\n') + `
+            this.bloquesVariablesACalcular.map(bloqueVars => bloqueVars.sentenciaUpdate(2, this.getRelevamientoVars()) + ';').join('\n') + `
           RETURN 'OK';
         END;
         $BODY$;`;

@@ -6,20 +6,16 @@ import { TablaDatos, TableDefinition, TableDefinitions } from "operativos";
 import { procedures } from "./procedures-varcal";
 import { VarCalculator } from "./types-varcal";
 
-
 // re-export my file of types for external modules
 export * from './types-varcal';
 
-export type Constructor<T> = new(...args: any[]) => T;
-
-export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosType>>(Base:T){    
+export function emergeAppVarCal<T extends operativos.Constructor<operativos.AppOperativosType>>(Base:T){    
     return class AppVarCal extends Base{
-        myProcedures: operativos.ProcedureDef[] = procedures;
-        myClientFileName: string = 'varcal';
 
         constructor(...args:any[]){
             super(args);
-            this.initialize();
+            this.allProcedures = this.allProcedures.concat(procedures);
+            this.allClientFileNames.push({type:'js', module: 'varcal', modPath: '../client', file: 'varcal.js', path: 'client_modules'})
         }
 
         generateAndLoadTableDefs(){
@@ -37,7 +33,6 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
 
         generateBaseTableDef(tablaDatos:TablaDatos){
             let tDef = super.generateBaseTableDef(tablaDatos);
-            //TODO: dejar de preguntar por el postfix agregar un campo "esCalculada" a tablaDatos 
             if (tablaDatos.esCalculada()){
                 // esto se agrega para que las calculadas muestren también todos los campos de su sourceBro
                 tDef.foreignKeys = [{ references: tablaDatos.getPrefixedQueBusco(), fields: tablaDatos.pks, onDelete: 'cascade', displayAllFields: true }];
@@ -47,27 +42,12 @@ export function emergeAppVarCal<T extends Constructor<operativos.AppOperativosTy
             return tDef
         }
 
-        
-
-        getMenu():operativos.MenuDefinition{
-            //TODO: es igual que en datos-ext llevarlo a operativos
-            let myMenuPart:operativos.MenuInfo[]=[
-                {menuType:'proc', name:'generar_calculadas',label:'generar calculadas', proc:'calculadas/generar'}
-            ];
-            let menu = {menu: super.getMenu().menu.concat(myMenuPart)}
-            return menu;
-        }
-
         prepareGetTables(){
-            //TODO: es igual que en datos-ext llevarlo a operativos
             super.prepareGetTables();
-            this.getTableDefinition={
-                ...this.getTableDefinition,
-                // alias
-            }
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(
-                    {name:'calculada', typeName:'date', editable:true}
+                    {name: "calcular" , typeName: "bigint"  , editable:false, clientSide:'generarCalculadas'},
+                    {name: 'calculada' , typeName:'date', editable:true},
                 );
             });
         }

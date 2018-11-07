@@ -16,7 +16,13 @@ var procedures = [
             varCalculator.generateDropsAndInserts();
             await varCalculator.generateSchemaAndLoadTableDefs();
             varCalculator.parseCalcVarExpressions();
-            // varCalculator.separarEnGruposPorNivelYOrigen();
+            
+            
+            //TODO: pasar a objeto sortCalcVars y separarEnGrupo
+            // let orderedCalcVars: VariableCalculada[] = sortCalcVariablesByDependency(varCalculator.getVarsCalculadas(), varCalculator.getRelevamientoVars().map(v=>v.variable), <DefinicionEstructural>{});
+            // let grupos:BloqueVariablesACalcular[] = separarEnGrupos(orderedCalcVars);
+            //sentencia update()
+
             // varCalculator.armarFuncionGeneradora();
             let todoElScript:string = varCalculator.getFinalSql();
             

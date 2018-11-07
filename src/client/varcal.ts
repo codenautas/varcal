@@ -55,7 +55,7 @@ function botonClientSideEnGrilla(opts: {nombreBoton: string, llamada: (depot:myO
     };
 }
 myOwn.clientSides.generarCalculadas = botonClientSideEnGrilla({
-    nombreBoton:'generar',
+    nombreBoton:'calcular',
     llamada:function(depot: myOwn.Depot){
         return myOwn.ajax.calculadas.generar({operativo: depot.row.operativo});
     }
