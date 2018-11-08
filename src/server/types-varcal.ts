@@ -64,8 +64,7 @@ export class VarCalculator extends OperativoGenerator {
         return <VariableCalculada[]>this.myVars.filter(v => v.esCalculada())
     }
 
-    /** No calculadas */
-    getRelevamientoVars() {
+    getNonCalcVars() {
         return this.myVars.filter(v => !v.esCalculada());
     }
 
@@ -110,7 +109,7 @@ export class VarCalculator extends OperativoGenerator {
         $BODY$
         BEGIN
         `+
-            this.bloquesVariablesACalcular.map(bloqueVars => bloqueVars.sentenciaUpdate(2, this.getRelevamientoVars()) + ';').join('\n') + `
+            this.bloquesVariablesACalcular.map(bloqueVars => bloqueVars.sentenciaUpdate(2, this.getNonCalcVars()) + ';').join('\n') + `
           RETURN 'OK';
         END;
         $BODY$;`;

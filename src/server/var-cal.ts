@@ -2,6 +2,7 @@
 
 import * as ExpresionParser from 'expre-parser';
 import { VariableCalculada } from './types-varcal';
+import { hasTablePrefix } from 'operativos';
 
 
 export function getAggregacion(f: string, exp: string) {
@@ -118,10 +119,6 @@ export type DefinicionEstructural = {
 
 export interface Aliases {
     [key: string]: AliasDefEst
-}
-
-function hasTablePrefix(variable: string) {
-    return variable.match(/^.+\..+$/);
 }
 
 function checkInsumos(vCalc: VariableCalculada, definedVars: string[], defEst: DefinicionEstructural): boolean {

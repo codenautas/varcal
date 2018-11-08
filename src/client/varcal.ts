@@ -6,12 +6,12 @@ import { TablaDatos } from "operativos";
 
 myOwn.clientSides.verTabla = {
     prepare: function (depot:myOwn.Depot, fieldName: string) {
-        //TODO sacar hardcode 'calculada' (requiere importar operativos en cliente)
-        let tabla_datos = <TablaDatos & {estructura_cerrada: string}> depot.row;
-        if (tabla_datos.tipo == 'calculada' || tabla_datos.estructura_cerrada){
+        let tabla_datos = <TablaDatos> depot.row;
+        if (tabla_datos.generada){
             var link = html.a().create();
             var td = depot.rowControls[fieldName];
             // TODO: se debería poder usar método de instancia getTableName pero desde el navegador no funciona
+            // O hacer un procedure donde se le pase la pk y sepa armar la url
             // link.href='#w=table&table=' + TablaDatos.construirConObj(tabla_datos).getTableName();
             link.href='#w=table&table=' + tabla_datos.operativo.toLowerCase() + '_' + tabla_datos.tabla_datos;;
             link.textContent='ir a tabla';
