@@ -4,9 +4,11 @@ import * as bg from "best-globals";
 import * as typesVarcal from './types-varcal';
 import { procedures } from "./procedures-varcal";
 import { VarCalculator } from "./types-varcal";
+import { MenuDefinition } from "operativos";
 
 // re-export my file of types for external modules
 export * from './types-varcal';
+export * from './var-cal';
 
 export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.AppOperativosType>>(Base:T){    
     return class AppVarCal extends Base{
@@ -15,6 +17,10 @@ export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.Ap
             super(args);
             this.allProcedures = this.allProcedures.concat(procedures);
             this.allClientFileNames.push({type:'js', module: 'varcal', modPath: '../client', file: 'varcal.js', path: 'client_modules'})
+        }
+
+        configStaticConfig():void{
+            super.configStaticConfig();
         }
 
         generateAndLoadTableDefs(){
@@ -49,6 +55,9 @@ export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.Ap
                     {name: 'calculada' , typeName:'date', editable:true},
                 );
             });
+        }
+        getMenu():MenuDefinition{
+            return {menu: super.getMenu().menu}
         }
     }
 }

@@ -22,14 +22,6 @@ export function getAggregacion(f: string, exp: string) {
     }
 }
 
-
-export function buildWhereConditions(leftAlias: string, rigthAlias: string, columnsToJoin: string[]) {
-    return columnsToJoin.map((col: string) =>
-        `${leftAlias}.${col} = ${rigthAlias}.${col}`
-    ).join(' and ');
-}
-
-
 export function getInsumos(expression: string): ExpresionParser.Insumos {
     return ExpresionParser.parse(expression).getInsumos();
 }
@@ -77,11 +69,6 @@ export interface Join {
 //     insumos?: ExpresionParser.Insumos
 //     aliases?: Aliases
 // }
-
-export type ParametrosGeneracion = {
-    nombreFuncionGeneradora: string,
-    esquema: string
-}
 
 export type TextoSQL = string;
 

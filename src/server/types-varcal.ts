@@ -1,5 +1,5 @@
 import { CompilerOptions, Insumos } from 'expre-parser';
-import { OperativoGenerator, tiposTablaDato, Variable, VariableOpcion, VariableDB } from 'operativos';
+import { OperativoGenerator, tiposTablaDato, Variable, VariableOpcion, VariableDB, AppOperativos } from 'operativos';
 import { AppVarCalType } from "./app-varcal";
 import { getInsumos, getWrappedExpression } from './var-cal';
 import { Client } from 'pg-promise-strict';
@@ -20,7 +20,7 @@ export class VariableCalculada extends Variable {
         if ((!this.opciones || !this.opciones.length) && !this.expresion) {
             throw new Error('La variable ' + this.variable + ' no puede tener expresión y opciones nulas simultaneamente');
         }
-        let tdPks = VarCalculator.instanceObj.getTD(this).getPKCSV();
+        let tdPks = VarCalculator.instanceObj.getTDFor(this).getPKCSV();
         if (this.opciones && this.opciones.length) {
             this.expresionValidada = 'CASE ' + this.opciones.map(function (opcion: VariableOpcion) {
                 return '\n          WHEN ' + getWrappedExpression(opcion.expresion_condicion, tdPks, compilerOptions) +
@@ -291,34 +291,56 @@ export type ParametrosGeneracion = {
     esquema: string
 }
 
+// construye una sola regex con 3 partes (grupos de captura) de regex diferentes, y hace el reemplazo que se pide por parametro
+export function regexpReplace(guno: string, gdos: string, gtres: string, sourceStr: string, replaceStr: string) {
+    let completeRegex = guno + gdos + gtres;
+    return sourceStr.replace(new RegExp(completeRegex, 'g'), '$1' + replaceStr + '$3');
+}
+
+//TODO: UNIFICAR ahora está copiado y casi igual al de varcal
+export function prefijarExpresion(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[]) {
+    insumos.variables.forEach((varInsumoName: string) => {
+        if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
+            let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
+            let [varPrefix, varInsumoPure] = Variable.hasTablePrefix(varInsumoName)? 
+                varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
+            let completeVar = AppOperativos.prefixTableName(varPrefix, definedVarForInsumoVar.operativo) + '.' + varInsumoPure;
+                
+            // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
+            // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada
+            let baseRegex = `(${varInsumoName})`;
+            let noWordRegex = '([^\w\.])';
+            expValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, expValidada, completeVar); // caso que reemplaza casi todas las ocurrencias en la exp validada
+            expValidada = regexpReplace('^()', baseRegex, noWordRegex, expValidada, completeVar); // caso que reemplaza una posible ocurrencia al principio
+            expValidada = regexpReplace(noWordRegex, baseRegex, '()$', expValidada, completeVar); // caso que reemplaza una posible ocurrencia al final
+        }
+    });
+}
+
 export class BloqueVariablesCalc {
 
     constructor(public tabla: string, public variables: VariableCalculada[]) {
     }
 
-    // construye una sola regex con 3 partes (grupos de captura) de regex diferentes, y hace el reemplazo que se pide por parametro
-    regexpReplace(guno: string, gdos: string, gtres: string, sourceStr: string, replaceStr: string) {
-        let completeRegex = guno + gdos + gtres;
-        return sourceStr.replace(new RegExp(completeRegex, 'g'), '$1' + replaceStr + '$3');
-    }
+    // //TODO: UNIFICAR ahora está copiado y casi igual al de consistencias
+    // prefijarExpresionnn(v: VariableCalculada, variablesDefinidas: Variable[]) {
+    //     v.insumos.variables.forEach((varInsumoName: string) => {
+    //         if (!Variable.hasTablePrefix(varInsumoName) && (!v.insumos.funciones || v.insumos.funciones.indexOf(varInsumoName) == -1) && variablesDefinidas.some(v => v.variable == varInsumoName)) {
+    //             // let definedVar = variablesDefinidas.filter(v=>v.variable==varInsumoName);
+    //             // let varPrefix = (definedVar.clase == 'calculada')? AppVarCal.sufijarCalculada(definedVar.tabla) : definedVar.tabla;
+    //             //TODO: HAY QUE prefijar con nombre físico de la td
+    //             let varWithPrefix = v.tabla_datos + '.' + varInsumoName;
 
-    prefijarExpresion(v: VariableCalculada, variablesDefinidas: Variable[]) {
-        v.insumos.variables.forEach((varInsumoName: string) => {
-            if (!Variable.hasTablePrefix(varInsumoName) && (!v.insumos.funciones || v.insumos.funciones.indexOf(varInsumoName) == -1) && variablesDefinidas.some(v => v.variable == varInsumoName)) {
-                // let definedVar = variablesDefinidas.filter(v=>v.variable==varInsumoName);
-                // let varPrefix = (definedVar.clase == 'calculada')? AppVarCal.sufijarCalculada(definedVar.tabla) : definedVar.tabla;
-                let varWithPrefix = v.tabla_datos + '.' + varInsumoName;
-
-                // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
-                // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada
-                let baseRegex = `(${varInsumoName})`;
-                let noWordRegex = '([^\w\.])';
-                v.expresionValidada = this.regexpReplace(noWordRegex, baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza casi todas las ocurrencias en la exp validada
-                v.expresionValidada = this.regexpReplace('^()', baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al principio
-                v.expresionValidada = this.regexpReplace(noWordRegex, baseRegex, '()$', v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al final
-            }
-        });
-    }
+    //             // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
+    //             // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada
+    //             let baseRegex = `(${varInsumoName})`;
+    //             let noWordRegex = '([^\w\.])';
+    //             v.expresionValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza casi todas las ocurrencias en la exp validada
+    //             v.expresionValidada = regexpReplace('^()', baseRegex, noWordRegex, v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al principio
+    //             v.expresionValidada = regexpReplace(noWordRegex, baseRegex, '()$', v.expresionValidada, varWithPrefix); // caso que reemplaza una posible ocurrencia al final
+    //         }
+    //     });
+    // }
 
     sentenciaUpdate(margen: number, variablesDefinidas: Variable[]): string {
         // let tablesToFromClausule: string[] = [];
@@ -329,7 +351,7 @@ export class BloqueVariablesCalc {
         if (variablesDefinidas) {
             this.variables.forEach(v => {
                 if (v.insumos) {
-                    this.prefijarExpresion(v, variablesDefinidas)
+                    prefijarExpresion(v.expresionValidada, v.insumos, variablesDefinidas)
                 }
             });
         }
