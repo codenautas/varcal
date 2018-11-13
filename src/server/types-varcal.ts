@@ -73,7 +73,7 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     getFinalSql(): string {
-        let todayDate = this.app.getTodayForDB();
+        let todayDate = AppOperativos.getTodayForDB();
         let updateFechaCalculada = `
         UPDATE operativos SET calculada='${todayDate}' WHERE operativo='${this.operativo}';
         UPDATE tabla_datos SET generada='${todayDate}' WHERE operativo='${this.operativo}' AND tipo='${tiposTablaDato.calculada}';`;
@@ -302,6 +302,7 @@ export function prefijarExpresion(expValidada: string, insumos: Insumos, variabl
     insumos.variables.forEach((varInsumoName: string) => {
         if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
             let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
+            //TODO si es una tabla interna no se debería prefijar con operativo
             let [varPrefix, varInsumoPure] = Variable.hasTablePrefix(varInsumoName)? 
                 varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
             let completeVar = AppOperativos.prefixTableName(varPrefix, definedVarForInsumoVar.operativo) + '.' + varInsumoPure;
