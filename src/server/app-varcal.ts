@@ -52,7 +52,7 @@ export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.Ap
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(
                     {name: "calcular" , typeName: "bigint"  , editable:false, clientSide:'generarCalculadas'},
-                    {name: 'calculada' , typeName:'date', editable:true},
+                    {name: 'calculada' , typeName:'timestamp', editable:true},
                 );
             });
         }

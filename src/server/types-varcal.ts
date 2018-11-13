@@ -73,10 +73,9 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     getFinalSql(): string {
-        let todayDate = AppOperativos.getTodayForDB();
         let updateFechaCalculada = `
-        UPDATE operativos SET calculada='${todayDate}' WHERE operativo='${this.operativo}';
-        UPDATE tabla_datos SET generada='${todayDate}' WHERE operativo='${this.operativo}' AND tipo='${tiposTablaDato.calculada}';`;
+        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo='${this.operativo}';
+        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo='${this.operativo}' AND tipo='${tiposTablaDato.calculada}';`;
 
         // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform gen_fun_var_calc();', updateFechaCalculada,  'end\n$SQL_DUMP$');
         // sin funcion generadora
