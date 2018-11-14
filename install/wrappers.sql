@@ -24,7 +24,7 @@ union select generate_generics('integer', '0')
 union select generate_generics('double precision', '0')
 union select generate_generics('float', '0')
 union select generate_generics('bigint', '0')
-union select generate_generics('text', '''''');
+union select generate_generics('text', $$''$$);
 
 drop function if exists div0err(p_numerador decimal, p_denominador decimal, variadic pk text[]);
 create or replace function div0err(p_numerador decimal, p_denominador decimal, variadic pk text[]) returns decimal
