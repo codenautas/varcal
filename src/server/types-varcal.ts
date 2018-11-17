@@ -4,10 +4,6 @@ import { AppVarCalType } from "./app-varcal";
 import { getInsumos, getWrappedExpression } from './var-cal';
 import { Client } from 'pg-promise-strict';
 
-// re-exports
-export { CompilerOptions, Insumos } from 'expre-parser';
-export * from 'operativos';
-
 export class VariableCalculada extends Variable {
     insumos: Insumos
     expresionValidada: string
@@ -434,3 +430,7 @@ export class BloqueVariablesCalc {
     }
 
 };
+
+// re-exports
+export { CompilerOptions, Insumos } from 'expre-parser';
+export * from 'operativos';
