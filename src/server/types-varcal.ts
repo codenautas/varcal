@@ -1,8 +1,8 @@
 import { CompilerOptions, Insumos } from 'expre-parser';
-import { OperativoGenerator, tiposTablaDato, Variable, VariableOpcion, VariableDB, AppOperativos } from 'operativos';
+import { AppOperativos, hasPrefix, OperativoGenerator, tiposTablaDato, Variable, VariableDB, VariableOpcion } from 'operativos';
+import { Client } from 'pg-promise-strict';
 import { AppVarCalType } from "./app-varcal";
 import { getInsumos, getWrappedExpression } from './var-cal';
-import { Client } from 'pg-promise-strict';
 
 export class VariableCalculada extends Variable {
     insumos: Insumos
@@ -115,7 +115,7 @@ export class VarCalculator extends OperativoGenerator {
     //     var cantDef: number = 0;
     //     vcalc.insumos.variables.forEach(function (insumosVar) {
     //         // si esta variable de insumo tiene un prefijo 
-    //         if (Variable.hasTablePrefix(insumosVar)) {
+    //         if (hasPrefix(insumosVar)) {
     //             var [prefix, varName] = insumosVar.split('.');
     //             // si la variable sin prefijo está definida && el prefijo está en la tabla de aliases
     //             if (definedVars.some(v => v.tabla_datos == prefix && v.variable == varName)) {
@@ -139,7 +139,7 @@ export class VarCalculator extends OperativoGenerator {
     //     var cantDef: number = 0;
     //     insumos.variables.forEach(function (varInsumos) {
     //         // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
-    //         if (hasTablePrefix(varInsumos) && defEst) {
+    //         if (hasPrefix(varInsumos) && defEst) {
     //             var [prefix, varName] = varInsumos.split('.');
     //             if (vardef.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
     //                 vardef.push(varInsumos);// then agrego esta variable a vardef
@@ -298,7 +298,7 @@ export function prefijarExpresion(expValidada: string, insumos: Insumos, variabl
         if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
             let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
             //TODO si es una tabla interna no se debería prefijar con operativo
-            let [varPrefix, varInsumoPure] = Variable.hasTablePrefix(varInsumoName)? 
+            let [varPrefix, varInsumoPure] = hasPrefix(varInsumoName)? 
                 varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
             let completeVar = AppOperativos.prefixTableName(varPrefix, definedVarForInsumoVar.operativo) + '.' + varInsumoPure;
                 
@@ -321,7 +321,7 @@ export class BloqueVariablesCalc {
     // //TODO: UNIFICAR ahora está copiado y casi igual al de consistencias
     // prefijarExpresionnn(v: VariableCalculada, variablesDefinidas: Variable[]) {
     //     v.insumos.variables.forEach((varInsumoName: string) => {
-    //         if (!Variable.hasTablePrefix(varInsumoName) && (!v.insumos.funciones || v.insumos.funciones.indexOf(varInsumoName) == -1) && variablesDefinidas.some(v => v.variable == varInsumoName)) {
+    //         if (!hasPrefix(varInsumoName) && (!v.insumos.funciones || v.insumos.funciones.indexOf(varInsumoName) == -1) && variablesDefinidas.some(v => v.variable == varInsumoName)) {
     //             // let definedVar = variablesDefinidas.filter(v=>v.variable==varInsumoName);
     //             // let varPrefix = (definedVar.clase == 'calculada')? AppVarCal.sufijarCalculada(definedVar.tabla) : definedVar.tabla;
     //             //TODO: HAY QUE prefijar con nombre físico de la td
@@ -363,7 +363,7 @@ export class BloqueVariablesCalc {
         //                     aliasesUsados[alias] = new Set();
         //                 }
         //                 vac.insumos.variables.forEach(varName => {
-        //                     if (Variable.hasTablePrefix(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
+        //                     if (hasPrefix(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
         //                         aliasesUsados[alias].add(varName)
         //                     }
         //                 })
@@ -434,3 +434,4 @@ export class BloqueVariablesCalc {
 // re-exports
 export { CompilerOptions, Insumos } from 'expre-parser';
 export * from 'operativos';
+

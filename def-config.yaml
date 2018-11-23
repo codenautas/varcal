@@ -19,7 +19,6 @@ install:
     skip-content: true
     scripts:
       post-adapt: 
-      - event_control_creates.sql
       - para-install.sql
       - wrappers.sql
       - ../node_modules/pg-triggers/lib/recreate-his.sql
