@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "repository": "codenautas/varcal",
   "license": "MIT",
@@ -25,7 +25,7 @@
     "discrepances": "~0.2.3",
     "mini-tools": "~1.0.4",
     "pg-promise-strict": "~0.4.16",
-    "types.d.ts": "~0.1.32"
+    "types.d.ts": "~0.3.0"
   },
   "engines": {
     "node": ">= 8.0.0"
