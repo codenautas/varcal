@@ -405,7 +405,7 @@ export class BloqueVariablesCalc {
         // ${txtMargen}    LATERAL (
         // ${txtMargen}      SELECT
         // ${txtMargen}          ${vars.map(v => `${getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
-        // ${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg}
+        // ${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg} //TODO: poner mas a la izquierda la tabla no calculada para que el join traiga todo
         // ${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg[bloqueVars.ua]}
         // ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
         //         );
