@@ -4,6 +4,7 @@ import {html} from "js-to-html";
 import * as myOwn from "myOwn";
 import { TablaDatos } from "operativos";
 
+//TODO usar el client side que está en el paquete operativos
 myOwn.clientSides.verTabla = {
     prepare: function (depot:myOwn.Depot, fieldName: string) {
         let tabla_datos = <TablaDatos> depot.row;

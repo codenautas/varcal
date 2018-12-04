@@ -2,7 +2,7 @@
 
 import * as ExpresionParser from 'expre-parser';
 import { VariableCalculada } from './types-varcal';
-import { hasPrefix } from 'operativos';
+import { hasAlias } from 'operativos';
 
 
 export function getAggregacion(f: string, exp: string) {
@@ -127,11 +127,11 @@ function checkAndPushVar(varInsumosName: string, definedVars: string[], defEst: 
 }
 
 function insumoVarIsWellPrefixed(varInsumosName: string, definedVars: string[], defEst: DefinicionEstructural) {
-    // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
+    // si esta variable tiene un alias && la variable sin alias está definida && el alias existe
     let isDefined = false;
-    if (hasPrefix(varInsumosName) && defEst) {
-        var [prefix, varName] = varInsumosName.split('.')
-        if (definedVars.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
+    if (hasAlias(varInsumosName) && defEst) {
+        var [alias, varName] = varInsumosName.split('.')
+        if (definedVars.indexOf(varName) > -1 && (alias in { ...defEst.tables, ...defEst.aliases })) {
             isDefined = true
         }
     }

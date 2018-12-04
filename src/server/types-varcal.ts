@@ -1,6 +1,6 @@
 import { CompilerOptions, Insumos } from 'expre-parser';
-import { AppOperativos, hasPrefix, OperativoGenerator, tiposTablaDato, Variable, VariableDB, VariableOpcion } from 'operativos';
-import { Client } from 'pg-promise-strict';
+import { hasAlias, OperativoGenerator, TablaDatos, tiposTablaDato, Variable, VariableDB, VariableOpcion } from 'operativos';
+import { Client, quoteIdent } from 'pg-promise-strict';
 import { AppVarCalType } from "./app-varcal";
 import { getInsumos, getWrappedExpression } from './var-cal';
 
@@ -16,7 +16,7 @@ export class VariableCalculada extends Variable {
         if ((!this.opciones || !this.opciones.length) && !this.expresion) {
             throw new Error('La variable ' + this.variable + ' no puede tener expresión y opciones nulas simultaneamente');
         }
-        let tdPks = VarCalculator.instanceObj.getTDFor(this).getPKCSV();
+        let tdPks = VarCalculator.instanceObj.getTDFor(this).getQuotedPKsCSV();
         if (this.opciones && this.opciones.length) {
             this.expresionValidada = 'CASE ' + this.opciones.map(function (opcion: VariableOpcion) {
                 return '\n          WHEN ' + getWrappedExpression(opcion.expresion_condicion, tdPks, compilerOptions) +
@@ -70,8 +70,8 @@ export class VarCalculator extends OperativoGenerator {
 
     getFinalSql(): string {
         let updateFechaCalculada = `
-        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo='${this.operativo}';
-        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo='${this.operativo}' AND tipo='${tiposTablaDato.calculada}';`;
+        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo='${this.app.db.quoteLiteral(this.operativo)}';
+        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo='${this.app.db.quoteLiteral(this.operativo)}' AND tipo='${this.app.db.quoteLiteral(tiposTablaDato.calculada)}';`;
 
         // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform gen_fun_var_calc();', updateFechaCalculada,  'end\n$SQL_DUMP$');
         // sin funcion generadora
@@ -87,7 +87,7 @@ export class VarCalculator extends OperativoGenerator {
     generateDropsAndInserts() {
         this.getTDCalculadas().forEach(td => {
             this.drops.unshift("drop table if exists " + this.app.db.quoteIdent(td.getTableName()) + ";");
-            let insert = `INSERT INTO ${this.app.db.quoteIdent(td.getTableName())} (${td.getPKCSV()}) SELECT ${td.getPKCSV()} FROM ${td.getPrefixedQueBusco()};` //estParaGenTabla.sourceJoin + ";");
+            let insert = `INSERT INTO ${this.app.db.quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${this.app.db.quoteIdent(td.getPrefixedQueBusco())};` //estParaGenTabla.sourceJoin + ";");
             this.inserts.push(insert);
         })
     }
@@ -115,7 +115,7 @@ export class VarCalculator extends OperativoGenerator {
     //     var cantDef: number = 0;
     //     vcalc.insumos.variables.forEach(function (insumosVar) {
     //         // si esta variable de insumo tiene un prefijo 
-    //         if (hasPrefix(insumosVar)) {
+    //         if (hasAlias(insumosVar)) {
     //             var [prefix, varName] = insumosVar.split('.');
     //             // si la variable sin prefijo está definida && el prefijo está en la tabla de aliases
     //             if (definedVars.some(v => v.tabla_datos == prefix && v.variable == varName)) {
@@ -139,7 +139,7 @@ export class VarCalculator extends OperativoGenerator {
     //     var cantDef: number = 0;
     //     insumos.variables.forEach(function (varInsumos) {
     //         // si esta variable tiene un prefijo && la variable sin prefijo está definida && el prefijo está en la tabla de aliases
-    //         if (hasPrefix(varInsumos) && defEst) {
+    //         if (hasAlias(varInsumos) && defEst) {
     //             var [prefix, varName] = varInsumos.split('.');
     //             if (vardef.indexOf(varName) > -1 && (prefix in { ...defEst.tables, ...defEst.aliases })) {
     //                 vardef.push(varInsumos);// then agrego esta variable a vardef
@@ -292,15 +292,19 @@ export function regexpReplace(guno: string, gdos: string, gtres: string, sourceS
     return sourceStr.replace(new RegExp(completeRegex, 'g'), '$1' + replaceStr + '$3');
 }
 
-//TODO: UNIFICAR ahora está copiado y casi igual al de varcal
-export function prefijarExpresion(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[]) {
+export function addAliasesToExpression(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[], tds: TablaDatos[]) {
     insumos.variables.forEach((varInsumoName: string) => {
         if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
             let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
-            //TODO si es una tabla interna no se debería prefijar con operativo
-            let [varPrefix, varInsumoPure] = hasPrefix(varInsumoName)? 
+            let [varAlias, varInsumoPure] = hasAlias(varInsumoName)? 
                 varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
-            let completeVar = AppOperativos.prefixTableName(varPrefix, definedVarForInsumoVar.operativo) + '.' + varInsumoPure;
+            
+            let td=tds.find(td=> td.tabla_datos==varAlias);
+            if (td){
+                varAlias = td.getTableName();
+            }
+
+            let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(varInsumoPure);
                 
             // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
             // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada
@@ -311,6 +315,7 @@ export function prefijarExpresion(expValidada: string, insumos: Insumos, variabl
             expValidada = regexpReplace(noWordRegex, baseRegex, '()$', expValidada, completeVar); // caso que reemplaza una posible ocurrencia al final
         }
     });
+    return expValidada;
 }
 
 export class BloqueVariablesCalc {
@@ -318,10 +323,10 @@ export class BloqueVariablesCalc {
     constructor(public tabla: string, public variables: VariableCalculada[]) {
     }
 
-    // //TODO: UNIFICAR ahora está copiado y casi igual al de consistencias
-    // prefijarExpresionnn(v: VariableCalculada, variablesDefinidas: Variable[]) {
+    // //TODO: version vieja, ahora está adaptada
+    // addAliasesToExpression(v: VariableCalculada, variablesDefinidas: Variable[]) {
     //     v.insumos.variables.forEach((varInsumoName: string) => {
-    //         if (!hasPrefix(varInsumoName) && (!v.insumos.funciones || v.insumos.funciones.indexOf(varInsumoName) == -1) && variablesDefinidas.some(v => v.variable == varInsumoName)) {
+    //         if (!hasAlias(varInsumoName) && (!v.insumos.funciones || v.insumos.funciones.indexOf(varInsumoName) == -1) && variablesDefinidas.some(v => v.variable == varInsumoName)) {
     //             // let definedVar = variablesDefinidas.filter(v=>v.variable==varInsumoName);
     //             // let varPrefix = (definedVar.clase == 'calculada')? AppVarCal.sufijarCalculada(definedVar.tabla) : definedVar.tabla;
     //             //TODO: HAY QUE prefijar con nombre físico de la td
@@ -347,7 +352,7 @@ export class BloqueVariablesCalc {
         if (variablesDefinidas) {
             this.variables.forEach(v => {
                 if (v.insumos) {
-                    prefijarExpresion(v.expresionValidada, v.insumos, variablesDefinidas)
+                    v.expresionValidada = addAliasesToExpression(v.expresionValidada, v.insumos, variablesDefinidas, VarCalculator.instanceObj.myTDs)
                 }
             });
         }
@@ -363,7 +368,7 @@ export class BloqueVariablesCalc {
         //                     aliasesUsados[alias] = new Set();
         //                 }
         //                 vac.insumos.variables.forEach(varName => {
-        //                     if (hasPrefix(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
+        //                     if (hasAlias(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
         //                         aliasesUsados[alias].add(varName)
         //                     }
         //                 })
