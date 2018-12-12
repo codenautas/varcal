@@ -286,12 +286,6 @@ export type ParametrosGeneracion = {
     esquema: string
 }
 
-// construye una sola regex con 3 partes (grupos de captura) de regex diferentes, y hace el reemplazo que se pide por parametro
-export function regexpReplace(guno: string, gdos: string, gtres: string, sourceStr: string, replaceStr: string) {
-    let completeRegex = guno + gdos + gtres;
-    return sourceStr.replace(new RegExp(completeRegex, 'g'), '$1' + replaceStr + '$3');
-}
-
 export function addAliasesToExpression(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[], tds: TablaDatos[]) {
     insumos.variables.forEach((varInsumoName: string) => {
         if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
@@ -304,15 +298,9 @@ export function addAliasesToExpression(expValidada: string, insumos: Insumos, va
                 varAlias = td.getTableName();
             }
 
+            let baseRegex = `\\b(${varInsumoName})\\b`;
             let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(varInsumoPure);
-                
-            // Se hacen 3 reemplazos porque no encontramos una regex que sirva para reemplazar de una sola vez todos
-            // los casos encontrados Y un caso que esté al principio Y un caso que esté al final de la exp validada
-            let baseRegex = `(${varInsumoName})`;
-            let noWordRegex = '([^\w\.])';
-            expValidada = regexpReplace(noWordRegex, baseRegex, noWordRegex, expValidada, completeVar); // caso que reemplaza casi todas las ocurrencias en la exp validada
-            expValidada = regexpReplace('^()', baseRegex, noWordRegex, expValidada, completeVar); // caso que reemplaza una posible ocurrencia al principio
-            expValidada = regexpReplace(noWordRegex, baseRegex, '()$', expValidada, completeVar); // caso que reemplaza una posible ocurrencia al final
+            expValidada = expValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
         }
     });
     return expValidada;
