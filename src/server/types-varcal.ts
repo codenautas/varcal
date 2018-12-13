@@ -42,12 +42,12 @@ export class VarCalculator extends OperativoGenerator {
     bloquesVariablesACalcular: BloqueVariablesCalc[]
     funGeneradora: string
 
-    constructor(public app: AppVarCalType, operativo: string) {
-        super(operativo);
+    constructor(public app: AppVarCalType, client:Client, operativo: string) {
+        super(client, operativo);
     }
 
-    async fetchDataFromDB(client: Client) {
-        await super.fetchDataFromDB(client);
+    async fetchDataFromDB() {
+        await super.fetchDataFromDB();
         //converting to type varCalculadas
         this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, VariableCalculada.prototype));
     }

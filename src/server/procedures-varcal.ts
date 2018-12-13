@@ -11,8 +11,8 @@ var procedures = [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
         coreFunction: async function (context: ProcedureContext, parameters: {operativo: string}) {
-            let varCalculator = new VarCalculator(context.be as AppVarCalType, parameters.operativo);
-            await varCalculator.fetchDataFromDB(context.client);
+            let varCalculator = new VarCalculator(context.be as AppVarCalType, context.client, parameters.operativo);
+            await varCalculator.fetchDataFromDB();
             varCalculator.generateDropsAndInserts();
             await varCalculator.generateSchemaAndLoadTableDefs();
             varCalculator.parseCalcVarExpressions();
