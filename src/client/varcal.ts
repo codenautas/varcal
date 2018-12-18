@@ -4,23 +4,6 @@ import {html} from "js-to-html";
 import * as myOwn from "myOwn";
 import { TablaDatos } from "operativos";
 
-//TODO usar el client side que está en el paquete operativos
-myOwn.clientSides.verTabla = {
-    prepare: function (depot:myOwn.Depot, fieldName: string) {
-        let tabla_datos = <TablaDatos> depot.row;
-        if (tabla_datos.generada){
-            var link = html.a().create();
-            var td = depot.rowControls[fieldName];
-            // TODO: se debería poder usar método de instancia getTableName pero desde el navegador no funciona
-            // O hacer un procedure donde se le pase la pk y sepa armar la url
-            // link.href='#w=table&table=' + TablaDatos.construirConObj(tabla_datos).getTableName();
-            link.href='#w=table&table=' + tabla_datos.operativo.toLowerCase() + '_' + tabla_datos.tabla_datos;;
-            link.textContent='ir a tabla';
-            td.appendChild(link);
-        }
-    }
-}
-
 function botonClientSideEnGrilla(opts: {nombreBoton: string, llamada: (depot:myOwn.Depot)=> Promise<any>}){
     return {
         prepare: function (depot:myOwn.Depot, fieldName: string) {
