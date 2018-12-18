@@ -290,6 +290,7 @@ export function addAliasesToExpression(expValidada: string, insumos: Insumos, va
     insumos.variables.forEach((varInsumoName: string) => {
         if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
             let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
+            //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
             let [varAlias, varInsumoPure] = hasAlias(varInsumoName)? 
                 varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
             
@@ -298,7 +299,10 @@ export function addAliasesToExpression(expValidada: string, insumos: Insumos, va
                 varAlias = td.getTableName();
             }
 
-            let baseRegex = `\\b(${varInsumoName})\\b`;
+            // match all varNames used alone (don't preceded nor followed by "."): 
+            // match: p3 ; (23/p3+1); max(13,p3)
+            // don't match: alias.p3, p3.column, etc
+            let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
             let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(varInsumoPure);
             expValidada = expValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
         }
