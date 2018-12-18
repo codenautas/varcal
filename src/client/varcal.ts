@@ -1,8 +1,7 @@
 'use strict';
 
-import {html} from "js-to-html";
+import { html } from "js-to-html";
 import * as myOwn from "myOwn";
-import { TablaDatos } from "operativos";
 
 function botonClientSideEnGrilla(opts: {nombreBoton: string, llamada: (depot:myOwn.Depot)=> Promise<any>}){
     return {
