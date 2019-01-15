@@ -377,7 +377,7 @@ export class BloqueVariablesCalc {
         // `
         // ${txtMargen}      LEFT JOIN (
         // ${txtMargen}          SELECT ${selectFieldsAlias}
-        // ${txtMargen}            FROM ${tableDefEst.operativo.toLowerCase() + '_' + alias.tabla_datos} ${aliasName}`;
+        // ${txtMargen}            FROM ${varCalculator.myTDs.find(alias.tabla_datos).getTableName()} ${aliasName}`;
         //             aliasLeftJoins +=alias.where?
         // `
         // ${txtMargen}            WHERE ${alias.where}`:'';

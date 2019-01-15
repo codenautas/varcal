@@ -14,7 +14,7 @@
     "unlogged"
   ],
   "dependencies": {
-    "best-globals": "~0.10.5",
+    "best-globals": "~0.10.6",
     "expre-parser": "~0.1.22",
     "operativos": "~0.4.7"
   },
