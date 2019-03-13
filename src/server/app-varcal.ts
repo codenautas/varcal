@@ -41,7 +41,7 @@ export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.Ap
             if (tablaDatos.esCalculada()){
                 // esto se agrega para que las calculadas muestren también todos los campos de su sourceBro
                 // TODO: ver si hay que sacar el que_busco del fetchall y fetch one de tabla_datos               
-                tDef.foreignKeys = [{ references: tablaDatos.getPrefixedQueBusco(), fields: tablaDatos.pks, onDelete: 'cascade', displayAllFields: true }];
+                tDef.foreignKeys = [{ references: tablaDatos.que_busco, fields: tablaDatos.pks, onDelete: 'cascade', displayAllFields: true }];
                 // tDef.detailTables = estParaGenTabla.detailTables;
                 tDef.sql.isReferable = true;
             }
