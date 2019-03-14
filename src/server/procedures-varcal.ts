@@ -6,7 +6,7 @@ import { ProcedureContext, VarCalculator } from "./types-varcal";
 
 var procedures = [
     {
-        action: 'calculadas/generar',
+        action: 'calculadas_generar',
         parameters: [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
