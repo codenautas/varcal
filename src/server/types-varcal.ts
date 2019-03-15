@@ -87,7 +87,7 @@ export class VarCalculator extends OperativoGenerator {
     generateDropsAndInserts() {
         this.getTDCalculadas().forEach(td => {
             this.drops.unshift("drop table if exists " + this.app.db.quoteIdent(td.getTableName()) + ";");
-            let insert = `INSERT INTO ${this.app.db.quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${this.app.db.quoteIdent(td.getPrefixedQueBusco())};` //estParaGenTabla.sourceJoin + ";");
+            let insert = `INSERT INTO ${this.app.db.quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${this.app.db.quoteIdent(td.que_busco)};` //estParaGenTabla.sourceJoin + ";");
             this.inserts.push(insert);
         })
     }
