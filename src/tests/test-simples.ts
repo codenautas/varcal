@@ -6,20 +6,15 @@ import * as VarCal from '../server/var-cal';
 import { BloqueVariablesACalcular } from '../server/var-cal';
 import { VariableCalculada, VariableDB } from '../server/app-varcal';
 
-
-
-(pg as { easy: boolean }).easy = true;
-
-var config = {
+var config:{db:pg.ConnectParams} = {
     db: {
         motor: 'postgres',
         database: 'test_db',
-        schema: 'varcal',
+        // schema: 'varcal', // TODO: ver después dónde se pone esto. 
         user: 'test_user',
         password: 'test_pass',
     }
 }
-
 // TODO pasar esto a otro archivo de mocks
 // mock constants for general use
 // let compilerOptionsMock: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
@@ -71,8 +66,8 @@ describe("varcal", function () {
         config = await MiniTools.readConfig(
             [config, 'src/tests/local-config'],
             { whenNotExist: 'ignore' }
-        ) as typeof config;
-        client = await pg.connect(config.db);
+        );
+        var client = await pg.connect(config.db);
         await client.executeSqlScript('src/tests/fixtures/initial_db.sql');
         console.log('system ready');
     });

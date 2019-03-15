@@ -1,16 +1,17 @@
 "use strict";
 
 import * as bg from "best-globals";
-import * as typesVarcal from './types-varcal';
 import { procedures } from "./procedures-varcal";
-import { VarCalculator } from "./types-varcal";
+import { VarCalculator, Constructor, AppOperativosType, TableDefinitions, TableDefinition, TablaDatos,
+         emergeAppOperativos, AppBackend
+} from "./types-varcal";
 import { MenuDefinition } from "operativos";
 
 // re-export my file of types for external modules
 export * from './types-varcal';
 export * from './var-cal';
 
-export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.AppOperativosType>>(Base:T){    
+export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T){    
     return class AppVarCal extends Base{
 
         constructor(...args:any[]){
@@ -25,10 +26,10 @@ export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.Ap
 
         generateAndLoadTableDefs(){
             let varCalculator = <VarCalculator> VarCalculator.instanceObj;
-            let tableDefs: typesVarcal.TableDefinitions={};
+            let tableDefs: TableDefinitions={};
             let calcTDatos = varCalculator.getTDCalculadas();
             calcTDatos.forEach(tablaDato => {
-                let tdef:typesVarcal.TableDefinition = this.generateBaseTableDef(tablaDato);
+                let tdef:TableDefinition = this.generateBaseTableDef(tablaDato);
                 this.loadTableDef(tdef); //carga el tableDef para las grillas (las grillas de calculadas NO deben permitir insert o update)
                 let newTDef = bg.changing(tdef, {allow: {insert: true, update: true}}); // modifica los allows para el dumpSchemaPartial (necesita insert y update)
                 tableDefs[newTDef.name] = this.getTableDefFunction(newTDef);
@@ -36,7 +37,7 @@ export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.Ap
             return tableDefs
         }
 
-        generateBaseTableDef(tablaDatos:typesVarcal.TablaDatos){
+        generateBaseTableDef(tablaDatos:TablaDatos){
             let tDef = super.generateBaseTableDef(tablaDatos);
             if (tablaDatos.esCalculada()){
                 // esto se agrega para que las calculadas muestren también todos los campos de su sourceBro
@@ -63,5 +64,5 @@ export function emergeAppVarCal<T extends typesVarcal.Constructor<typesVarcal.Ap
     }
 }
 
-export var AppVarCal = emergeAppVarCal(typesVarcal.emergeAppOperativos(typesVarcal.AppBackend));
+export var AppVarCal = emergeAppVarCal(emergeAppOperativos(AppBackend));
 export type AppVarCalType = InstanceType<typeof AppVarCal>;
