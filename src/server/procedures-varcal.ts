@@ -3,6 +3,8 @@
 import * as fs from "fs-extra";
 import { AppVarCalType } from "./app-varcal";
 import { ProcedureContext, VarCalculator } from "./types-varcal";
+import { VariableCalculada } from "./variable-calculada";
+import { sortCalcVariablesByDependency } from "./var-cal";
 
 var procedures = [
     {
@@ -17,11 +19,9 @@ var procedures = [
             await varCalculator.generateSchemaAndLoadTableDefs();
             varCalculator.parseCalcVarExpressions();
             
-            
             //TODO: pasar a objeto sortCalcVars y separarEnGrupo
-            // let orderedCalcVars: VariableCalculada[] = sortCalcVariablesByDependency(varCalculator.getVarsCalculadas(), varCalculator.getRelevamientoVars().map(v=>v.variable), <DefinicionEstructural>{});
-            // let grupos:BloqueVariablesACalcular[] = separarEnGrupos(orderedCalcVars);
-            //sentencia update()
+            varCalculator.separarEnGruposOrdenados();
+            varCalculator.armarFuncionGeneradora();
 
             // varCalculator.armarFuncionGeneradora();
             let todoElScript:string = varCalculator.getFinalSql();

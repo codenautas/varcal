@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "repository": "codenautas/varcal",
   "license": "MIT",
