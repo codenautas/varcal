@@ -1,10 +1,10 @@
-import { Insumos, CompilerOptions } from "expre-parser";
-import { hasAlias, TablaDatos, Variable, VariableDB, VariableOpcion } from "operativos";
-import { quoteIdent } from "pg-promise-strict";
+import { CompilerOptions, Insumos } from "expre-parser";
+import { TablaDatos, Variable, VariableDB, VariableOpcion } from "operativos";
 import { getInsumos, getWrappedExpression } from "./var-cal";
 import { VarCalculator } from "./var-calculator";
 
-let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
+//TODO: quit this global var
+export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
 
 export class VariableCalculada extends Variable {
     insumos: Insumos
@@ -80,9 +80,6 @@ export class BloqueVariablesCalc {
                 this.buildFROMClausule(txtMargen) + 
                 this.buildWHEREClausule(txtMargen);
                 
-
-
-        
         // let tablesToFromClausule: string[] = [];
         // let completeWhereConditions: string = '';
 
@@ -177,27 +174,4 @@ export class BloqueVariablesCalc {
             return `${v.variable} = ${expresion}`;
         }).join(`,\n      ${txtMargen}`);
     }
-}
-export function addAliasesToExpression(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[], tds: TablaDatos[]) {
-    insumos.variables.forEach((varInsumoName: string) => {
-        if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
-            let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
-            //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
-            let [varAlias, varInsumoPure] = hasAlias(varInsumoName)? 
-                varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
-            
-            let td=tds.find(td=> td.tabla_datos==varAlias);
-            if (td){
-                varAlias = td.getTableName();
-            }
-
-            // match all varNames used alone (don't preceded nor followed by "."): 
-            // match: p3 ; (23/p3+1); max(13,p3)
-            // don't match: alias.p3, p3.column, etc
-            let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
-            let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(varInsumoPure);
-            expValidada = expValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
-        }
-    });
-    return expValidada;
 }

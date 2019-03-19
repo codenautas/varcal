@@ -1,16 +1,19 @@
-import { Client, OperativoGenerator, tiposTablaDato, hasAlias } from "operativos";
+import { Client, OperativoGenerator, tiposTablaDato, hasAlias, TablaDatos, Variable } from "operativos";
 import { AppVarCalType } from "./app-varcal";
 import { BloqueVariablesCalc, VariableCalculada } from "./types-varcal";
+import { Insumos } from "expre-parser";
+import { quoteIdent } from "pg-promise-strict";
 
 
 export class VarCalculator extends OperativoGenerator {
+
     allSqls: string[]
     drops: string[] = []
     inserts: string[] = []
 
     bloquesVariablesACalcular: BloqueVariablesCalc[] = [];
     funGeneradora: string;
-    nombreFuncionGeneradora:string = 'gen_fun_var_calc'
+    nombreFuncionGeneradora: string = 'gen_fun_var_calc'
 
     constructor(public app: AppVarCalType, client: Client, operativo: string) {
         super(client, operativo);
@@ -21,10 +24,43 @@ export class VarCalculator extends OperativoGenerator {
         //converting to type varCalculadas
         this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, VariableCalculada.prototype));
     }
-   
+
+    async calculate(): Promise<string> {
+        this.generateDropsAndInserts();
+        await this.generateSchemaAndLoadTableDefs();
+        this.parseCalcVarExpressions();
+        this.separarEnGruposOrdenados();
+        this.armarFuncionGeneradora();
+        return this.getFinalSql();
+    }
+
+    addAliasesToExpression(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[], tds: TablaDatos[]) {
+        insumos.variables.forEach((varInsumoName: string) => {
+            if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
+                let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
+                //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
+                let [varAlias, varInsumoPure] = hasAlias(varInsumoName)? 
+                    varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
+                
+                let td=tds.find(td=> td.tabla_datos==varAlias);
+                if (td){
+                    varAlias = td.getTableName();
+                }
+    
+                // match all varNames used alone (don't preceded nor followed by "."): 
+                // match: p3 ; (23/p3+1); max(13,p3)
+                // don't match: alias.p3, p3.column, etc
+                let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
+                let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(varInsumoPure);
+                expValidada = expValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
+            }
+        });
+        return expValidada;
+    }
+
     separarEnGruposOrdenados() {
         let orderedCalcVars: VariableCalculada[] = this.sortCalcVariablesByDependency();
-        
+
         orderedCalcVars.forEach(function (vCalc: VariableCalculada) {
             if (this.bloquesVariablesACalcular.length == 0) {
                 this.bloquesVariablesACalcular.push(new BloqueVariablesCalc(vCalc));
@@ -118,7 +154,7 @@ export class VarCalculator extends OperativoGenerator {
         // si esta variable tiene un alias && la variable sin alias está definida && el alias existe
         let isDefined = false;
         if (hasAlias(varInsumosName)) {
-            let validPrefixes = { ...this.myTDs.map(td=>td.tabla_datos), ...this.myRels.filter(r=>r.tipo=='opcional').map(r=>r.que_busco) };
+            let validPrefixes = { ...this.myTDs.map(td => td.tabla_datos), ...this.myRels.filter(r => r.tipo == 'opcional').map(r => r.que_busco) };
             var [alias, varName] = varInsumosName.split('.')
             //TODO: mejorar: debería chequear que la variable este definida en la TD correspondiente al alias
             // por ej: si el usuario escribe una expresión "referente.edad" chequear si la variable definida 'edad' además pertenece a la tabla "tabla_busqueda"
@@ -154,7 +190,7 @@ export class VarCalculator extends OperativoGenerator {
         UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${this.app.db.quoteLiteral(this.operativo)};
         UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${this.app.db.quoteLiteral(this.operativo)} AND tipo=${this.app.db.quoteLiteral(tiposTablaDato.calculada)};`;
 
-        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform '+ this.nombreFuncionGeneradora +'();', updateFechaCalculada,  'end\n$SQL_DUMP$');
+        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', updateFechaCalculada, 'end\n$SQL_DUMP$');
         // sin funcion generadora
         // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, updateFechaCalculada, 'end\n$SQL_DUMP$');
         return this.allSqls.join('\n----\n') + '--- generado: ' + new Date() + '\n';
