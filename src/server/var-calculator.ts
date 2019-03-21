@@ -1,4 +1,4 @@
-import { Client, OperativoGenerator, tiposTablaDato, hasAlias, TablaDatos, Variable } from "operativos";
+import { Client, OperativoGenerator, tiposTablaDato, hasAlias, TablaDatos, Variable, Relacion } from "operativos";
 import { AppVarCalType } from "./app-varcal";
 import { BloqueVariablesCalc, VariableCalculada } from "./types-varcal";
 import { Insumos } from "expre-parser";
@@ -15,6 +15,8 @@ export class VarCalculator extends OperativoGenerator {
     funGeneradora: string;
     nombreFuncionGeneradora: string = 'gen_fun_var_calc'
 
+  
+
     constructor(public app: AppVarCalType, client: Client, operativo: string) {
         super(client, operativo);
     }
@@ -23,6 +25,7 @@ export class VarCalculator extends OperativoGenerator {
         await super.fetchDataFromDB();
         //converting to type varCalculadas
         this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, VariableCalculada.prototype));
+        
     }
 
     async calculate(): Promise<string> {
