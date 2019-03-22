@@ -1,7 +1,7 @@
 import * as EP from "expre-parser";
 import { Relacion, TablaDatos } from "operativos";
 
-export abstract class ExpressionContainer{
+export interface ExpressionContainer{
     rawExpression: string
     insumos: EP.Insumos; 
     
@@ -12,12 +12,6 @@ export abstract class ExpressionContainer{
 
     clausula_from:string
     clausula_where:string
-
-    prepare(){
-        // expre-parse to check for bad sql
-        let bn:EP.BaseNode = EP.parse(this.getExpression()); 
-        this.insumos = bn.getInsumos();
-    }
 
     abstract getExpression():string
 

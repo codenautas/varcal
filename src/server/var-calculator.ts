@@ -1,4 +1,4 @@
-import { Insumos, parse, Compiler, CompilerOptions } from "expre-parser";
+import { Insumos, parse, Compiler, CompilerOptions, BaseNode } from "expre-parser";
 import { Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato, Variable } from "operativos";
 import { quoteIdent } from "pg-promise-strict";
 import { AppVarCalType } from "./app-varcal";
@@ -137,6 +137,17 @@ export class VarCalculator extends OperativoGenerator {
         return insumosAliases;
     }
 
+    preCompile(ec: ExpressionContainer): any {
+        this.prepare(ec)
+        this.validateInsumos(ec.insumos);
+        this.filterOrderedTDs(ec); //tabla mas específicas (hija)
+    }
+
+    prepare(ec:ExpressionContainer){
+        let bn:BaseNode = parse(ec.getExpression()); 
+        ec.insumos = bn.getInsumos();
+    }
+    
     protected filterOrderedTDs(ec:ExpressionContainer) {
         //put in constructor
         // TODO: ORDENAR dinamicamente:
@@ -146,7 +157,7 @@ export class VarCalculator extends OperativoGenerator {
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
         
-        let insumosAliases = this.addMainTD(ec.getInsumosAliases());
+        let insumosAliases = this.addMainTD(ec.insumos.aliases);
         ec.notOrderedInsumosOptionalRelations = this.optionalRelations.filter(r => insumosAliases.indexOf(r.que_busco) > -1);
         let orderedInsumosIngresoTDNames:string[] = VarCalculator.orderedIngresoTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
         let orderedInsumosReferencialesTDNames:string[]= VarCalculator.orderedReferencialesTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
