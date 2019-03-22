@@ -1,7 +1,7 @@
 import * as EP from "expre-parser";
 import { Relacion, TablaDatos } from "operativos";
 
-export class ExpressionContainer{
+export abstract class ExpressionContainer{
     rawExpression: string
     insumos: EP.Insumos; 
     
@@ -19,9 +19,7 @@ export class ExpressionContainer{
         this.insumos = bn.getInsumos();
     }
 
-    getExpression(){
-        return this.rawExpression;
-    }
+    abstract getExpression():string
 
     getInsumosAliases() {
         return this.insumos.aliases;

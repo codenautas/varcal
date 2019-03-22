@@ -1,10 +1,9 @@
-import { Client, OperativoGenerator, tiposTablaDato, hasAlias, TablaDatos, Variable, Relacion } from "operativos";
-import { AppVarCalType } from "./app-varcal";
-import { BloqueVariablesCalc, VariableCalculada } from "./types-varcal";
-import { Insumos, parse } from "expre-parser";
+import { Insumos, parse, Compiler, CompilerOptions } from "expre-parser";
+import { Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato, Variable } from "operativos";
 import { quoteIdent } from "pg-promise-strict";
+import { AppVarCalType } from "./app-varcal";
 import { ExpressionContainer } from "./expression-container";
-import { getWrappedExpression } from "./var-cal";
+import { BloqueVariablesCalc, VariableCalculada } from "./types-varcal";
 import { compilerOptions } from "./variable-calculada";
 
 
@@ -29,7 +28,35 @@ export class VarCalculator extends OperativoGenerator {
         
     }
 
-    // PARA SUBIR VARCAL
+    getInsumos(expression: string): Insumos {
+        return parse(expression).getInsumos();
+    }
+
+    getWrappedExpression(expression: string | number, pkExpression: string, options: CompilerOptions): string {
+        var compiler = new Compiler(options);
+        return compiler.toCode(parse(expression), pkExpression);
+    }
+
+    getAggregacion(f: string, exp: string) {
+        switch (f) {
+            case 'sumar':
+                return 'sum(' + exp + ')';
+            case 'min':
+                return 'min(' + exp + ')';
+            case 'max':
+                return 'max(' + exp + ')';
+            case 'contar':
+                return 'count(nullif(' + exp + ',false))';
+            case 'promediar':
+                return 'avg(' + exp + ')';
+            default:
+                return f + '(' + exp + ')';
+        }
+    }
+
+    getTDFor(v:VariableCalculada){
+        return this.myTDs.find(td => td.operativo == v.operativo && td.tabla_datos == v.tabla_datos);
+    }
 
     protected optionalRelations: Relacion[];
     
@@ -68,6 +95,11 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     protected findValidVar(varName: string):{varFound:Variable,relation?:string} {
+
+        //AGREGAR ESTA VALIDACIÓN
+        if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {}
+
+
         let rawVarName = varName;
         let varsFound:Variable[] = this.myVars;
         let relation:string;
@@ -80,7 +112,6 @@ export class VarCalculator extends OperativoGenerator {
                 relation=varAlias;
                 varAlias=relAlias.tabla_busqueda;
             }
-
             varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
         }
         varsFound = varsFound.filter(v => v.variable == rawVarName);
@@ -97,6 +128,7 @@ export class VarCalculator extends OperativoGenerator {
         }
         if (!varsFound[0].activa) { throw new Error('La variable "' + varName + '" no está activa.'); }
     }
+
     private addMainTD(insumosAliases: string[]) {
         //aliases involved in this consistence expresion
         if (insumosAliases.indexOf(VarCalculator.mainTD) == -1) {
@@ -124,20 +156,12 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     protected buildClausulaWhere(ec:ExpressionContainer):string {
-        // this.precondicion = getWrappedExpression(this.precondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
-        // this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
-        // this.precondicion = addAliasesToExpression(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
-        // this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
-        // this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
-
-        let sanitizedExp = getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
-        sanitizedExp = this.addAliasesToExpression(sanitizedExp, parse(sanitizedExp).getInsumos(), this.myVars, this.myTDs);
-        return `WHERE ${sanitizedExp} IS NOT TRUE`;
+        let sanitizedExp = this.getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
+        return this.addAliasesToExpression(sanitizedExp, ec.insumos.variables);
     }
     
     protected buildClausulaFrom(ec:ExpressionContainer): string {
-        let firstTD = this.getUniqueTD(ec.orderedInsumosTDNames[0]); //tabla mas general (padre)
-        let clausula_from = 'FROM ' + quoteIdent(firstTD.getTableName());
+        let clausula_from = 'FROM ' + quoteIdent(ec.firstTD.getTableName());
         for (let i = 1; i < ec.orderedInsumosTDNames.length; i++) {
             let leftInsumoAlias = ec.orderedInsumosTDNames[i - 1];
             let rightInsumoAlias = ec.orderedInsumosTDNames[i];
@@ -145,39 +169,143 @@ export class VarCalculator extends OperativoGenerator {
         }
         //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
         ec.notOrderedInsumosOptionalRelations.forEach(r=>clausula_from += this.joinRelation(r));
-        
         return clausula_from;
     }
 
     async calculate(): Promise<string> {
+        llamar a prepare
+        this.parseCalcVarExpressions();
+
         this.generateDropsAndInserts();
         await this.generateSchemaAndLoadTableDefs();
-        this.parseCalcVarExpressions();
         this.separarEnGruposOrdenados();
         this.armarFuncionGeneradora();
         return this.getFinalSql();
     }
 
-    private addAliasesToExpression(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[], tds: TablaDatos[]) {
-        insumos.variables.forEach((varInsumoName: string) => {
-            if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
-                let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
-                //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
-                let [varAlias, varInsumoPure] = hasAlias(varInsumoName)? 
-                    varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
+    sentenciaUpdate(margen: number, bloque: BloqueVariablesCalc): string {
+        var txtMargen = Array(margen + 1).join(' ');
+        return `${txtMargen}UPDATE ${bloque.tabla.getTableName()}\n${txtMargen}  SET ` +
+                this.buildSETClausule(txtMargen, bloque) +
+                this.buildFROMClausule(txtMargen, bloque) + 
+                this.buildWHEREClausule(txtMargen, bloque);
                 
-                let td=tds.find(td=> td.tabla_datos==varAlias);
-                if (td){
-                    varAlias = td.getTableName();
-                }
+        // let tablesToFromClausule: string[] = [];
+        // let completeWhereConditions: string = '';
+
+        // //resultado: se tienen todos los alias de todas las variables (se eliminan duplicados usando Set)
+        // let aliasesUsados = [...(new Set([].concat(...(definicion.variables.filter(v => (v.insumos && v.insumos.aliases)).map(v => v.insumos.aliases)))))]; // borrar
+        // let aliasesUsados: {[key:string]:Set<string>} = {};
+
+        //     bloqueVars.variables.filter(v => (v.insumos && v.insumos.aliases)).forEach(vac => {
+        //         vac.insumos.aliases.forEach(alias => {
+        //             if(defEst && defEst.aliases && defEst.aliases[alias]){
+        //                 if (! aliasesUsados[alias]){
+        //                     aliasesUsados[alias] = new Set();
+        //                 }
+        //                 vac.insumos.variables.forEach(varName => {
+        //                     if (hasAlias(varName) && varName.indexOf(alias) == 0 ) { // si está en la primera posición
+        //                         aliasesUsados[alias].add(varName)
+        //                     }
+        //                 })
+        //             }
+        //         })
+        //     })
+
+        //     let aliasLeftJoins = '';
+        //     likear(aliasesUsados).forEach((aliasVars,aliasName) => {
+        //         let alias = defEst.aliases[aliasName];
+        //         let selectFieldsAlias = defEst.tables[alias.tabla_datos].pks.concat([...aliasVars]).join(', ');
+        //         if (alias) {
+        //             aliasLeftJoins +=
+        // `
+        // ${txtMargen}      LEFT JOIN (
+        // ${txtMargen}          SELECT ${selectFieldsAlias}
+        // ${txtMargen}            FROM ${varCalculator.myTDs.find(alias.tabla_datos).getTableName()} ${aliasName}`;
+        //             aliasLeftJoins +=alias.where?
+        // `
+        // ${txtMargen}            WHERE ${alias.where}`:'';
+        //             aliasLeftJoins +=
+        // `
+        // ${txtMargen}      ) ${aliasName} ON ${alias.on}`; 
+
+        //         }
+        //     });
+
+        //     if (tableDefEst && tableDefEst.sourceBro){
+        //         tablesToFromClausule.push(tableDefEst.sourceBro + ' ' + tableDefEst.sourceJoin + aliasLeftJoins);
+        //     } 
+        //     tablesToFromClausule = tablesToFromClausule.concat(defJoinExist ? bloqueVars.joins.map(join => join.tabla) : []);
+
+        //     //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
+        //     let tablasAgregadas = [...(new Set(bloqueVars.variables.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
+        //     tablasAgregadas.forEach(tabAgg => {
+        //         let vars = bloqueVars.variables.filter(v => v.tabla_agregada == tabAgg);
+        //         tablesToFromClausule = tablesToFromClausule.concat(
+        //             `
+        // ${txtMargen}    LATERAL (
+        // ${txtMargen}      SELECT
+        // ${txtMargen}          ${vars.map(v => `${getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
+        // ${txtMargen}        FROM ${defEst.tables[tabAgg].sourceAgg} //TODO: poner mas a la izquierda la tabla no calculada para que el join traiga todo
+        // ${txtMargen}        WHERE ${defEst.tables[tabAgg].whereAgg[bloqueVars.ua]}
+        // ${txtMargen}    ) ${defEst.tables[tabAgg].aliasAgg}`
+        //         );
+        //     });
+
+        //     return `${txtMargen}UPDATE ${tableDefEst ? tableDefEst.target : bloqueVars.tabla}\n${txtMargen}  SET ` +
+        //         bloqueVars.variables.map(function (variable) {
+        //             if (variable.tabla_agregada && variable.funcion_agregacion) {
+        //                 return `${variable.variable} = ${defEst.tables[variable.tabla_agregada].aliasAgg}.${variable.variable}`;
+        //             } else {
+        //                 return `${variable.variable} = ${variable.expresionValidada}`;
+        //             }
+        //         }).join(`,\n      ${txtMargen}`) +
+        //         (tablesToFromClausule.length ?
+        //             `\n  ${txtMargen}FROM ${tablesToFromClausule.join(', ')}` +
+        //             (completeWhereConditions ? `\n  ${txtMargen}WHERE ${completeWhereConditions}` : '')
+        //             : '')
+
+    }
     
-                // match all varNames used alone (don't preceded nor followed by "."): 
-                // match: p3 ; (23/p3+1); max(13,p3)
-                // don't match: alias.p3, p3.column, etc
-                let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
-                let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(varInsumoPure);
-                expValidada = expValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
+    buildFROMClausule(txtMargen: string): string {
+        return `\n  ${txtMargen}FROM ${tablesToFromClausule.join(', ')}`;
+    }
+
+    buildWHEREClausule(txtMargen: string): string {
+        return `\n  ${txtMargen}WHERE ${completeWhereConditions}`;
+    }
+
+    // acá bajo se concatena _agg
+    export const sufijo_agregacion: string = '_agg';
+
+    private buildSETClausule(txtMargen: string) {
+        return this.variablesCalculadas.map(v => {
+            let expresion = v.expresionValidada
+            if (v.tabla_agregada && v.funcion_agregacion) {
+                expresion = `${v.tabla_agregada + '_agg'}.${v.variable}`;
             }
+            return `${v.variable} = ${expresion}`;
+        }).join(`,\n      ${txtMargen}`);
+    }
+
+    private addAliasesToExpression(expValidada: string, insumosVariablesNames: string[]) {
+        insumosVariablesNames.forEach(varInsumoName => {
+            let definedVarForInsumoVar = this.myVars.find(v=>v.variable==varInsumoName);
+            //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
+            let [varAlias, insumoVarRawName] = hasAlias(varInsumoName)? 
+                varInsumoName.split('.'): [definedVarForInsumoVar.tabla_datos, varInsumoName];
+            
+            let td=this.myTDs.find(td=> td.tabla_datos==varAlias);
+            if (td){
+                varAlias = td.getTableName();
+            }
+
+            // match all varNames used alone (don't preceded nor followed by "."): 
+            // match: p3 ; (23/p3+1); max(13,p3)
+            // don't match: alias.p3, p3.column, etc
+            let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
+            let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(insumoVarRawName);
+            expValidada = expValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
         });
         return expValidada;
     }
@@ -306,7 +434,13 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     parseCalcVarExpressions() {
-        this.getVarsCalculadas().forEach((v: VariableCalculada) => v.parseExpression());
+        this.getVarsCalculadas().forEach((v: VariableCalculada) => 
+        {
+            v.parseExpression()
+            if (v.insumos) {
+                v.expresionValidada = this.addAliasesToExpression(v.expresionValidada, v.insumos.variables)
+            }
+        });
     }
 
     getFinalSql(): string {
@@ -340,7 +474,7 @@ export class VarCalculator extends OperativoGenerator {
         $BODY$
         BEGIN
         `+
-            this.bloquesVariablesACalcular.map(bloqueVars => bloqueVars.sentenciaUpdate(2, this.myVars) + ';').join('\n') + `
+            this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(2, bloqueVars) + ';').join('\n') + `
           RETURN 'OK';
         END;
         $BODY$;`;
