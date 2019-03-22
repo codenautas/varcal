@@ -1,53 +1,27 @@
-import { TablaDatos, Variable, VariableDB, Client, tiposTablaDato, VariableOpcion, TipoVarDB, PgKnownTypes } from "operativos";
-import { VarCalculator } from "./var-calculator";
+import { CompilerOptions, Insumos } from "expre-parser";
+import { Relacion, TablaDatos, tiposTablaDato, TipoVarDB, Variable, VariableOpcion } from "operativos";
 import { ExpressionContainer } from "./expression-container";
-import { Insumos, CompilerOptions } from "expre-parser";
+import { VarCalculator } from "./var-calculator";
 
 //TODO: quit this global var
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
 
-export class VariableCalculada extends ExpressionContainer implements VariableDB, TipoVarDB{
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    operativo          :string
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    tabla_datos        :string
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    variable           :string
-    abr?                :string
-    nombre?             :string
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    tipovar            :string
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    clase              :string
-    es_pk?              :number
-    es_nombre_unico?    :boolean
-    activa?             :boolean
-    filtro?             :string
-    expresion?          :string
-    cascada?            :string
-    nsnc_atipico?       :number
-    cerrada?            :boolean
-    funcion_agregacion? :string
-    tabla_agregada?     :string
-    grupo?              :string
-    orden? : number
-
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    tipovar: string
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    html_type: string
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    type_name: PgKnownTypes
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    validar: string
-    // @ts-ignore https://github.com/codenautas/operativos/issues/4
-    radio: boolean
-    
-   
-    opciones?: VariableOpcion[]
-
-    insumos: Insumos
+export class VariableCalculada extends Variable implements ExpressionContainer, TipoVarDB{
+    //TODO: elegir uno
     expresionValidada: string
+    rawExpression: string
+
+    insumos: Insumos; 
+    
+    orderedInsumosTDNames: string[]
+    notOrderedInsumosOptionalRelations: Relacion[] 
+    lastTD:TablaDatos
+    firstTD:TablaDatos
+
+    clausula_from:string
+    clausula_where:string
+       
+    opciones?: VariableOpcion[]    
 
     getExpression(){
         return this.expresion;

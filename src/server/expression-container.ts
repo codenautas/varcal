@@ -15,7 +15,4 @@ export interface ExpressionContainer{
 
     abstract getExpression():string
 
-    getInsumosAliases() {
-        return this.insumos.aliases;
-    }
 }
