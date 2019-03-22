@@ -1,21 +1,22 @@
 import { Client, OperativoGenerator, tiposTablaDato, hasAlias, TablaDatos, Variable, Relacion } from "operativos";
 import { AppVarCalType } from "./app-varcal";
 import { BloqueVariablesCalc, VariableCalculada } from "./types-varcal";
-import { Insumos } from "expre-parser";
+import { Insumos, parse } from "expre-parser";
 import { quoteIdent } from "pg-promise-strict";
+import { ExpressionContainer } from "./expression-container";
+import { getWrappedExpression } from "./var-cal";
+import { compilerOptions } from "./variable-calculada";
 
 
 export class VarCalculator extends OperativoGenerator {
 
-    allSqls: string[]
-    drops: string[] = []
-    inserts: string[] = []
+    private allSqls: string[]
+    private drops: string[] = []
+    private inserts: string[] = []
 
-    bloquesVariablesACalcular: BloqueVariablesCalc[] = [];
-    funGeneradora: string;
-    nombreFuncionGeneradora: string = 'gen_fun_var_calc'
-
-  
+    private bloquesVariablesACalcular: BloqueVariablesCalc[] = [];
+    private funGeneradora: string;
+    private nombreFuncionGeneradora: string = 'gen_fun_var_calc'
 
     constructor(public app: AppVarCalType, client: Client, operativo: string) {
         super(client, operativo);
@@ -28,6 +29,126 @@ export class VarCalculator extends OperativoGenerator {
         
     }
 
+    // PARA SUBIR VARCAL
+
+    protected optionalRelations: Relacion[];
+    
+    private validateAliases(aliases: string[]): any {
+        let validAliases=this.getValidAliases();
+        aliases.forEach(alias=>{
+            if (validAliases.indexOf(alias) == -1) {
+                throw new Error('El alias "' + alias + '" no se encontró en la lista de alias válidos: ' + validAliases.join(', '));
+            }
+        });
+    }
+    private getValidAliases(): string[]{
+        let validRelationsNames = this.optionalRelations.map(rel=>rel.que_busco)
+        return this.myTDs.map(td=>td.tabla_datos).concat(validRelationsNames);
+    }
+    private validateFunctions(funcNames: string[]) {
+        let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
+        let comunSquemaWhiteList = ['informado'];
+        let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
+        funcNames.forEach(f => {
+            if (hasAlias(f)) {
+                if (f.split('.')[0] != 'dbo') {
+                    throw new Error('La Función ' + f + ' contiene un alias inválido');
+                }
+            } else {
+                if (functionWhiteList.indexOf(f) == -1) {
+                    throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
+                }
+            }
+        })
+    }
+
+    protected validateInsumos(insumos:Insumos): void {    
+        this.validateFunctions(insumos.funciones);
+        this.validateAliases(insumos.aliases);
+    }
+
+    protected findValidVar(varName: string):{varFound:Variable,relation?:string} {
+        let rawVarName = varName;
+        let varsFound:Variable[] = this.myVars;
+        let relation:string;
+        if (hasAlias(varName)) {
+            let varAlias = varName.split('.')[0];
+            rawVarName = varName.split('.')[1];
+
+            let relAlias = this.optionalRelations.find(rel => rel.que_busco == varAlias)
+            if (relAlias){
+                relation=varAlias;
+                varAlias=relAlias.tabla_busqueda;
+            }
+
+            varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
+        }
+        varsFound = varsFound.filter(v => v.variable == rawVarName);
+        this.VarsFoundErrorChecks(varsFound, varName);
+        return {varFound:varsFound[0], relation};
+    }
+
+    private VarsFoundErrorChecks(varsFound:Variable[], varName: string){
+        if (varsFound.length > 1) {
+            throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
+        }
+        if (varsFound.length <= 0) {
+            throw new Error('La variable "' + varName + '" no se encontró en la lista de variables.');
+        }
+        if (!varsFound[0].activa) { throw new Error('La variable "' + varName + '" no está activa.'); }
+    }
+    private addMainTD(insumosAliases: string[]) {
+        //aliases involved in this consistence expresion
+        if (insumosAliases.indexOf(VarCalculator.mainTD) == -1) {
+            insumosAliases.push(VarCalculator.mainTD);
+        }
+        return insumosAliases;
+    }
+
+    protected filterOrderedTDs(ec:ExpressionContainer) {
+        //put in constructor
+        // TODO: ORDENAR dinamicamente:
+        // primero: la td que no tenga ninguna TD en que busco es la principal
+        // segundas: van todas las tds que tengan en "que_busco" a la principal
+        // terceras: las tds que tengan en "que busco" a las segundas
+        // provisoriamente se ordena fijando un arreglo ordenado
+        // TODO: deshardcodear main TD
+        
+        let insumosAliases = this.addMainTD(ec.getInsumosAliases());
+        ec.notOrderedInsumosOptionalRelations = this.optionalRelations.filter(r => insumosAliases.indexOf(r.que_busco) > -1);
+        let orderedInsumosIngresoTDNames:string[] = VarCalculator.orderedIngresoTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        let orderedInsumosReferencialesTDNames:string[]= VarCalculator.orderedReferencialesTDNames.filter(orderedTDName => insumosAliases.indexOf(orderedTDName) > -1);
+        ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
+        ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
+        ec.firstTD = this.getUniqueTD(VarCalculator.mainTD);
+    }
+
+    protected buildClausulaWhere(ec:ExpressionContainer):string {
+        // this.precondicion = getWrappedExpression(this.precondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
+        // this.postcondicion = getWrappedExpression(this.postcondicion, lastTD.getQuotedPKsCSV(), compilerOptions);
+        // this.precondicion = addAliasesToExpression(this.precondicion, EP.parse(this.precondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
+        // this.postcondicion = addAliasesToExpression(this.postcondicion, EP.parse(this.postcondicion).getInsumos(), this.opGen.myVars, this.opGen.myTDs);
+        // this.clausula_where = `WHERE ${this.getMixConditions()} IS NOT TRUE`;
+
+        let sanitizedExp = getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
+        sanitizedExp = this.addAliasesToExpression(sanitizedExp, parse(sanitizedExp).getInsumos(), this.myVars, this.myTDs);
+        return `WHERE ${sanitizedExp} IS NOT TRUE`;
+    }
+    
+    protected buildClausulaFrom(ec:ExpressionContainer): string {
+        let firstTD = this.getUniqueTD(ec.orderedInsumosTDNames[0]); //tabla mas general (padre)
+        let clausula_from = 'FROM ' + quoteIdent(firstTD.getTableName());
+        for (let i = 1; i < ec.orderedInsumosTDNames.length; i++) {
+            let leftInsumoAlias = ec.orderedInsumosTDNames[i - 1];
+            let rightInsumoAlias = ec.orderedInsumosTDNames[i];
+            clausula_from += this.joinTDs(leftInsumoAlias, rightInsumoAlias);
+        }
+        //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
+        ec.notOrderedInsumosOptionalRelations.forEach(r=>clausula_from += this.joinRelation(r));
+        
+        return clausula_from;
+    }
+
     async calculate(): Promise<string> {
         this.generateDropsAndInserts();
         await this.generateSchemaAndLoadTableDefs();
@@ -37,7 +158,7 @@ export class VarCalculator extends OperativoGenerator {
         return this.getFinalSql();
     }
 
-    addAliasesToExpression(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[], tds: TablaDatos[]) {
+    private addAliasesToExpression(expValidada: string, insumos: Insumos, variablesDefinidas: Variable[], tds: TablaDatos[]) {
         insumos.variables.forEach((varInsumoName: string) => {
             if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {
                 let definedVarForInsumoVar = variablesDefinidas.find(v=>v.variable==varInsumoName);
@@ -97,7 +218,7 @@ export class VarCalculator extends OperativoGenerator {
         });
     }
 
-    sortCalcVariablesByDependency() {
+    private sortCalcVariablesByDependency() {
         /**
      * @param nonDefinedVars son las que variables a calcular cuyos insumos no están en definedVars
      * @param definedVars variables con insumos definidos
@@ -135,7 +256,7 @@ export class VarCalculator extends OperativoGenerator {
         }
     }
 
-    checkInsumos(vCalc: VariableCalculada, definedVars: string[]): boolean {
+    private checkInsumos(vCalc: VariableCalculada, definedVars: string[]): boolean {
         var countChecked: number = 0;
         vCalc.insumos.variables.forEach(
             varInsumos => countChecked = this.checkAndPushVar(varInsumos, definedVars) ? countChecked + 1 : countChecked);
@@ -204,7 +325,7 @@ export class VarCalculator extends OperativoGenerator {
         this.allSqls = this.drops.concat(sqls.mainSql).concat(sqls.enancePart).concat(this.inserts)
     }
 
-    generateDropsAndInserts() {
+    private generateDropsAndInserts() {
         this.getTDCalculadas().forEach(td => {
             this.drops.unshift("drop table if exists " + this.app.db.quoteIdent(td.getTableName()) + ";");
             let insert = `INSERT INTO ${this.app.db.quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${this.app.db.quoteIdent(td.que_busco)};` //estParaGenTabla.sourceJoin + ";");
@@ -212,7 +333,7 @@ export class VarCalculator extends OperativoGenerator {
         })
     }
 
-    armarFuncionGeneradora(): any {
+    private armarFuncionGeneradora(): any {
         this.funGeneradora = `CREATE OR REPLACE FUNCTION ${this.app.config.db.schema}.${this.nombreFuncionGeneradora}() RETURNS TEXT
           LANGUAGE PLPGSQL
         AS

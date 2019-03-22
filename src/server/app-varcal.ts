@@ -1,11 +1,9 @@
 "use strict";
 
 import * as bg from "best-globals";
-import { procedures } from "./procedures-varcal";
-import { VarCalculator, Constructor, AppOperativosType, TableDefinitions, TableDefinition, TablaDatos,
-         emergeAppOperativos, AppBackend
-} from "./types-varcal";
 import { MenuDefinition } from "operativos";
+import { procedures } from "./procedures-varcal";
+import { AppBackend, AppOperativosType, Constructor, emergeAppOperativos, TablaDatos, TableDefinition, TableDefinitions, VarCalculator } from "./types-varcal";
 
 // re-export my file of types for external modules
 export * from './types-varcal';
