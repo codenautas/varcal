@@ -13,6 +13,6 @@ export interface ExpressionContainer{
     clausula_from:string
     clausula_where:string
 
-    abstract getExpression():string
+    getExpression():string
 
 }

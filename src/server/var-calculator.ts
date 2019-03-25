@@ -89,44 +89,68 @@ export class VarCalculator extends OperativoGenerator {
         })
     }
 
-    protected validateInsumos(insumos:Insumos): void {    
+    protected validateInsumos(insumos:Insumos): void {
+        this.validateOverwritingNames(insumos);
         this.validateFunctions(insumos.funciones);
         this.validateAliases(insumos.aliases);
+        this.validateVars(insumos.variables)
     }
 
-    protected findValidVar(varName: string):{varFound:Variable,relation?:string} {
-
-        //AGREGAR ESTA VALIDACIÓN
-        if (!insumos.funciones || insumos.funciones.indexOf(varInsumoName) == -1) {}
-
-
-        let rawVarName = varName;
-        let varsFound:Variable[] = this.myVars;
-        let relation:string;
-        if (hasAlias(varName)) {
-            let varAlias = varName.split('.')[0];
-            rawVarName = varName.split('.')[1];
-
-            let relAlias = this.optionalRelations.find(rel => rel.que_busco == varAlias)
-            if (relAlias){
-                relation=varAlias;
-                varAlias=relAlias.tabla_busqueda;
-            }
-            varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
+    validateOverwritingNames(insumos: Insumos): void {
+        if (insumos.funciones){
+            insumos.variables.forEach(varName=> {
+                if(insumos.funciones.indexOf(varName) > -1) {
+                    throw new Error('La variable "' + varName + '" es también un nombre de función');
+                }
+            })
         }
-        varsFound = varsFound.filter(v => v.variable == rawVarName);
-        this.VarsFoundErrorChecks(varsFound, varName);
-        return {varFound:varsFound[0], relation};
     }
 
-    private VarsFoundErrorChecks(varsFound:Variable[], varName: string){
+    validateVars(varNames: string[]): void {
+        varNames.forEach(vName => {this.validateVar(vName)})
+    }
+
+    validateVar(varName: string): Variable {
+        let varsFound:Variable[] = this.findValidVars(varName);
+        this.checkFoundVarsForErrors(varsFound, varName);
+        return varsFound[0];
+    }
+    
+    private checkFoundVarsForErrors(varsFound: Variable[], varName: string) {
         if (varsFound.length > 1) {
             throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
         }
         if (varsFound.length <= 0) {
             throw new Error('La variable "' + varName + '" no se encontró en la lista de variables.');
         }
-        if (!varsFound[0].activa) { throw new Error('La variable "' + varName + '" no está activa.'); }
+        let foundVar = varsFound[0];
+        if (!foundVar.activa) {
+            throw new Error('La variable "' + varName + '" no está activa.');
+        }
+    }
+
+    protected findValidVars(varName: string) {
+        let rawVarName = varName;
+        let varsFound:Variable[] = this.myVars;
+        if (hasAlias(varName)) {
+            let varAlias = varName.split('.')[0];
+            rawVarName = varName.split('.')[1];
+           
+            let rel = this.getAliasIfOptionalRelation(varName);
+            varAlias = rel? rel.tabla_busqueda: varAlias
+
+            varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
+        }
+        return varsFound.filter(v => v.variable == rawVarName);
+    }
+
+    getAliasIfOptionalRelation(varName:string):Relacion{
+        let rel:Relacion
+        if (hasAlias(varName)){
+            let varAlias = varName.split('.')[0];
+            rel = this.optionalRelations.find(rel => rel.que_busco == varAlias)
+        }
+        return rel
     }
 
     private addMainTD(insumosAliases: string[]) {
@@ -137,13 +161,13 @@ export class VarCalculator extends OperativoGenerator {
         return insumosAliases;
     }
 
-    preCompile(ec: ExpressionContainer): any {
-        this.prepare(ec)
+    prepareEC(ec: ExpressionContainer): any {
+        this.setInsumos(ec)
         this.validateInsumos(ec.insumos);
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
     }
 
-    prepare(ec:ExpressionContainer){
+    setInsumos(ec:ExpressionContainer){
         let bn:BaseNode = parse(ec.getExpression()); 
         ec.insumos = bn.getInsumos();
     }
@@ -184,7 +208,9 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     async calculate(): Promise<string> {
-        llamar a prepare
+        
+        this.preCalculate()        
+        
         this.parseCalcVarExpressions();
 
         this.generateDropsAndInserts();
@@ -192,6 +218,9 @@ export class VarCalculator extends OperativoGenerator {
         this.separarEnGruposOrdenados();
         this.armarFuncionGeneradora();
         return this.getFinalSql();
+    }
+    preCalculate(): any {
+        this.getVarsCalculadas().forEach(vc=>this.prepareEC(vc));
     }
 
     sentenciaUpdate(margen: number, bloque: BloqueVariablesCalc): string {
