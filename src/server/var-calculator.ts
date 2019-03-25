@@ -89,14 +89,14 @@ export class VarCalculator extends OperativoGenerator {
         })
     }
 
-    protected validateInsumos(insumos:Insumos): void {
+    private validateInsumos(insumos:Insumos): void {
         this.validateOverwritingNames(insumos);
         this.validateFunctions(insumos.funciones);
         this.validateAliases(insumos.aliases);
         this.validateVars(insumos.variables)
     }
 
-    validateOverwritingNames(insumos: Insumos): void {
+    private validateOverwritingNames(insumos: Insumos): void {
         if (insumos.funciones){
             insumos.variables.forEach(varName=> {
                 if(insumos.funciones.indexOf(varName) > -1) {
@@ -106,11 +106,11 @@ export class VarCalculator extends OperativoGenerator {
         }
     }
 
-    validateVars(varNames: string[]): void {
+    private validateVars(varNames: string[]): void {
         varNames.forEach(vName => {this.validateVar(vName)})
     }
 
-    validateVar(varName: string): Variable {
+    protected validateVar(varName: string): Variable {
         let varsFound:Variable[] = this.findValidVars(varName);
         this.checkFoundVarsForErrors(varsFound, varName);
         return varsFound[0];
@@ -129,7 +129,7 @@ export class VarCalculator extends OperativoGenerator {
         }
     }
 
-    protected findValidVars(varName: string) {
+    private findValidVars(varName: string) {
         let rawVarName = varName;
         let varsFound:Variable[] = this.myVars;
         if (hasAlias(varName)) {
@@ -144,7 +144,7 @@ export class VarCalculator extends OperativoGenerator {
         return varsFound.filter(v => v.variable == rawVarName);
     }
 
-    getAliasIfOptionalRelation(varName:string):Relacion{
+    protected getAliasIfOptionalRelation(varName:string):Relacion{
         let rel:Relacion
         if (hasAlias(varName)){
             let varAlias = varName.split('.')[0];
@@ -161,13 +161,13 @@ export class VarCalculator extends OperativoGenerator {
         return insumosAliases;
     }
 
-    prepareEC(ec: ExpressionContainer): any {
+    protected prepareEC(ec: ExpressionContainer): any {
         this.setInsumos(ec)
         this.validateInsumos(ec.insumos);
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
     }
 
-    setInsumos(ec:ExpressionContainer){
+    private setInsumos(ec:ExpressionContainer){
         let bn:BaseNode = parse(ec.getExpression()); 
         ec.insumos = bn.getInsumos();
     }
@@ -219,11 +219,11 @@ export class VarCalculator extends OperativoGenerator {
         this.armarFuncionGeneradora();
         return this.getFinalSql();
     }
-    preCalculate(): any {
+    private preCalculate(): any {
         this.getVarsCalculadas().forEach(vc=>this.prepareEC(vc));
     }
 
-    sentenciaUpdate(margen: number, bloque: BloqueVariablesCalc): string {
+    private sentenciaUpdate(margen: number, bloque: BloqueVariablesCalc): string {
         var txtMargen = Array(margen + 1).join(' ');
         return `${txtMargen}UPDATE ${bloque.tabla.getTableName()}\n${txtMargen}  SET ` +
                 this.buildSETClausule(txtMargen, bloque) +
