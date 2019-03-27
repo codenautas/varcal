@@ -9,11 +9,12 @@ import { compilerOptions } from "./variable-calculada";
 
 export class VarCalculator extends OperativoGenerator {
 
-    private allSqls: string[]
+    private allSqls: string[] = []
     private drops: string[] = []
     private inserts: string[] = []
 
     private bloquesVariablesACalcular: BloqueVariablesCalc[] = [];
+     // @ts-ignore https://github.com/codenautas/operativos/issues/4
     private funGeneradora: string;
     private nombreFuncionGeneradora: string = 'gen_fun_var_calc'
 
@@ -58,7 +59,7 @@ export class VarCalculator extends OperativoGenerator {
         return this.myTDs.find(td => td.operativo == v.operativo && td.tabla_datos == v.tabla_datos);
     }
 
-    protected optionalRelations: Relacion[];
+    protected optionalRelations: Relacion[]=[];
     
     private validateAliases(aliases: string[]): any {
         let validAliases=this.getValidAliases();
@@ -145,7 +146,7 @@ export class VarCalculator extends OperativoGenerator {
     }
 
     protected getAliasIfOptionalRelation(varName:string):Relacion{
-        let rel:Relacion
+        let rel:Relacion;
         if (hasAlias(varName)){
             let varAlias = varName.split('.')[0];
             rel = this.optionalRelations.find(rel => rel.que_busco == varAlias)

@@ -13,8 +13,8 @@ export class VariableCalculada extends Variable implements ExpressionContainer, 
 
     insumos: Insumos; 
     
-    orderedInsumosTDNames: string[]
-    notOrderedInsumosOptionalRelations: Relacion[] 
+    orderedInsumosTDNames: string[] = []
+    notOrderedInsumosOptionalRelations: Relacion[] = []
     lastTD:TablaDatos
     firstTD:TablaDatos
 

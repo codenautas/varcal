@@ -4,6 +4,7 @@ import * as bg from "best-globals";
 import { defConfig } from "./def-config";
 import { procedures } from "./procedures-varcal";
 import { AppBackend, AppOperativosType, Constructor, emergeAppOperativos, TablaDatos, TableDefinition, TableDefinitions, VarCalculator } from "./types-varcal";
+import { Request } from "operativos";
 
 // re-export my file of types for external modules
 export * from './types-varcal';
@@ -13,13 +14,22 @@ export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T
 
         constructor(...args:any[]){
             super(args);
-            this.allProcedures = this.allProcedures.concat(procedures);
-            this.allClientFileNames.push({type:'js', module: 'varcal', modPath: '../client', file: 'varcal.js', path: 'client_modules'})
         }
 
         configStaticConfig(){
             super.configStaticConfig();
             this.setStaticConfig(defConfig);
+        }
+
+        async getProcedures(){
+            var parentProc = await super.getProcedures()
+            return parentProc.concat(procedures);
+        }
+
+        clientIncludes(req:Request, hideBEPlusInclusions?:boolean){
+            return super.clientIncludes(req, hideBEPlusInclusions).concat([
+                {type:'js', module: 'varcal', modPath: '../client', file: 'varcal.js', path: 'client_modules'}
+            ])
         }
 
         generateAndLoadTableDefs(){
