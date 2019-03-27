@@ -10,7 +10,7 @@
             "request": "launch",
             "name": "Launch Program",
             "preLaunchTask": "build-all",
-            "program": "${workspaceFolder}/server/server-varcal.js",
+            "program": "${workspaceFolder}/dist/server/server-varcal.js",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ]
@@ -20,7 +20,7 @@
             "request": "launch",
             "name": "dumpDb",
             "preLaunchTask": "tsc-server",
-            "program": "${workspaceFolder}/server/server-varcal.js",
+            "program": "${workspaceFolder}/dist/server/server-varcal.js",
             "args": [
                 "--dump-db"
             ],

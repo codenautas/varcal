@@ -1,13 +1,12 @@
 "use strict";
 
 import * as bg from "best-globals";
-import { MenuDefinition } from "operativos";
+import { defConfig } from "./def-config";
 import { procedures } from "./procedures-varcal";
 import { AppBackend, AppOperativosType, Constructor, emergeAppOperativos, TablaDatos, TableDefinition, TableDefinitions, VarCalculator } from "./types-varcal";
 
 // re-export my file of types for external modules
 export * from './types-varcal';
-export * from './var-cal';
 
 export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T){    
     return class AppVarCal extends Base{
@@ -18,8 +17,9 @@ export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T
             this.allClientFileNames.push({type:'js', module: 'varcal', modPath: '../client', file: 'varcal.js', path: 'client_modules'})
         }
 
-        configStaticConfig():void{
+        configStaticConfig(){
             super.configStaticConfig();
+            this.setStaticConfig(defConfig);
         }
 
         generateAndLoadTableDefs(){
@@ -55,9 +55,6 @@ export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T
                     {name: 'calculada' , typeName:'timestamp', editable:true},
                 );
             });
-        }
-        getMenu():MenuDefinition{
-            return {menu: super.getMenu().menu}
         }
     }
 }

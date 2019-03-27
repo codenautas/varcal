@@ -1,5 +1,6 @@
+export const defConfig=`
 server:
-  port: 3031
+  port: 3032
   base-url: /varcal
   session-store: memory
 db:
@@ -8,8 +9,6 @@ db:
   database: varcal_db
   schema: varcal
   user: varcal_user
-  search_path: 
-  - varcal
 install:
   dump:
     db:
@@ -60,3 +59,4 @@ client-setup:
   cursors: true
   lang: es
   menu: true
+`;

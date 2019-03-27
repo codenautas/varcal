@@ -4,10 +4,8 @@
 local-*
 *-local.*
 
-# Don't publish Typescript code
+# Never publish Typescript code
 src/
 
-# Always publish generated files (.js, .map. .d.ts)
-!server/
-!client/
-!tests/
+# Always publish generated files (.js, .map. .d.ts) in order package users could execute it
+!dist/
