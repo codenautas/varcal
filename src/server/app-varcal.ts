@@ -35,8 +35,8 @@ export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T
         generateAndLoadTableDefs(){
             let varCalculator = <VarCalculator> VarCalculator.instanceObj;
             let tableDefs: TableDefinitions={};
-            let calcTDatos = varCalculator.getTDCalculadas();
-            calcTDatos.forEach(tablaDato => {
+            let tdCalculadas = varCalculator.getTDCalculadas();
+            tdCalculadas.forEach(tablaDato => {
                 let tdef:TableDefinition = this.generateBaseTableDef(tablaDato);
                 this.loadTableDef(tdef); //carga el tableDef para las grillas (las grillas de calculadas NO deben permitir insert o update)
                 let newTDef = bg.changing(tdef, {allow: {insert: true, update: true}}); // modifica los allows para el dumpSchemaPartial (necesita insert y update)

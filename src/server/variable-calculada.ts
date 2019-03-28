@@ -1,5 +1,5 @@
 import { CompilerOptions, Insumos } from "expre-parser";
-import { Relacion, TablaDatos, tiposTablaDato, TipoVarDB, Variable, VariableOpcion } from "operativos";
+import { OperativoGenerator, Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
 import { ExpressionContainer } from "./expression-container";
 import { VarCalculator } from "./var-calculator";
 
@@ -7,46 +7,25 @@ import { VarCalculator } from "./var-calculator";
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
 
 export class VariableCalculada extends Variable implements ExpressionContainer, TipoVarDB{
-    //TODO: elegir uno
-    expresionValidada: string
-    rawExpression: string
 
-    insumos: Insumos; 
-    
     orderedInsumosTDNames: string[] = []
     notOrderedInsumosOptionalRelations: Relacion[] = []
-    lastTD:TablaDatos
-    firstTD:TablaDatos
-
-    clausula_from:string
-    clausula_where:string
        
     opciones?: VariableOpcion[]    
 
+    constructor(public expresionValidada:string, public insumos: Insumos, public lastTD:TablaDatos, public firstTD:TablaDatos, public clausula_from:string, public clausula_where:string ){
+        super();
+    }
+    
+    public buildSetClausule():string {
+        let expresion = (this.tabla_agregada && this.funcion_agregacion)?
+            `${this.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${this.variable}`:
+            this.expresionValidada;
+        return `${this.variable} = ${expresion}`;
+    }
+
     getExpression(){
-        return this.expresion;
-    }
-
-    esCalculada(){
-        return this.clase == tiposTablaDato.calculada;
-    }
-
-    async parseExpression() {
-        if ((!this.opciones || !this.opciones.length) && !this.expresion) {
-            throw new Error('La variable ' + this.variable + ' no puede tener expresión y opciones nulas simultaneamente');
-        }
-        let tdPks = VarCalculator.instanceObj.getTDFor(this).getQuotedPKsCSV();
-        if (this.opciones && this.opciones.length) {
-            this.expresionValidada = 'CASE ' + this.opciones.map(function (opcion: VariableOpcion) {
-                return '\n          WHEN ' + getWrappedExpression(opcion.expresion_condicion, tdPks, compilerOptions) +
-                    ' THEN ' + getWrappedExpression(opcion.expresion_valor || opcion.opcion, tdPks, compilerOptions)
-            }).join('') + (this.expresion ? '\n          ELSE ' + getWrappedExpression(this.expresion, tdPks, compilerOptions) : '') + ' END'
-        } else {
-            this.expresionValidada = getWrappedExpression(this.expresion, tdPks, compilerOptions);
-        }
-        if (this.filtro) {
-            this.expresionValidada = 'CASE WHEN ' + this.filtro + ' THEN ' + this.expresionValidada + ' ELSE NULL END'
-        }
+        return this.expresion || '';
     }
 }
 
