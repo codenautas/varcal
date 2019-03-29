@@ -8,18 +8,19 @@ export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'nu
 
 export class VariableCalculada extends Variable implements ExpressionContainer, TipoVarDB{
 
+    tdsNeedByExpression: string[] = [];
     orderedInsumosTDNames: string[] = []
-    notOrderedInsumosOptionalRelations: Relacion[] = []
+    insumosOptionalRelations: Relacion[] = []
        
     opciones?: VariableOpcion[]    
 
-    constructor(public expresionValidada:string, public insumos: Insumos, public lastTD:TablaDatos, public firstTD:TablaDatos, public clausula_from:string, public clausula_where:string ){
+    constructor(public expresionValidada:string, public insumos: Insumos, public lastTD:TablaDatos, public clausula_from:string, public clausula_where:string ){
         super();
     }
     
     public buildSetClausule():string {
-        let expresion = (this.tabla_agregada && this.funcion_agregacion)?
-            `${this.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${this.variable}`:
+        let expresion = (this.tabla_agregada && this.funcion_agregacion) ?
+            `${this.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${this.variable}` :
             this.expresionValidada;
         return `${this.variable} = ${expresion}`;
     }
