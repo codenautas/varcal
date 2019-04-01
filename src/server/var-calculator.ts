@@ -1,13 +1,11 @@
-import { Insumos, parse, Compiler, CompilerOptions, BaseNode } from "expre-parser";
-import { Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato, Variable, Operativo, TablaDatos } from "operativos";
-import { quoteIdent } from "pg-promise-strict";
+import { ExpressionProcessor } from "expression-processor";
+import { Client, hasAlias, OperativoGenerator, tiposTablaDato, Variable, Relacion } from "operativos";
 import { AppVarCalType } from "./app-varcal";
-import { ExpressionContainer } from "./expression-container";
-import { BloqueVariablesCalc, VariableCalculada } from "./types-varcal";
-import { compilerOptions } from "./variable-calculada";
+import { BloqueVariablesCalc } from "./types-varcal";
+import { compilerOptions, VariableCalculada } from "./variable-calculada";
+import {quoteIdent, quoteLiteral } from "pg-promise-strict";
 
-
-export class VarCalculator extends OperativoGenerator {
+export class VarCalculator extends ExpressionProcessor {
 
     private allSqls: string[] = []
     private drops: string[] = []
@@ -22,23 +20,32 @@ export class VarCalculator extends OperativoGenerator {
         super(client, operativo);
     }
 
+    //########## public methods
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
         //converting to type varCalculadas
-        this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, VariableCalculada.prototype));
+        this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, Variable.prototype));
         this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
     }
-
-    getInsumos(expression: string): Insumos {
-        return parse(expression).getInsumos();
+    getTDCalculadas() {
+        return this.myTDs.filter(td => td.esCalculada());
+    }
+    async calculate(): Promise<string> {
+        //for each TD, do SQL generation
+        this.generateTDDropsAndInserts();
+        await this.generateSchemaAndLoadTableDefs();
+        
+        //Variable Processing
+        this.preCalculate();
+        
+        //variables blocks
+        this.separarEnGruposOrdenados();
+        this.armarFuncionGeneradora();
+        return this.getFinalSql();
     }
 
-    getWrappedExpression(expression: string | number, pkExpression: string, options: CompilerOptions): string {
-        var compiler = new Compiler(options);
-        return compiler.toCode(parse(expression), pkExpression);
-    }
-
-    getAggregacion(f: string, exp: string) {
+    //########## private methods
+    private getAggregacion(f?: string, exp: string) {
         switch (f) {
             case 'sumar':
                 return 'sum(' + exp + ')';
@@ -54,129 +61,6 @@ export class VarCalculator extends OperativoGenerator {
                 return f + '(' + exp + ')';
         }
     }
-
-    getTDFor(v:VariableCalculada): TablaDatos{
-        return this.myTDs.find(td => td.operativo == v.operativo && td.tabla_datos == v.tabla_datos);
-    }
-
-    protected optionalRelations: Relacion[]=[];
-
-    private validateAliases(aliases: string[]): any {
-        let validAliases = this.getValidAliases();
-        aliases.forEach(alias => {
-            if (validAliases.indexOf(alias) == -1) {
-                throw new Error('El alias "' + alias + '" no se encontró en la lista de alias válidos: ' + validAliases.join(', '));
-            }
-        });
-    }
-    private getValidAliases(): string[]{
-        let validRelationsNames = this.optionalRelations.map(rel => rel.que_busco)
-        return this.myTDs.map(td => td.tabla_datos).concat(validRelationsNames);
-    }
-    private validateFunctions(funcNames: string[]) {
-        let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
-        let comunSquemaWhiteList = ['informado'];
-        let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
-        funcNames.forEach(f => {
-            if (hasAlias(f)) {
-                if (f.split('.')[0] != 'dbo') {
-                    throw new Error('La Función ' + f + ' contiene un alias inválido');
-                }
-            } else {
-                if (functionWhiteList.indexOf(f) == -1) {
-                    throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
-                }
-            }
-        })
-    }
-
-    private validateInsumos(ec:ExpressionContainer): void {
-        this.validateOverwritingNames(ec.insumos);
-        this.validateFunctions(ec.insumos.funciones);
-        this.validateAliases(ec.insumos.aliases);
-        this.validateVars(ec)
-    }
-
-    private validateOverwritingNames(insumos: Insumos): void {
-        if (insumos.funciones) {
-            insumos.variables.forEach(varName => {
-                if (insumos.funciones.indexOf(varName) > -1) {
-                    throw new Error('La variable "' + varName + '" es también un nombre de función');
-                }
-            })
-        }
-    }
-
-    private validateVars(ec:ExpressionContainer): void {
-        ec.insumos.variables.forEach(vName => {
-            let foundVar = this.validateVar(vName);
-            if ( ! ec.tdsNeedByExpression.find(tdName=> tdName == foundVar.tabla_datos)){
-                ec.tdsNeedByExpression.push(foundVar.tabla_datos)
-            } 
-        })
-    }
-
-    protected validateVar(varName: string): Variable {
-        let varsFound:Variable[] = this.findValidVars(varName);
-        this.checkFoundVarsForErrors(varsFound, varName);
-        return varsFound[0];
-    }
-    
-    private checkFoundVarsForErrors(varsFound: Variable[], varName: string) {
-        if (varsFound.length > 1) {
-            throw new Error('La variable "' + varName + '" se encontró mas de una vez en las siguientes tablas de datos: ' + varsFound.map(v => v.tabla_datos).join(', '));
-        }
-        if (varsFound.length <= 0) {
-            throw new Error('La variable "' + varName + '" no se encontró en la lista de variables.');
-        }
-        let foundVar = varsFound[0];
-        if (!foundVar.activa) {
-            throw new Error('La variable "' + varName + '" no está activa.');
-        }
-    }
-
-    private findValidVars(varName: string) {
-        let rawVarName = varName;
-        let varsFound: Variable[] = this.myVars;
-        if (hasAlias(varName)) {
-            let varAlias: string;
-            [varAlias, rawVarName] = varName.split('.');
-
-            let rel = this.getAliasIfOptionalRelation(varName);
-            varAlias = rel ? rel.tabla_busqueda : varAlias
-
-            varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
-        }
-        return varsFound.filter(v => v.variable == rawVarName);
-    }
-
-    protected getAliasIfOptionalRelation(varName:string):Relacion{
-        let rel:Relacion;
-        if (hasAlias(varName)){
-            let varAlias = varName.split('.')[0];
-            rel = this.optionalRelations.find(rel => rel.que_busco == varAlias)
-        }
-        return rel
-    }
-
-    private addMainTD(insumosAliases: string[]) {
-        //aliases involved in this consistence expresion
-        if (insumosAliases.indexOf(VarCalculator.mainTD) == -1) {
-            insumosAliases.push(VarCalculator.mainTD);
-        }
-        return insumosAliases;
-    }
-
-    protected prepareEC(ec: ExpressionContainer): any {
-        this.setInsumos(ec)
-        this.validateInsumos(ec);
-        this.filterOrderedTDs(ec); //tabla mas específicas (hija)
-    }
-
-    private setInsumos(ec:ExpressionContainer){
-        let bn:BaseNode = parse(ec.getExpression()); 
-        ec.insumos = bn.getInsumos();
-    }
     
     private preCalculate(): void {
         this.getVarsCalculadas().forEach(vc=>{
@@ -188,11 +72,70 @@ export class VarCalculator extends OperativoGenerator {
         });
     }
 
-    buildExpression(vc: VariableCalculada): void {
+    private getVarsCalculadas(): VariableCalculada[] {
+        return <VariableCalculada[]>this.myVars.filter(v => v.esCalculada())
+    }
+
+    private getNonCalcVars() {
+        return this.myVars.filter(v => !v.esCalculada());
+    }
+
+    private getRelevamientoVars() {
+        return this.getNonCalcVars();
+    }
+
+    private getFinalSql(): string {
+        let updateFechaCalculada = `
+        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${quoteLiteral(<string>this.operativo)};
+        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${quoteLiteral(<string>this.operativo)} AND tipo=${quoteLiteral(tiposTablaDato.calculada)};`;
+
+        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', updateFechaCalculada, 'end\n$SQL_DUMP$');
+        // sin funcion generadora
+        // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, updateFechaCalculada, 'end\n$SQL_DUMP$');
+        return this.allSqls.join('\n----\n') + '--- generado: ' + new Date() + '\n';
+    }
+
+    private armarFuncionGeneradora(): any {
+        this.funGeneradora = `CREATE OR REPLACE FUNCTION ${this.app.config.db.schema}.${this.nombreFuncionGeneradora}() RETURNS TEXT
+          LANGUAGE PLPGSQL
+        AS
+        $BODY$
+        BEGIN
+        `+
+            this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(2, bloqueVars) + ';').join('\n') + `
+          RETURN 'OK';
+        END;
+        $BODY$;`;
+    }
+    
+    private buildAggregatedLateralsFromClausule(txtMargen:string, bloque:BloqueVariablesCalc):string{
+        //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
+        let tablesToFromClausule:string='';
+        let tablasAgregadas = [...(new Set(bloque.variablesCalculadas.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
+        tablasAgregadas.forEach(tabAgg => {
+            let varsAgg = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada == tabAgg);
+            // TODO:
+             falta ordenarlos
+            let involvedTDs = [...(new Set([].concat.apply(varsAgg.map(vca=>vca.tdsNeedByExpression))))] 
+            tablesToFromClausule +=
+                `${txtMargen}LATERAL (
+                ${txtMargen}   SELECT
+                ${txtMargen}       ${varsAgg.map(v => `${this.getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
+                ${txtMargen}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
+                ${txtMargen}     WHERE ${defEst.tables[tabAgg].whereAgg[bloque.ua]}
+                ${txtMargen} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
+        });
+
+        return tablesToFromClausule
+    }
+
+    private buildExpression(vc: VariableCalculada): void {
+        //extract that validation to a better place
         if ((!vc.opciones || !vc.opciones.length) && !vc.expresion) {
             throw new Error('La variable ' + vc.variable + ' no puede tener expresión y opciones nulas simultaneamente');
         }
-        
+
+        vc.expresion=vc.expresion||'';
         if (vc.opciones && vc.opciones.length) {
             vc.expresionValidada = 'CASE ' + vc.opciones.map(opcion => {
                 return '\n          WHEN ' + opcion.expresion_condicion +
@@ -206,99 +149,30 @@ export class VarCalculator extends OperativoGenerator {
         }
     }
 
-    protected filterOrderedTDs(ec:ExpressionContainer) {
-        //put in constructor
-        // TODO: ORDENAR dinamicamente:
-        // primero: la td que no tenga ninguna TD en que busco es la principal
-        // segundas: van todas las tds que tengan en "que_busco" a la principal
-        // terceras: las tds que tengan en "que busco" a las segundas
-        // provisoriamente se ordena fijando un arreglo ordenado
-        // TODO: deshardcodear main TD
-
-        let tdsNeedByExpression = this.addMainTD(ec.tdsNeedByExpression);
-        ec.insumosOptionalRelations = this.optionalRelations.filter(r => ec.insumos.aliases.indexOf(r.que_busco) > -1);
-        let orderedInsumosIngresoTDNames: string[] = VarCalculator.orderedIngresoTDNames.filter(orderedTDName => tdsNeedByExpression.indexOf(orderedTDName) > -1);
-        let orderedInsumosReferencialesTDNames: string[] = VarCalculator.orderedReferencialesTDNames.filter(orderedTDName => tdsNeedByExpression.indexOf(orderedTDName) > -1);
-        ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
-        ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
-    }
-
-    protected buildClausulaWhere(ec:ExpressionContainer):string {
-        ec.expresionValidada = this.getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
-        return this.addAliasesToExpression(ec);
-    }
-    
-    protected buildClausulaFrom(txtMargen:string, bloque:BloqueVariablesCalc): string {
-        let insumosOptionalRelations:Relacion[]=[];
-        let orderedInsumosTDNames:string[]=[];
-        // bloque.variablesCalculadas(vc=>{
-        //     insumosOptionalRelations
-        //     orderedInsumosTDNames
-        // })
-        return this.buildInsumosTDsFromClausule(orderedInsumosTDNames) + this.buildAggregatedLateralsFromClausule(txtMargen, bloque) + this.buildOptRelationsFromClausule(insumosOptionalRelations);
-    }
-
-    private buildInsumosTDsFromClausule(orderedInsumosTDNames: string[]) {
-        let clausula_from = 'FROM ' + quoteIdent(this.getUniqueTD(orderedInsumosTDNames[0]).getTableName());;
-        //starting from 1 instead of 0
-        for (let i = 1; i < orderedInsumosTDNames.length; i++) {
-            let leftInsumoAlias = orderedInsumosTDNames[i - 1];
-            let rightInsumoAlias = orderedInsumosTDNames[i];
-            clausula_from += this.joinTDs(leftInsumoAlias, rightInsumoAlias);
+    private buildWHEREClausule(txtMargen: string, bloqueVars:BloqueVariablesCalc): string {
+        let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.ua]) ? defEst.tables[definicion.ua] : null;
+        let defJoinExist: boolean = !!(definicion.joins && definicion.joins.length);
+        let completeWhereConditions: string = '';
+        if (tableDefEst || defJoinExist) {
+            let defJoinsWhere = defJoinExist ? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `) : '';
+            completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
         }
-        return clausula_from;
-    }
-    
-    private buildAggregatedLateralsFromClausule(txtMargen:string, bloque:BloqueVariablesCalc):string{
-        //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
-        let tablesToFromClausule:string;
-        let tablasAgregadas = [...(new Set(bloque.variablesCalculadas.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
-        tablasAgregadas.forEach(tabAgg => {
-            let varsAgg = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada == tabAgg);
-            // TODO:
-             falta ordenarlos
-            let involvedTDs = [...(new Set([].concat.apply(varsAgg.map(vca=>vca.tdsNeedByExpression))))] 
-            tablesToFromClausule = tablesToFromClausule.concat(
-                `${txtMargen}LATERAL (
-                ${txtMargen}   SELECT
-                ${txtMargen}       ${varsAgg.map(v => `${this.getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
-                ${txtMargen}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${txtMargen}     WHERE ${defEst.tables[tabAgg].whereAgg[bloque.ua]}
-                ${txtMargen} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
-            );
-        });
 
-        return tablesToFromClausule
+        return `\n  ${txtMargen}WHERE ${completeWhereConditions}`;
+    }
+    private buildSETClausule(txtMargen: string, bloqueVars: BloqueVariablesCalc) {
+        return bloqueVars.variablesCalculadas.map(vc => vc.buildSetClausule()).join(`,\n      ${txtMargen}`);
     }
 
-    buildOptRelationsFromClausule(insumosOptionalRelations: Relacion[]): string {
-        //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
-        return insumosOptionalRelations.map(r => this.joinRelation(r)).join('\n');
-    }
-
-    async calculate(): Promise<string> {
-        //for each TD, do SQL generation
-        this.generateTDDropsAndInserts();
-        await this.generateSchemaAndLoadTableDefs();
-        
-        //Variable Processing
-        this.preCalculate();
-        
-        //variables blocks
-        this.separarEnGruposOrdenados();
-        this.armarFuncionGeneradora();
-        return this.getFinalSql();
-    }
-
-    async generateSchemaAndLoadTableDefs() {
+    private async generateSchemaAndLoadTableDefs() {
         let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {});
         this.allSqls = this.drops.concat(sqls.mainSql).concat(sqls.enancePart).concat(this.inserts)
     }
 
     private generateTDDropsAndInserts() {
         this.getTDCalculadas().forEach(td => {
-            this.drops.unshift("drop table if exists " + this.app.db.quoteIdent(td.getTableName()) + ";");
-            let insert = `INSERT INTO ${this.app.db.quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${this.app.db.quoteIdent(td.que_busco)};` //estParaGenTabla.sourceJoin + ";");
+            this.drops.unshift("drop table if exists " + quoteIdent(td.getTableName()) + ";");
+            let insert = `INSERT INTO ${quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.que_busco)};` //estParaGenTabla.sourceJoin + ";");
             this.inserts.push(insert);
         })
     }
@@ -310,47 +184,8 @@ export class VarCalculator extends OperativoGenerator {
             this.buildClausulaFrom(txtMargen, bloque) + 
             this.buildWHEREClausule(txtMargen, bloque);
     }
-    
 
-    buildWHEREClausule(txtMargen: string, bloqueVars:BloqueVariablesCalc): string {
-        let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.ua]) ? defEst.tables[definicion.ua] : null;
-        let defJoinExist: boolean = !!(definicion.joins && definicion.joins.length);
-        let completeWhereConditions: string = '';
-        if (tableDefEst || defJoinExist) {
-            let defJoinsWhere = defJoinExist ? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `) : '';
-            completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
-        }
-
-        return `\n  ${txtMargen}WHERE ${completeWhereConditions}`;
-    }
-
-    private buildSETClausule(txtMargen: string, bloqueVars: BloqueVariablesCalc) {
-        return bloqueVars.variablesCalculadas.map(vc => vc.buildSetClausule()).join(`,\n      ${txtMargen}`);
-    }
-
-    private addAliasesToExpression(ec: ExpressionContainer) {
-        ec.insumos.variables.forEach(varInsumoName => {
-            let definedVarForInsumoVar = <Variable>this.myVars.find(v => v.variable == varInsumoName);
-            //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
-            let [varAlias, insumoVarRawName] = hasAlias(varInsumoName) ?
-                varInsumoName.split('.') : [definedVarForInsumoVar.tabla_datos, varInsumoName];
-
-            let td = this.myTDs.find(td => td.tabla_datos == varAlias);
-            if (td) {
-                varAlias = td.getTableName();
-            }
-
-            // match all varNames used alone (don't preceded nor followed by "."): 
-            // match: p3 ; (23/p3+1); max(13,p3)
-            // don't match: alias.p3, p3.column, etc
-            let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
-            let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(insumoVarRawName);
-            ec.expresionValidada = ec.expresionValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
-        });
-        return ec.expresionValidada;
-    }
-
-    separarEnGruposOrdenados() {
+    private separarEnGruposOrdenados() {
         let orderedCalcVars: VariableCalculada[] = this.sortCalcVariablesByDependency();
         orderedCalcVars.forEach((vCalc: VariableCalculada) => {
             if (this.bloquesVariablesACalcular.length == 0) {
@@ -379,7 +214,7 @@ export class VarCalculator extends OperativoGenerator {
         });
     }
 
-    private sortCalcVariablesByDependency() {
+    private sortCalcVariablesByDependency():VariableCalculada[] {
         /**
         *  nonDefinedVars son las que variables a calcular cuyos insumos no están en definedVars
         * definedVars variables con insumos definidos
@@ -450,43 +285,24 @@ export class VarCalculator extends OperativoGenerator {
         return isDefined;
     }
 
-    getTDCalculadas() {
-        return this.myTDs.filter(td => td.esCalculada());
+    private getTDsInBloque(bloque: BloqueVariablesCalc) {
+        let insumosOptionalRelations: Relacion[] = [];
+        let orderedInsumosTDNames: string[] = [];
+        bloque.variablesCalculadas.forEach(vc => {
+            insumosOptionalRelations.push(...vc.insumosOptionalRelations);
+            orderedInsumosTDNames.push(...vc.orderedInsumosTDNames);
+        });
+        //removing duplicated
+        insumosOptionalRelations = [...(new Set(insumosOptionalRelations))];
+        orderedInsumosTDNames = [...(new Set(orderedInsumosTDNames))];
+        return { orderedInsumosTDNames, insumosOptionalRelations };
     }
 
-    getVarsCalculadas(): VariableCalculada[] {
-        return <VariableCalculada[]>this.myVars.filter(v => v.esCalculada())
-    }
-
-    getNonCalcVars() {
-        return this.myVars.filter(v => !v.esCalculada());
-    }
-
-    getRelevamientoVars() {
-        return this.getNonCalcVars();
-    }
-
-    getFinalSql(): string {
-        let updateFechaCalculada = `
-        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${this.app.db.quoteLiteral(this.operativo)};
-        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${this.app.db.quoteLiteral(this.operativo)} AND tipo=${this.app.db.quoteLiteral(tiposTablaDato.calculada)};`;
-
-        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', updateFechaCalculada, 'end\n$SQL_DUMP$');
-        // sin funcion generadora
-        // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, updateFechaCalculada, 'end\n$SQL_DUMP$');
-        return this.allSqls.join('\n----\n') + '--- generado: ' + new Date() + '\n';
-    }
-
-    private armarFuncionGeneradora(): any {
-        this.funGeneradora = `CREATE OR REPLACE FUNCTION ${this.app.config.db.schema}.${this.nombreFuncionGeneradora}() RETURNS TEXT
-          LANGUAGE PLPGSQL
-        AS
-        $BODY$
-        BEGIN
-        `+
-            this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(2, bloqueVars) + ';').join('\n') + `
-          RETURN 'OK';
-        END;
-        $BODY$;`;
-    }
+    //########## protected methods
+    protected buildClausulaFrom(txtMargen:string, bloque:BloqueVariablesCalc): string {
+        let { orderedInsumosTDNames, insumosOptionalRelations }: { orderedInsumosTDNames: string[]; insumosOptionalRelations: Relacion[]; } = this.getTDsInBloque(bloque);
+        return this.buildInsumosTDsFromClausule(orderedInsumosTDNames) +
+            this.buildAggregatedLateralsFromClausule(txtMargen, bloque) + 
+            this.buildOptRelationsFromClausule(insumosOptionalRelations);
+    }    
 }
