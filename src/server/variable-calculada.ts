@@ -10,7 +10,7 @@ export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'nu
 export class VariableCalculada extends Variable implements TipoVarDB, IExpressionContainer{
     tdsNeedByExpression: string[]= [];
 
-    expresionValidada!: string
+    expressionProcesada!: string
     insumos!: EP.Insumos; 
     
     orderedInsumosTDNames: string[] = []
@@ -26,7 +26,7 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     public buildSetClausule():string {
         let expresion = (this.tabla_agregada && this.funcion_agregacion) ?
             `${this.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${this.variable}` :
-            this.expresionValidada;
+            this.expressionProcesada;
         return `${this.variable} = ${expresion}`;
     }
 

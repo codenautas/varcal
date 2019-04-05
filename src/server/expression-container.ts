@@ -6,7 +6,7 @@ export interface IExpressionContainer{
     // complexExp: ComplexExpression;
     tdsNeedByExpression: string[];
 
-    expresionValidada: string
+    expressionProcesada: string
     insumos: EP.Insumos; 
     
     orderedInsumosTDNames: string[]

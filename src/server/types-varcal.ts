@@ -2,7 +2,7 @@
 
 export * from 'operativos';
 
-export * from './var-calculator';
 export * from './variable-calculada';
 export * from './expression-container';
 export * from './expression-processor';
+export * from './var-calculator';
