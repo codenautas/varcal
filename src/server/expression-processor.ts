@@ -1,11 +1,16 @@
 import { BaseNode, Compiler, CompilerOptions, Insumos, parse } from "expre-parser";
 import { IExpressionContainer } from "expression-container";
-import { hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } from "operativos";
+import { hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable, Client } from "operativos";
 import { compilerOptions } from "variable-calculada";
 
 export class ExpressionProcessor extends OperativoGenerator{
     
     protected optionalRelations: Relacion[]=[];
+
+    //TODO operativo is required, we only support one operativo per app
+    constructor(public client:Client, public operativo: string){
+        super(client,operativo)
+    }
 
     //########## public methods
     async fetchDataFromDB() {
@@ -61,7 +66,7 @@ export class ExpressionProcessor extends OperativoGenerator{
     }
 
     private setInsumos(ec:IExpressionContainer){
-        let bn:BaseNode = parse(ec.getExpression()); 
+        let bn:BaseNode = parse(ec.getUserExpression()); 
         ec.insumos = bn.getInsumos();
     }
 
@@ -133,16 +138,14 @@ export class ExpressionProcessor extends OperativoGenerator{
         }
         return rel
     }
-    protected prepareEC(ec: IExpressionContainer): any {
+    protected prepareEC(ec: IExpressionContainer): void {
         this.setInsumos(ec)
         this.validateInsumos(ec);
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
+        ec.expressionProcesada = this.addAliasesToExpression(ec)
+        ec.expressionProcesada = this.getWrappedExpression(ec.expressionProcesada, ec.lastTD.getQuotedPKsCSV(), compilerOptions);
     }
-
-    protected getInsumos(expression: string): Insumos {
-        return parse(expression).getInsumos();
-    }
-
+ 
     protected validateVar(varName: string): Variable {
         let varsFound:Variable[] = this.findValidVars(varName);
         this.checkFoundVarsForErrors(varsFound, varName);
@@ -155,6 +158,7 @@ export class ExpressionProcessor extends OperativoGenerator{
     }
 
     protected addAliasesToExpression(ec: IExpressionContainer):string {
+        let completeExpression = ec.expressionProcesada;
         ec.insumos.variables.forEach(varInsumoName => {
             let definedVarForInsumoVar = <Variable>this.myVars.find(v => v.variable == varInsumoName);
             //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
@@ -171,9 +175,9 @@ export class ExpressionProcessor extends OperativoGenerator{
             // don't match: alias.p3, p3.column, etc
             let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
             let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(insumoVarRawName);
-            ec.expresionValidada = ec.expresionValidada.replace(new RegExp(baseRegex, 'g'), completeVar);
+            completeExpression = completeExpression.replace(new RegExp(baseRegex, 'g'), completeVar);
         });
-        return ec.expresionValidada;
+        return completeExpression;
     }
 
     protected filterOrderedTDs(ec:IExpressionContainer) {
@@ -191,21 +195,5 @@ export class ExpressionProcessor extends OperativoGenerator{
         let orderedInsumosReferencialesTDNames: string[] = OperativoGenerator.orderedReferencialesTDNames.filter(orderedTDName => tdsNeedByExpression.indexOf(orderedTDName) > -1);
         ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
         ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
-    }
-
-    protected buildClausulaWhere(ec:IExpressionContainer):string {
-        ec.expresionValidada = this.getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
-        return this.addAliasesToExpression(ec);
-    }
-
-    protected buildInsumosTDsFromClausule(orderedInsumosTDNames: string[]) {
-        let clausula_from = 'FROM ' + quoteIdent(this.getUniqueTD(orderedInsumosTDNames[0]).getTableName());;
-        //starting from 1 instead of 0
-        for (let i = 1; i < orderedInsumosTDNames.length; i++) {
-            let leftInsumoAlias = orderedInsumosTDNames[i - 1];
-            let rightInsumoAlias = orderedInsumosTDNames[i];
-            clausula_from += this.joinTDs(leftInsumoAlias, rightInsumoAlias);
-        }
-        return clausula_from;
-    }
+    }    
 }
