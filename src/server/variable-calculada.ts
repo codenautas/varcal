@@ -1,22 +1,27 @@
-import { CompilerOptions, Insumos } from "expre-parser";
-import { OperativoGenerator, Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
-import { ExpressionContainer } from "./expression-container";
+import * as EP from "expre-parser";
+import { CompilerOptions } from "expre-parser";
+import { IExpressionContainer } from "expression-container";
+import { OperativoGenerator, TablaDatos, TipoVarDB, Variable, VariableOpcion, Relacion } from "operativos";
 import { VarCalculator } from "./var-calculator";
 
 //TODO: quit this global var
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
 
-export class VariableCalculada extends Variable implements ExpressionContainer, TipoVarDB{
+export class VariableCalculada extends Variable implements TipoVarDB, IExpressionContainer{
+    tdsNeedByExpression: string[]= [];
 
-    tdsNeedByExpression: string[] = [];
+    expresionValidada!: string
+    insumos!: EP.Insumos; 
+    
     orderedInsumosTDNames: string[] = []
     insumosOptionalRelations: Relacion[] = []
-       
-    opciones?: VariableOpcion[]    
+    lastTD!:TablaDatos
 
-    constructor(public expresionValidada:string, public insumos: Insumos, public lastTD:TablaDatos, public clausula_from:string, public clausula_where:string ){
-        super();
-    }
+    clausula_from!:string
+    clausula_where!:string
+    
+    opciones?: VariableOpcion[]
+    // complexExp!:ComplexExpression
     
     public buildSetClausule():string {
         let expresion = (this.tabla_agregada && this.funcion_agregacion) ?
@@ -25,12 +30,10 @@ export class VariableCalculada extends Variable implements ExpressionContainer, 
         return `${this.variable} = ${expresion}`;
     }
 
-    getExpression(){
+    getUserExpression(){
         return this.expresion || '';
     }
 }
-
-
 
 export class BloqueVariablesCalc {
     tabla: TablaDatos

@@ -1,19 +1,20 @@
+// import { ComplexExpression } from "complex-expression";
 import * as EP from "expre-parser";
 import { Relacion, TablaDatos } from "operativos";
 
-export interface ExpressionContainer{
+export interface IExpressionContainer{
+    // complexExp: ComplexExpression;
     tdsNeedByExpression: string[];
 
-    expresionValidada?: string
-    insumos?: EP.Insumos; 
+    expresionValidada: string
+    insumos: EP.Insumos; 
     
     orderedInsumosTDNames: string[]
     insumosOptionalRelations: Relacion[] 
     lastTD:TablaDatos
 
-    clausula_from?:string
-    clausula_where?:string
+    clausula_from:string
+    clausula_where:string
 
-    getExpression():string
-
+    getUserExpression():string;
 }
