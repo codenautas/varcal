@@ -3,7 +3,7 @@ import { Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato } from "
 import { quoteIdent, quoteLiteral } from "pg-promise-strict";
 import { AppVarCalType } from "./app-varcal";
 import { BloqueVariablesCalc } from "./types-varcal";
-import { compilerOptions, VariableCalculada } from "./variable-calculada";
+import { VariableCalculada } from "./variable-calculada";
 
 export class VarCalculator extends ExpressionProcessor {
 
@@ -70,12 +70,14 @@ export class VarCalculator extends ExpressionProcessor {
     
     private preCalculate(): void {
         this.getVarsCalculadas().forEach(vc=>{
-            this.buildExpression(vc)
             this.prepareEC(vc)
-
-            let tdPks = this.getTDFor(vc).getQuotedPKsCSV();
-            vc.expresionValidada = this.getWrappedExpression(this.addAliasesToExpression(vc), tdPks, compilerOptions);
         });
+    }
+
+    // override parent method
+    protected prepareEC(vc:VariableCalculada){
+        this.buildExpression(vc)
+        super.prepareEC(vc)
     }
 
     private getVarsCalculadas(): VariableCalculada[] {
@@ -126,7 +128,7 @@ export class VarCalculator extends ExpressionProcessor {
             tablesToFromClausule +=
                 `${txtMargen}, LATERAL (
                 ${txtMargen}   SELECT
-                ${txtMargen}       ${varsAgg.map(v => `${this.getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
+                ${txtMargen}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expressionProcesada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
                 ${txtMargen}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
                 ${txtMargen}     WHERE ${this.samePKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])}
                 ${txtMargen} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
@@ -143,15 +145,15 @@ export class VarCalculator extends ExpressionProcessor {
 
         vc.expresion=vc.expresion||'';
         if (vc.opciones && vc.opciones.length) {
-            vc.expresionValidada = 'CASE ' + vc.opciones.map(opcion => {
+            vc.expressionProcesada = 'CASE ' + vc.opciones.map(opcion => {
                 return '\n          WHEN ' + opcion.expresion_condicion +
                     ' THEN ' + opcion.expresion_valor || opcion.opcion
             }).join('') + (vc.expresion ? '\n          ELSE ' + vc.expresion : '') + ' END'
         } else {
-            vc.expresionValidada = vc.expresion;
+            vc.expressionProcesada = vc.expresion;
         }
         if (vc.filtro) {
-            vc.expresionValidada = 'CASE WHEN ' + vc.filtro + ' THEN ' + vc.expresionValidada + ' ELSE NULL END'
+            vc.expressionProcesada = 'CASE WHEN ' + vc.filtro + ' THEN ' + vc.expressionProcesada + ' ELSE NULL END'
         }
     }
 
