@@ -1,9 +1,9 @@
 import { ExpressionProcessor } from "expression-processor";
-import { Client, hasAlias, OperativoGenerator, tiposTablaDato, Variable, Relacion } from "operativos";
+import { Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato } from "operativos";
+import { quoteIdent, quoteLiteral } from "pg-promise-strict";
 import { AppVarCalType } from "./app-varcal";
 import { BloqueVariablesCalc } from "./types-varcal";
 import { compilerOptions, VariableCalculada } from "./variable-calculada";
-import {quoteIdent, quoteLiteral } from "pg-promise-strict";
 
 export class VarCalculator extends ExpressionProcessor {
 
@@ -16,16 +16,22 @@ export class VarCalculator extends ExpressionProcessor {
     private funGeneradora: string;
     private nombreFuncionGeneradora: string = 'gen_fun_var_calc'
 
+    //########## public methods
     constructor(public app: AppVarCalType, client: Client, operativo: string) {
         super(client, operativo);
     }
 
-    //########## public methods
+    // for future management of insumos with ComplexExpression
+    // preProcess(vcs:VariableCalculada[]){
+    //     vcs.forEach(vc=> {
+    //         this.buildExpression(vc)
+    //     })
+    //     super.preProcess(vcs);
+    // }
+
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
-        //converting to type varCalculadas
-        this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, Variable.prototype));
-        this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
+        this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, VariableCalculada.prototype));
     }
     getTDCalculadas() {
         return this.myTDs.filter(td => td.esCalculada());
@@ -45,7 +51,7 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     //########## private methods
-    private getAggregacion(f?: string, exp: string) {
+    private getAggregacion(f: string, exp: string) {
         switch (f) {
             case 'sumar':
                 return 'sum(' + exp + ')';
@@ -86,8 +92,8 @@ export class VarCalculator extends ExpressionProcessor {
 
     private getFinalSql(): string {
         let updateFechaCalculada = `
-        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${quoteLiteral(<string>this.operativo)};
-        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${quoteLiteral(<string>this.operativo)} AND tipo=${quoteLiteral(tiposTablaDato.calculada)};`;
+        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)};
+        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)} AND tipo=${quoteLiteral(tiposTablaDato.calculada)};`;
 
         this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', updateFechaCalculada, 'end\n$SQL_DUMP$');
         // sin funcion generadora
@@ -113,16 +119,16 @@ export class VarCalculator extends ExpressionProcessor {
         let tablesToFromClausule:string='';
         let tablasAgregadas = [...(new Set(bloque.variablesCalculadas.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
         tablasAgregadas.forEach(tabAgg => {
+            //TODO: when build tablasAgregadas store its variables
             let varsAgg = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada == tabAgg);
-            // TODO:
-             falta ordenarlos
-            let involvedTDs = [...(new Set([].concat.apply(varsAgg.map(vca=>vca.tdsNeedByExpression))))] 
+            
+            let involvedTDs:string[] = [...(new Set([].concat.apply(varsAgg.map(vca=>vca.orderedInsumosTDNames))))] 
             tablesToFromClausule +=
-                `${txtMargen}LATERAL (
+                `${txtMargen}, LATERAL (
                 ${txtMargen}   SELECT
                 ${txtMargen}       ${varsAgg.map(v => `${this.getAggregacion(v.funcion_agregacion, v.expresionValidada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
                 ${txtMargen}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${txtMargen}     WHERE ${defEst.tables[tabAgg].whereAgg[bloque.ua]}
+                ${txtMargen}     WHERE ${this.samePKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])}
                 ${txtMargen} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
@@ -150,15 +156,8 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private buildWHEREClausule(txtMargen: string, bloqueVars:BloqueVariablesCalc): string {
-        let tableDefEst = (defEst && defEst.tables && defEst.tables[definicion.ua]) ? defEst.tables[definicion.ua] : null;
-        let defJoinExist: boolean = !!(definicion.joins && definicion.joins.length);
-        let completeWhereConditions: string = '';
-        if (tableDefEst || defJoinExist) {
-            let defJoinsWhere = defJoinExist ? definicion.joins.map(def => def.clausulaJoin).join(`\n    ${txtMargen}AND `) : '';
-            completeWhereConditions = tableDefEst && defJoinExist ? `(${tableDefEst.where}) AND (${defJoinsWhere})` : tableDefEst ? tableDefEst.where : defJoinsWhere;
-        }
-
-        return `\n  ${txtMargen}WHERE ${completeWhereConditions}`;
+        let baseTable = (<Relacion>this.myRels.find(r=>r.tabla_datos==bloqueVars.tabla.tabla_datos)).que_busco;
+        return `\n  ${txtMargen}WHERE ${this.samePKsConditions(baseTable, bloqueVars.tabla.tabla_datos)}`;
     }
     private buildSETClausule(txtMargen: string, bloqueVars: BloqueVariablesCalc) {
         return bloqueVars.variablesCalculadas.map(vc => vc.buildSetClausule()).join(`,\n      ${txtMargen}`);
