@@ -1,11 +1,21 @@
-import { OperativoGenerator, Relacion, Variable, hasAlias, quoteIdent } from "operativos";
-import { Insumos, parse, Compiler, BaseNode, CompilerOptions } from "expre-parser";
-import { ExpressionContainer } from "expression-container";
+import { BaseNode, Compiler, CompilerOptions, Insumos, parse } from "expre-parser";
+import { IExpressionContainer } from "expression-container";
+import { hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } from "operativos";
 import { compilerOptions } from "variable-calculada";
 
 export class ExpressionProcessor extends OperativoGenerator{
-
+    
     protected optionalRelations: Relacion[]=[];
+
+    //########## public methods
+    async fetchDataFromDB() {
+        await super.fetchDataFromDB();
+        this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
+    }
+
+    // preProcess(ec:IExpressionContainer[]){
+    //     ec.complexExp
+    // }
 
     //########## private methods
     private checkFoundVarsForErrors(varsFound: Variable[], varName: string) {
@@ -18,6 +28,12 @@ export class ExpressionProcessor extends OperativoGenerator{
         let foundVar = varsFound[0];
         if (!foundVar.activa) {
             throw new Error('La variable "' + varName + '" no está activa.');
+        }
+        if (foundVar.tabla_agregada && ! foundVar.funcion_agregacion) {
+            throw new Error('En la variable "' + varName + '" debe completar campo funcion_agregacion ya que tiene completo el campo tabla_agregada.');
+        }
+        if ( ! foundVar.tabla_agregada && foundVar.funcion_agregacion) {
+            throw new Error('En la variable "' + varName + '" debe completar campo tabla_agregada ya que tiene completo el campo funcion_agregacion.');
         }
     }
 
@@ -36,7 +52,6 @@ export class ExpressionProcessor extends OperativoGenerator{
         return varsFound.filter(v => v.variable == rawVarName);
     }
 
-
     private addMainTD(insumosAliases: string[]) {
         //aliases involved in this consistence expresion
         if (insumosAliases.indexOf(OperativoGenerator.mainTD) == -1) {
@@ -45,7 +60,7 @@ export class ExpressionProcessor extends OperativoGenerator{
         return insumosAliases;
     }
 
-    private setInsumos(ec:ExpressionContainer){
+    private setInsumos(ec:IExpressionContainer){
         let bn:BaseNode = parse(ec.getExpression()); 
         ec.insumos = bn.getInsumos();
     }
@@ -79,7 +94,7 @@ export class ExpressionProcessor extends OperativoGenerator{
         })
     }
 
-    private validateInsumos(ec:ExpressionContainer): void {
+    private validateInsumos(ec:IExpressionContainer): void {
         this.validateOverwritingNames(ec.insumos);
         this.validateFunctions(ec.insumos.funciones);
         this.validateAliases(ec.insumos.aliases);
@@ -96,7 +111,7 @@ export class ExpressionProcessor extends OperativoGenerator{
         }
     }
 
-    private validateVars(ec:ExpressionContainer): void {
+    private validateVars(ec:IExpressionContainer): void {
         ec.insumos.variables.forEach(vName => {
             let foundVar = this.validateVar(vName);
             if ( ! ec.tdsNeedByExpression.find(tdName=> tdName == foundVar.tabla_datos)){
@@ -118,7 +133,7 @@ export class ExpressionProcessor extends OperativoGenerator{
         }
         return rel
     }
-    protected prepareEC(ec: ExpressionContainer): any {
+    protected prepareEC(ec: IExpressionContainer): any {
         this.setInsumos(ec)
         this.validateInsumos(ec);
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
@@ -139,7 +154,7 @@ export class ExpressionProcessor extends OperativoGenerator{
         return insumosOptionalRelations.map(r => this.joinRelation(r)).join('\n');
     }
 
-    protected addAliasesToExpression(ec: ExpressionContainer) {
+    protected addAliasesToExpression(ec: IExpressionContainer):string {
         ec.insumos.variables.forEach(varInsumoName => {
             let definedVarForInsumoVar = <Variable>this.myVars.find(v => v.variable == varInsumoName);
             //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
@@ -161,7 +176,7 @@ export class ExpressionProcessor extends OperativoGenerator{
         return ec.expresionValidada;
     }
 
-    protected filterOrderedTDs(ec:ExpressionContainer) {
+    protected filterOrderedTDs(ec:IExpressionContainer) {
         //put in constructor
         // TODO: ORDENAR dinamicamente:
         // primero: la td que no tenga ninguna TD en que busco es la principal
@@ -178,7 +193,7 @@ export class ExpressionProcessor extends OperativoGenerator{
         ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
     }
 
-    protected buildClausulaWhere(ec:ExpressionContainer):string {
+    protected buildClausulaWhere(ec:IExpressionContainer):string {
         ec.expresionValidada = this.getWrappedExpression(ec.getExpression(), ec.lastTD.getQuotedPKsCSV(), compilerOptions);
         return this.addAliasesToExpression(ec);
     }
