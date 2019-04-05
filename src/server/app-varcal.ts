@@ -52,7 +52,9 @@ export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T
                 // TODO: ver si hay que sacar el que_busco del fetchall y fetch one de tabla_datos               
                 tDef.foreignKeys = [{ references: tablaDatos.que_busco, fields: tablaDatos.pks, onDelete: 'cascade', displayAllFields: true }];
                 // tDef.detailTables = estParaGenTabla.detailTables;
-                tDef.sql.isReferable = true;
+                if (tDef.sql){
+                    tDef.sql.isReferable = true;
+                }
             }
             return tDef
         }
