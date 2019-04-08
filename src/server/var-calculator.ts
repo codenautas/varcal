@@ -1,7 +1,7 @@
-import { ExpressionProcessor } from "expression-processor";
 import { Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato } from "operativos";
 import { quoteIdent, quoteLiteral } from "pg-promise-strict";
 import { AppVarCalType } from "./app-varcal";
+import { ExpressionProcessor } from "./expression-processor";
 import { BloqueVariablesCalc } from "./types-varcal";
 import { VariableCalculada } from "./variable-calculada";
 

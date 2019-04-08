@@ -1,7 +1,7 @@
 import { BaseNode, Compiler, CompilerOptions, Insumos, parse } from "expre-parser";
-import { IExpressionContainer } from "expression-container";
-import { hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable, Client } from "operativos";
-import { compilerOptions } from "variable-calculada";
+import { Client, hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } from "operativos";
+import { IExpressionContainer } from "./expression-container";
+import { compilerOptions } from "./variable-calculada";
 
 export class ExpressionProcessor extends OperativoGenerator{
     

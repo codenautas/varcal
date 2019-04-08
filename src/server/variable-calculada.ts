@@ -1,7 +1,7 @@
 import * as EP from "expre-parser";
 import { CompilerOptions } from "expre-parser";
-import { IExpressionContainer } from "expression-container";
-import { OperativoGenerator, TablaDatos, TipoVarDB, Variable, VariableOpcion, Relacion } from "operativos";
+import { OperativoGenerator, Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
+import { IExpressionContainer } from "./expression-container";
 import { VarCalculator } from "./var-calculator";
 
 //TODO: quit this global var
