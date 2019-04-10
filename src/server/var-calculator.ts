@@ -1,5 +1,4 @@
-import { Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato } from "operativos";
-import { quoteIdent, quoteLiteral } from "pg-promise-strict";
+import {quoteIdent, quoteLiteral, Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato, Variable } from "operativos";
 import { AppVarCalType } from "./app-varcal";
 import { ExpressionProcessor } from "./expression-processor";
 import { BloqueVariablesCalc } from "./types-varcal";
@@ -15,6 +14,7 @@ export class VarCalculator extends ExpressionProcessor {
     // @ts-ignore https://github.com/codenautas/operativos/issues/4
     private funGeneradora: string;
     private nombreFuncionGeneradora: string = 'gen_fun_var_calc'
+    calcVars: VariableCalculada[] = [];
 
     //########## public methods
     constructor(public app: AppVarCalType, client: Client, operativo: string) {
@@ -31,7 +31,8 @@ export class VarCalculator extends ExpressionProcessor {
 
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
-        this.getVarsCalculadas().forEach(vcalc => Object.setPrototypeOf(vcalc, VariableCalculada.prototype));
+        // change type of calculated vars
+        this.calcVars = this.myVars.filter(v=>v.clase == tiposTablaDato.calculada).map((v:Variable) => Object.assign(new VariableCalculada(), v));
     }
     getTDCalculadas() {
         return this.myTDs.filter(td => td.esCalculada());
@@ -70,6 +71,7 @@ export class VarCalculator extends ExpressionProcessor {
     
     private preCalculate(): void {
         this.getVarsCalculadas().forEach(vc=>{
+            vc.validate()
             this.prepareEC(vc)
         });
     }
@@ -81,15 +83,11 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private getVarsCalculadas(): VariableCalculada[] {
-        return <VariableCalculada[]>this.myVars.filter(v => v.esCalculada())
+        return this.calcVars;
     }
-
-    private getNonCalcVars() {
-        return this.myVars.filter(v => !v.esCalculada());
-    }
-
+    
     private getRelevamientoVars() {
-        return this.getNonCalcVars();
+        return this.myVars.filter(v => !v.esCalculada());
     }
 
     private getFinalSql(): string {
@@ -124,7 +122,9 @@ export class VarCalculator extends ExpressionProcessor {
             //TODO: when build tablasAgregadas store its variables
             let varsAgg = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada == tabAgg);
             
-            let involvedTDs:string[] = [...(new Set([].concat.apply(varsAgg.map(vca=>vca.orderedInsumosTDNames))))] 
+            let a:string[] =[];
+            varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
+            let involvedTDs:string[] = [...(new Set(a))] 
             tablesToFromClausule +=
                 `${txtMargen}, LATERAL (
                 ${txtMargen}   SELECT
@@ -138,11 +138,6 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private buildExpression(vc: VariableCalculada): void {
-        //extract that validation to a better place
-        if ((!vc.opciones || !vc.opciones.length) && !vc.expresion) {
-            throw new Error('La variable ' + vc.variable + ' no puede tener expresión y opciones nulas simultaneamente');
-        }
-
         vc.expresion=vc.expresion||'';
         if (vc.opciones && vc.opciones.length) {
             vc.expressionProcesada = 'CASE ' + vc.opciones.map(opcion => {
@@ -275,11 +270,10 @@ export class VarCalculator extends ExpressionProcessor {
         // si esta variable tiene un alias && la variable sin alias está definida && el alias existe
         let isDefined = false;
         if (hasAlias(varInsumosName)) {
-            let validPrefixes = { ...this.myTDs.map(td => td.tabla_datos), ...this.myRels.filter(r => r.tipo == 'opcional').map(r => r.que_busco) };
             var [alias, varName] = varInsumosName.split('.')
             //TODO: mejorar: debería chequear que la variable este definida en la TD correspondiente al alias
             // por ej: si el usuario escribe una expresión "referente.edad" chequear si la variable definida 'edad' además pertenece a la tabla "tabla_busqueda"
-            if (definedVars.indexOf(varName) > -1 && (alias in validPrefixes)) {
+            if (definedVars.indexOf(varName) > -1 && this.getValidAliases().indexOf(alias) > -1) {
                 isDefined = true
             }
         }
