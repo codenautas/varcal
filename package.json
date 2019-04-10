@@ -20,8 +20,6 @@
     "@types/mocha": "~5.2.6",
     "mocha": "^6.1.2",
     "discrepances": "~0.2.4",
-    "mini-tools": "~1.0.7",
-    "pg-promise-strict": "~1.0.7",
     "types.d.ts": "~0.4.1",
     "mixin-patch": "~0.2.0"
   },
