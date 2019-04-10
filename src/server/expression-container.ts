@@ -13,8 +13,5 @@ export interface IExpressionContainer{
     insumosOptionalRelations: Relacion[] 
     lastTD:TablaDatos
 
-    clausula_from:string
-    clausula_where:string
-
     getUserExpression():string;
 }
