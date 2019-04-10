@@ -9,16 +9,13 @@ export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'nu
 
 export class VariableCalculada extends Variable implements TipoVarDB, IExpressionContainer{
     tdsNeedByExpression: string[]= [];
-
+    
     expressionProcesada!: string
     insumos!: EP.Insumos; 
     
     orderedInsumosTDNames: string[] = []
     insumosOptionalRelations: Relacion[] = []
     lastTD!:TablaDatos
-
-    clausula_from!:string
-    clausula_where!:string
     
     opciones?: VariableOpcion[]
     // complexExp!:ComplexExpression
@@ -28,6 +25,12 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
             `${this.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${this.variable}` :
             this.expressionProcesada;
         return `${this.variable} = ${expresion}`;
+    }
+        
+    validate() {
+        if ((!this.opciones || !this.opciones.length) && !this.expresion) {
+            throw new Error('La variable ' + this.variable + ' no puede tener expresión y opciones nulas simultaneamente');
+        };
     }
 
     getUserExpression(){
