@@ -66,7 +66,7 @@ export class ExpressionProcessor extends OperativoGenerator{
     }
 
     private setInsumos(ec:IExpressionContainer){
-        let bn:BaseNode = parse(ec.getUserExpression()); 
+        let bn:BaseNode = parse(ec.expressionProcesada); 
         ec.insumos = bn.getInsumos();
     }
 
@@ -78,7 +78,7 @@ export class ExpressionProcessor extends OperativoGenerator{
             }
         });
     }
-    private getValidAliases(): string[]{
+    protected getValidAliases(): string[]{
         let validRelationsNames = this.optionalRelations.map(rel => rel.que_busco)
         return this.myTDs.map(td => td.tabla_datos).concat(validRelationsNames);
     }
@@ -119,7 +119,7 @@ export class ExpressionProcessor extends OperativoGenerator{
     private validateVars(ec:IExpressionContainer): void {
         ec.insumos.variables.forEach(vName => {
             let foundVar = this.validateVar(vName);
-            if ( ! ec.tdsNeedByExpression.find(tdName=> tdName == foundVar.tabla_datos)){
+            if (! ec.tdsNeedByExpression.find(tdName=> tdName == foundVar.tabla_datos)){
                 ec.tdsNeedByExpression.push(foundVar.tabla_datos)
             } 
         })
@@ -142,6 +142,8 @@ export class ExpressionProcessor extends OperativoGenerator{
         this.setInsumos(ec)
         this.validateInsumos(ec);
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
+
+        // ec.expressionProcesada=ec.getUserExpression();
         ec.expressionProcesada = this.addAliasesToExpression(ec)
         ec.expressionProcesada = this.getWrappedExpression(ec.expressionProcesada, ec.lastTD.getQuotedPKsCSV(), compilerOptions);
     }
