@@ -31,7 +31,7 @@ export class VarCalculator extends ExpressionProcessor {
 
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
-        // change type of calculated vars
+        // changing type of calculated vars // Using assign instead of setPrototypeOf because we need to have initialized properties
         this.calcVars = this.myVars.filter(v=>v.clase == tiposTablaDato.calculada).map((v:Variable) => Object.assign(new VariableCalculada(), v));
     }
     getTDCalculadas() {
