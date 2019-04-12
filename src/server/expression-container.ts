@@ -13,5 +13,5 @@ export interface IExpressionContainer{
     insumosOptionalRelations: Relacion[] 
     lastTD:TablaDatos
 
-    getUserExpression():string;
+    fusionUserExpressions():void;
 }

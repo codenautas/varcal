@@ -71,14 +71,13 @@ export class VarCalculator extends ExpressionProcessor {
     
     private preCalculate(): void {
         this.getVarsCalculadas().forEach(vc=>{
-            vc.validate()
             this.prepareEC(vc)
         });
     }
 
     // override parent method
     protected prepareEC(vc:VariableCalculada){
-        this.buildExpression(vc)
+        vc.validate()
         super.prepareEC(vc)
     }
 
@@ -119,7 +118,7 @@ export class VarCalculator extends ExpressionProcessor {
         let tablesToFromClausule:string='';
         let tablasAgregadas = [...(new Set(bloque.variablesCalculadas.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
         tablasAgregadas.forEach(tabAgg => {
-            //TODO: when build tablasAgregadas store its variables
+            //TODO: when build tablasAgregadas store its variables instead of get here again
             let varsAgg = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada == tabAgg);
             
             let a:string[] =[];
@@ -135,21 +134,6 @@ export class VarCalculator extends ExpressionProcessor {
         });
 
         return tablesToFromClausule
-    }
-
-    private buildExpression(vc: VariableCalculada): void {
-        vc.expresion=vc.expresion||'';
-        if (vc.opciones && vc.opciones.length) {
-            vc.expressionProcesada = 'CASE ' + vc.opciones.map(opcion => {
-                return '\n          WHEN ' + opcion.expresion_condicion +
-                    ' THEN ' + opcion.expresion_valor || opcion.opcion
-            }).join('') + (vc.expresion ? '\n          ELSE ' + vc.expresion : '') + ' END'
-        } else {
-            vc.expressionProcesada = vc.expresion;
-        }
-        if (vc.filtro) {
-            vc.expressionProcesada = 'CASE WHEN ' + vc.filtro + ' THEN ' + vc.expressionProcesada + ' ELSE NULL END'
-        }
     }
 
     private buildWHEREClausule(txtMargen: string, bloqueVars:BloqueVariablesCalc): string {

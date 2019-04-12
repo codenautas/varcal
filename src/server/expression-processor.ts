@@ -3,7 +3,7 @@ import { Client, hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } 
 import { IExpressionContainer } from "./expression-container";
 import { compilerOptions } from "./variable-calculada";
 
-export class ExpressionProcessor extends OperativoGenerator{
+export abstract class ExpressionProcessor extends OperativoGenerator{
     
     protected optionalRelations: Relacion[]=[];
 
@@ -33,12 +33,6 @@ export class ExpressionProcessor extends OperativoGenerator{
         let foundVar = varsFound[0];
         if (!foundVar.activa) {
             throw new Error('La variable "' + varName + '" no está activa.');
-        }
-        if (foundVar.tabla_agregada && ! foundVar.funcion_agregacion) {
-            throw new Error('En la variable "' + varName + '" debe completar campo funcion_agregacion ya que tiene completo el campo tabla_agregada.');
-        }
-        if ( ! foundVar.tabla_agregada && foundVar.funcion_agregacion) {
-            throw new Error('En la variable "' + varName + '" debe completar campo tabla_agregada ya que tiene completo el campo funcion_agregacion.');
         }
     }
 
@@ -139,11 +133,12 @@ export class ExpressionProcessor extends OperativoGenerator{
         return rel
     }
     protected prepareEC(ec: IExpressionContainer): void {
+        ec.fusionUserExpressions();
+
         this.setInsumos(ec)
         this.validateInsumos(ec);
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
 
-        // ec.expressionProcesada=ec.getUserExpression();
         ec.expressionProcesada = this.addAliasesToExpression(ec)
         ec.expressionProcesada = this.getWrappedExpression(ec.expressionProcesada, ec.lastTD.getQuotedPKsCSV(), compilerOptions);
     }

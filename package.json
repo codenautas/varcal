@@ -31,8 +31,8 @@
     "test": "(npm run build || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks tests/tests/*.js",
     "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks tests/tests/",
     "prepare": "npm run build",
-    "build": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json & mixin-patch",
-    "build-ignoring-err": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\")",
+    "build": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json && mixin-patch",
+    "build-ignoring-err": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
     "start": "node dist/server/server-varcal.js"
   },
   "qa-control": {

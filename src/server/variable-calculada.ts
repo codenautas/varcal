@@ -31,10 +31,27 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
         if ((!this.opciones || !this.opciones.length) && !this.expresion) {
             throw new Error('La variable ' + this.variable + ' no puede tener expresión y opciones nulas simultaneamente');
         };
+        if (this.tabla_agregada && ! this.funcion_agregacion) {
+            throw new Error('En la variable "' + this.variable + '" debe completar campo funcion_agregacion ya que tiene completo el campo tabla_agregada.');
+        }
+        if ( ! this.tabla_agregada && this.funcion_agregacion) {
+            throw new Error('En la variable "' + this.variable + '" debe completar campo tabla_agregada ya que tiene completo el campo funcion_agregacion.');
+        }
     }
 
-    getUserExpression(){
-        return this.expresion || '';
+    fusionUserExpressions(): void {
+        this.expresion=this.expresion||'';
+        if (this.opciones && this.opciones.length) {
+            this.expressionProcesada = 'CASE ' + this.opciones.map(opcion => {
+                return '\n          WHEN ' + opcion.expresion_condicion +
+                    ' THEN ' + opcion.expresion_valor || opcion.opcion
+            }).join('') + (this.expresion ? '\n          ELSE ' + this.expresion : '') + ' END'
+        } else {
+            this.expressionProcesada = this.expresion;
+        }
+        if (this.filtro) {
+            this.expressionProcesada = 'CASE WHEN ' + this.filtro + ' THEN ' + this.expressionProcesada + ' ELSE NULL END'
+        }
     }
 }
 
