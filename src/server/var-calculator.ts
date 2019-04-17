@@ -16,6 +16,9 @@ export class VarCalculator extends ExpressionProcessor {
     private nombreFuncionGeneradora: string = 'gen_fun_var_calc'
     calcVars: VariableCalculada[] = [];
 
+    static margin = 2;
+    static txtMargin = Array(VarCalculator.margin + 1).join(' ');
+
     //########## public methods
     constructor(public app: AppVarCalType, client: Client, operativo: string) {
         super(client, operativo);
@@ -107,13 +110,13 @@ export class VarCalculator extends ExpressionProcessor {
         $BODY$
         BEGIN
         `+
-            this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(2, bloqueVars) + ';').join('\n') + `
+            this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(bloqueVars) + ';').join('\n') + `
           RETURN 'OK';
         END;
         $BODY$;`;
     }
     
-    private buildAggregatedLateralsFromClausule(txtMargen:string, bloque:BloqueVariablesCalc):string{
+    private buildAggregatedLateralsFromClausule(bloque:BloqueVariablesCalc):string{
         //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
         let tablesToFromClausule:string='';
         let tablasAgregadas = [...(new Set(bloque.variablesCalculadas.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
@@ -121,27 +124,28 @@ export class VarCalculator extends ExpressionProcessor {
             //TODO: when build tablasAgregadas store its variables instead of get here again
             let varsAgg = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada == tabAgg);
             
+            //TODO: improve concatenation, here we are trying to concat all ordered insumos TDNames for all variablesCalculadas of this bloque
             let a:string[] =[];
             varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
             let involvedTDs:string[] = [...(new Set(a))] 
             tablesToFromClausule +=
-                `${txtMargen}, LATERAL (
-                ${txtMargen}   SELECT
-                ${txtMargen}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expressionProcesada)} as ${v.variable}`).join(',\n          ' + txtMargen)}
-                ${txtMargen}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${txtMargen}     WHERE ${this.samePKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])}
-                ${txtMargen} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
+                `${VarCalculator.txtMargin}, LATERAL (
+                ${VarCalculator.txtMargin}   SELECT
+                ${VarCalculator.txtMargin}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expressionProcesada)} as ${v.variable}`).join(',\n          ' + VarCalculator.txtMargin)}
+                ${VarCalculator.txtMargin}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
+                ${involvedTDs.length>1 ? VarCalculator.txtMargin + ' WHERE' + this.samePKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1]): ''}
+                ${VarCalculator.txtMargin} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
         return tablesToFromClausule
     }
 
-    private buildWHEREClausule(txtMargen: string, bloqueVars:BloqueVariablesCalc): string {
+    private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
         let baseTable = (<Relacion>this.myRels.find(r=>r.tabla_datos==bloqueVars.tabla.tabla_datos)).que_busco;
-        return `\n  ${txtMargen}WHERE ${this.samePKsConditions(baseTable, bloqueVars.tabla.tabla_datos)}`;
+        return `\n  ${VarCalculator.txtMargin}WHERE ${this.samePKsConditions(baseTable, bloqueVars.tabla.tabla_datos)}`;
     }
-    private buildSETClausule(txtMargen: string, bloqueVars: BloqueVariablesCalc) {
-        return bloqueVars.variablesCalculadas.map(vc => vc.buildSetClausule()).join(`,\n      ${txtMargen}`);
+    private buildSETClausule(bloqueVars: BloqueVariablesCalc) {
+        return bloqueVars.variablesCalculadas.map(vc => vc.buildSetClausule()).join(`,\n${VarCalculator.txtMargin}`);
     }
 
     private async generateSchemaAndLoadTableDefs() {
@@ -157,12 +161,13 @@ export class VarCalculator extends ExpressionProcessor {
         })
     }
 
-    private sentenciaUpdate(margen: number, bloque: BloqueVariablesCalc): string {
-        var txtMargen = Array(margen + 1).join(' ');
-        return `${txtMargen}UPDATE ${bloque.tabla.getTableName()}\n${txtMargen}  SET ` +
-            this.buildSETClausule(txtMargen, bloque) +
-            this.buildClausulaFrom(txtMargen, bloque) + 
-            this.buildWHEREClausule(txtMargen, bloque);
+    private sentenciaUpdate(bloque: BloqueVariablesCalc): string {
+        return  `
+    ${VarCalculator.txtMargin}UPDATE ${bloque.tabla.getTableName()}
+        SET 
+            ${this.buildSETClausule(bloque)}
+            ${this.buildClausulaFrom(bloque)}
+            ${this.buildWHEREClausule(bloque)}`
     }
 
     private separarEnGruposOrdenados() {
@@ -278,10 +283,10 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     //########## protected methods
-    protected buildClausulaFrom(txtMargen:string, bloque:BloqueVariablesCalc): string {
+    protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
         let { orderedInsumosTDNames, insumosOptionalRelations }: { orderedInsumosTDNames: string[]; insumosOptionalRelations: Relacion[]; } = this.getTDsInBloque(bloque);
         return this.buildInsumosTDsFromClausule(orderedInsumosTDNames) +
-            this.buildAggregatedLateralsFromClausule(txtMargen, bloque) + 
+            this.buildAggregatedLateralsFromClausule(bloque) + 
             this.buildOptRelationsFromClausule(insumosOptionalRelations);
     }    
 }
