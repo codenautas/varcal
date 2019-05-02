@@ -143,7 +143,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
 
         ec.expresionProcesada = this.addAliasesToExpression(ec)
-        ec.expresionProcesada = this.getWrappedExpression(ec.expresionProcesada, ec.lastTD.getQuotedPKsCSV());
+        // ec.expresionProcesada = this.getWrappedExpression(ec.expresionProcesada, ec.lastTD.getQuotedPKsCSV());
     }
  
     protected validateVar(varName: string): Variable {

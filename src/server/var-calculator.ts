@@ -144,8 +144,16 @@ export class VarCalculator extends ExpressionProcessor {
         let baseTable = (<Relacion>this.myRels.find(r=>r.tabla_datos==bloqueVars.tabla.tabla_datos)).que_busco;
         return `\n  ${VarCalculator.txtMargin}WHERE ${this.samePKsConditions(baseTable, bloqueVars.tabla.tabla_datos)}`;
     }
-    private buildSETClausule(bloqueVars: BloqueVariablesCalc) {
-        return bloqueVars.variablesCalculadas.map(vc => vc.buildSetClausule()).join(`,\n${VarCalculator.txtMargin}`);
+    private buildSETClausuleForBloque(bloqueVars: BloqueVariablesCalc) {
+        return bloqueVars.variablesCalculadas.map(vc => this.buildSETClausuleForVC(vc)).join(`,\n${VarCalculator.txtMargin}`);
+    }
+
+    private buildSETClausuleForVC(vc: VariableCalculada):string {
+        let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
+            `${vc.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${vc.variable}` :
+            // vc.expresionProcesada;
+            this.getWrappedExpression(vc.expresionProcesada, vc.lastTD.getQuotedPKsCSV());
+        return `${vc.variable} = ${expresion}`;
     }
 
     private async generateSchemaAndLoadTableDefs() {
@@ -165,7 +173,7 @@ export class VarCalculator extends ExpressionProcessor {
         return  `
     ${VarCalculator.txtMargin}UPDATE ${bloque.tabla.getTableName()}
         SET 
-            ${this.buildSETClausule(bloque)}
+            ${this.buildSETClausuleForBloque(bloque)}
             ${this.buildClausulaFrom(bloque)}
             ${this.buildWHEREClausule(bloque)}`
     }

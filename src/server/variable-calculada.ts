@@ -15,13 +15,6 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     
     opciones?: VariableOpcion[]
     // complexExp!:ComplexExpression
-    
-    public buildSetClausule():string {
-        let expresion = (this.tabla_agregada && this.funcion_agregacion) ?
-            `${this.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${this.variable}` :
-            this.expresionProcesada;
-        return `${this.variable} = ${expresion}`;
-    }
         
     validate() {
         if ((!this.opciones || !this.opciones.length) && !this.expresion) {
