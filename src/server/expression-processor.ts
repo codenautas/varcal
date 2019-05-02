@@ -1,7 +1,9 @@
 import { BaseNode, Compiler, CompilerOptions, Insumos, parse } from "expre-parser";
 import { Client, hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } from "operativos";
 import { IExpressionContainer } from "./expression-container";
-import { compilerOptions } from "./variable-calculada";
+
+//TODO: quit this global var
+export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
 
 export abstract class ExpressionProcessor extends OperativoGenerator{
     
@@ -60,7 +62,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     private setInsumos(ec:IExpressionContainer){
-        let bn:BaseNode = parse(ec.expressionProcesada); 
+        let bn:BaseNode = parse(ec.expresionProcesada); 
         ec.insumos = bn.getInsumos();
     }
 
@@ -120,10 +122,11 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     // protected methods
-    protected getWrappedExpression(expression: string | number, pkExpression: string, options: CompilerOptions): string {
-        var compiler = new Compiler(options);
+    protected getWrappedExpression(expression: string | number, pkExpression: string): string {
+        var compiler = new Compiler(compilerOptions);
         return compiler.toCode(parse(expression), pkExpression);
     }
+
     protected getAliasIfOptionalRelation(varName:string):Relacion|undefined{
         let rel:Relacion|undefined;
         if (hasAlias(varName)){
@@ -139,8 +142,8 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         this.validateInsumos(ec);
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
 
-        ec.expressionProcesada = this.addAliasesToExpression(ec)
-        ec.expressionProcesada = this.getWrappedExpression(ec.expressionProcesada, ec.lastTD.getQuotedPKsCSV(), compilerOptions);
+        ec.expresionProcesada = this.addAliasesToExpression(ec)
+        ec.expresionProcesada = this.getWrappedExpression(ec.expresionProcesada, ec.lastTD.getQuotedPKsCSV());
     }
  
     protected validateVar(varName: string): Variable {
@@ -155,7 +158,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     protected addAliasesToExpression(ec: IExpressionContainer):string {
-        let completeExpression = ec.expressionProcesada;
+        let completeExpression = ec.expresionProcesada;
         ec.insumos.variables.forEach(varInsumoName => {
             let definedVarForInsumoVar = <Variable>this.myVars.find(v => v.variable == varInsumoName);
             //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)

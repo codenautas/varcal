@@ -1,16 +1,12 @@
 import * as EP from "expre-parser";
-import { CompilerOptions } from "expre-parser";
 import { OperativoGenerator, Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
 import { IExpressionContainer } from "./expression-container";
 import { VarCalculator } from "./var-calculator";
 
-//TODO: quit this global var
-export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
-
 export class VariableCalculada extends Variable implements TipoVarDB, IExpressionContainer{
     tdsNeedByExpression: string[]= [];
     
-    expressionProcesada!: string
+    expresionProcesada!: string
     insumos!: EP.Insumos; 
     
     orderedInsumosTDNames: string[] = []
@@ -23,7 +19,7 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     public buildSetClausule():string {
         let expresion = (this.tabla_agregada && this.funcion_agregacion) ?
             `${this.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${this.variable}` :
-            this.expressionProcesada;
+            this.expresionProcesada;
         return `${this.variable} = ${expresion}`;
     }
         
@@ -42,15 +38,15 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     fusionUserExpressions(): void {
         this.expresion=this.expresion||'';
         if (this.opciones && this.opciones.length) {
-            this.expressionProcesada = 'CASE ' + this.opciones.map(opcion => {
+            this.expresionProcesada = 'CASE ' + this.opciones.map(opcion => {
                 return '\n          WHEN ' + opcion.expresion_condicion +
                     ' THEN ' + opcion.expresion_valor || opcion.opcion
             }).join('') + (this.expresion ? '\n          ELSE ' + this.expresion : '') + ' END'
         } else {
-            this.expressionProcesada = this.expresion;
+            this.expresionProcesada = this.expresion;
         }
         if (this.filtro) {
-            this.expressionProcesada = 'CASE WHEN ' + this.filtro + ' THEN ' + this.expressionProcesada + ' ELSE NULL END'
+            this.expresionProcesada = 'CASE WHEN ' + this.filtro + ' THEN ' + this.expresionProcesada + ' ELSE NULL END'
         }
     }
 }

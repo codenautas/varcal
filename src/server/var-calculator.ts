@@ -131,7 +131,7 @@ export class VarCalculator extends ExpressionProcessor {
             tablesToFromClausule +=
                 `${VarCalculator.txtMargin}, LATERAL (
                 ${VarCalculator.txtMargin}   SELECT
-                ${VarCalculator.txtMargin}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expressionProcesada)} as ${v.variable}`).join(',\n          ' + VarCalculator.txtMargin)}
+                ${VarCalculator.txtMargin}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n          ' + VarCalculator.txtMargin)}
                 ${VarCalculator.txtMargin}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
                 ${involvedTDs.length>1 ? VarCalculator.txtMargin + ' WHERE' + this.samePKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1]): ''}
                 ${VarCalculator.txtMargin} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
