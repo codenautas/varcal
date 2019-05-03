@@ -1,5 +1,5 @@
 import * as EP from "expre-parser";
-import { OperativoGenerator, Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
+import { Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
 import { IExpressionContainer } from "./expression-container";
 import { VarCalculator } from "./var-calculator";
 
