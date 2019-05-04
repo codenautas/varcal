@@ -3,6 +3,10 @@ export class Indenter {
     static instance:Indenter;
     public mrg: string = '';
 
+    static getInstance(){
+        return Indenter.instance || (Indenter.instance = new Indenter())
+    }
+
     constructor(public indentation: number = 2, public margin: number = 0){
         Indenter.instance = this;
     }
@@ -20,47 +24,47 @@ export class Indenter {
     }
 }
 
-
-
-class Animal {
+class Horse{
     constructor(public name: string) { }
-    move(distanceInMeters: number = 0) {
-        console.log(`${this.name} moved ${distanceInMeters}m.`);
+
+    //@startQuery()
+    getTxt() {
+        return  `text without trailing spaces: \n`+
+                `${this.childTxt()}`
+    }
+    @ident()
+    childTxt() {
+        return 'child txt'
     }
 }
 
-// class Snake extends Animal {
-//     constructor(name: string) { super(name); }
-//     move(distanceInMeters = 5) {
-//         console.log("Slithering...");
-//         super.move(distanceInMeters);
+// function startQuery() {
+//     return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+//         var originalMethod = descriptor.value;
+//         descriptor.value = function() {
+//             new Indenter();
+//             return originalMethod.apply(this, arguments);
+//             new Indenter();
+//         };
+//         return descriptor;
 //     }
 // }
 
-class Horse extends Animal {
-
-    @prueba()
-    move(distanceInMeters = 45) {
-        console.log("Galloping...");
-        super.move(distanceInMeters);
-    }
-}
-
-function prueba() {
+function ident() {
     return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         var originalMethod = descriptor.value;
         descriptor.value = function() {
-            console.log('antes');
-            originalMethod.apply(this, arguments);
-            console.log('despues');
+            let indenter = Indenter.getInstance();
+            indenter.indent();
+            let result = indenter.mrg + originalMethod.apply(this, arguments);
+            indenter.unindent();        
+            return result
         };
         return descriptor;
     }
 }
 
-// let sam = new Snake("Sammy the Python");
-let tom: Animal = new Horse("Tommy the Palomino");
-
-// sam.move();
-tom.move(34);
-
+let tom = new Horse("Tommy the Palomino");
+console.log('aa'+tom.getTxt());
+console.log('aa'+tom.getTxt());
+console.log('aa'+tom.getTxt());
