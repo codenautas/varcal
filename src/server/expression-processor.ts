@@ -2,8 +2,10 @@ import { BaseNode, Compiler, CompilerOptions, Insumos, parse } from "expre-parse
 import { Client, hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } from "operativos";
 import { IExpressionContainer } from "./expression-container";
 
-//TODO: quit this global var
+//put these here is good because specifics apps could change/override this options depending on their own needs
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
+export let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce', 'age', 'date_trunc'];
+export let comunSquemaWhiteList = ['informado'];
 
 export abstract class ExpressionProcessor extends OperativoGenerator{
     
@@ -79,8 +81,6 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         return this.myTDs.map(td => td.tabla_datos).concat(validRelationsNames);
     }
     private validateFunctions(funcNames: string[]) {
-        let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
-        let comunSquemaWhiteList = ['informado'];
         let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
         funcNames.forEach(f => {
             if (hasAlias(f)) {
