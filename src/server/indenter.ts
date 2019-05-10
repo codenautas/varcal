@@ -24,39 +24,24 @@ export class Indenter {
     }
 }
 
-class Horse{
-    constructor(public name: string) { }
-
-    //@startQuery()
-    getTxt() {
-        return  `text without trailing spaces: \n`+
-                `${this.childTxt()}`
-    }
-    @ident()
-    childTxt() {
-        return 'child txt'
-    }
-}
-
-// function startQuery() {
+// function newLine() {
 //     return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
 //         var originalMethod = descriptor.value;
 //         descriptor.value = function() {
-//             new Indenter();
-//             return originalMethod.apply(this, arguments);
-//             new Indenter();
+//             return '\n'+originalMethod.apply(this, arguments);
 //         };
 //         return descriptor;
 //     }
 // }
 
+// Indent text in new Line
 function ident() {
     return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         var originalMethod = descriptor.value;
         descriptor.value = function() {
             let indenter = Indenter.getInstance();
             indenter.indent();
-            let result = indenter.mrg + originalMethod.apply(this, arguments);
+            let result = '\n' + indenter.mrg + originalMethod.apply(this, arguments);
             indenter.unindent();        
             return result
         };
@@ -64,7 +49,27 @@ function ident() {
     }
 }
 
-let tom = new Horse("Tommy the Palomino");
-console.log('aa'+tom.getTxt());
-console.log('aa'+tom.getTxt());
-console.log('aa'+tom.getTxt());
+// for testing purposes of indenter decorator
+// class Horse{
+//     constructor(public name: string) { }
+
+//     getTxt() {
+//         return `text without trailing spaces:`+
+//                     this.childTxt()+
+//                     this.anotherChildTxt()
+//     }
+//     @newLine()
+//     @ident()
+//     childTxt(): string{
+//         return 'child txt'+this.anotherChildTxt();
+//     }
+//     @newLine()
+//     @ident()
+//     anotherChildTxt(): string{
+//         return 'another child txt';
+//     }
+// }
+// let tom = new Horse("Tommy the Palomino");
+// console.log('aa'+tom.getTxt());
+// console.log('aa'+tom.getTxt());
+// console.log('aa'+tom.getTxt());
