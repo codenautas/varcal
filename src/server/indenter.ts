@@ -1,4 +1,4 @@
-export class Indenter {
+class Indenter {
 
     static instance:Indenter;
     public mrg: string = '';
@@ -35,7 +35,7 @@ export class Indenter {
 // }
 
 // Indent text in new Line
-function ident() {
+export function indent() {
     return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
         var originalMethod = descriptor.value;
         descriptor.value = function() {
@@ -52,24 +52,24 @@ function ident() {
 // for testing purposes of indenter decorator
 // class Horse{
 //     constructor(public name: string) { }
+//     getTxt(): string{
+//         return 'texto 1:'+
+//                     this.gettexto2()+
+//                     this.gettexto3()+
+//                     "\nmi texto"
+//     }
 
-//     getTxt() {
-//         return `text without trailing spaces:`+
-//                     this.childTxt()+
-//                     this.anotherChildTxt()
+//     @indent()
+//     gettexto2(): string{
+//         return 'texto 2'+
+//                     this.gettexto3();
 //     }
-//     @newLine()
-//     @ident()
-//     childTxt(): string{
-//         return 'child txt'+this.anotherChildTxt();
-//     }
-//     @newLine()
-//     @ident()
-//     anotherChildTxt(): string{
-//         return 'another child txt';
+
+//     @indent()
+//     gettexto3(): string{
+//         return 'texto 3';
 //     }
 // }
 // let tom = new Horse("Tommy the Palomino");
-// console.log('aa'+tom.getTxt());
-// console.log('aa'+tom.getTxt());
-// console.log('aa'+tom.getTxt());
+// console.log(tom.getTxt());
+
