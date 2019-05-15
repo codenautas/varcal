@@ -49,8 +49,8 @@ export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T
             let tDef = super.generateBaseTableDef(tablaDatos);
             if (tablaDatos.esCalculada()){
                 // esto se agrega para que las calculadas muestren también todos los campos de su sourceBro
-                // TODO: ver si hay que sacar el que_busco del fetchall y fetch one de tabla_datos               
-                tDef.foreignKeys = [{ references: tablaDatos.que_busco, fields: tablaDatos.pks, onDelete: 'cascade', displayAllFields: true }];
+                // TODO: ver si hay que sacar el td_base del fetchall y fetch one de tabla_datos
+                tDef.foreignKeys = [{ references: tablaDatos.td_base, fields: tablaDatos.pks, onDelete: 'cascade', displayAllFields: true }];
                 // tDef.detailTables = estParaGenTabla.detailTables;
                 if (tDef.sql){
                     tDef.sql.isReferable = true;

@@ -133,7 +133,7 @@ export class VarCalculator extends ExpressionProcessor {
                 ${VarCalculator.txtMargin}   SELECT
                 ${VarCalculator.txtMargin}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n          ' + VarCalculator.txtMargin)}
                 ${VarCalculator.txtMargin}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${involvedTDs.length>1 ? VarCalculator.txtMargin + ' WHERE' + this.samePKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1]): ''}
+                ${involvedTDs.length>1 ? VarCalculator.txtMargin + ' WHERE' + this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1]): ''}
                 ${VarCalculator.txtMargin} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
@@ -141,8 +141,7 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
-        let baseTable = (<Relacion>this.myRels.find(r=>r.tabla_datos==bloqueVars.tabla.tabla_datos)).que_busco;
-        return `\n  ${VarCalculator.txtMargin}WHERE ${this.samePKsConditions(baseTable, bloqueVars.tabla.tabla_datos)}`;
+        return `\n  ${VarCalculator.txtMargin}WHERE ${this.relVarPKsConditions(bloqueVars.tabla.td_base, bloqueVars.tabla.tabla_datos)}`;
     }
     private buildSETClausuleForBloque(bloqueVars: BloqueVariablesCalc) {
         return bloqueVars.variablesCalculadas.map(vc => this.buildSETClausuleForVC(vc)).join(`,\n${VarCalculator.txtMargin}`);
@@ -164,7 +163,7 @@ export class VarCalculator extends ExpressionProcessor {
     private generateTDDropsAndInserts() {
         this.getTDCalculadas().forEach(td => {
             this.drops.unshift("drop table if exists " + quoteIdent(td.getTableName()) + ";");
-            let insert = `INSERT INTO ${quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.que_busco)};` //estParaGenTabla.sourceJoin + ";");
+            let insert = `INSERT INTO ${quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.td_base)};` //estParaGenTabla.sourceJoin + ";");
             this.inserts.push(insert);
         })
     }
@@ -269,7 +268,7 @@ export class VarCalculator extends ExpressionProcessor {
         if (hasAlias(varInsumosName)) {
             var [alias, varName] = varInsumosName.split('.')
             //TODO: mejorar: debería chequear que la variable este definida en la TD correspondiente al alias
-            // por ej: si el usuario escribe una expresión "referente.edad" chequear si la variable definida 'edad' además pertenece a la tabla "tabla_busqueda"
+            // por ej: si el usuario escribe una expresión "referente.edad" chequear si la variable definida 'edad' además pertenece a la tabla "tabla_relacionada"
             if (definedVars.indexOf(varName) > -1 && this.getValidAliases().indexOf(alias) > -1) {
                 isDefined = true
             }

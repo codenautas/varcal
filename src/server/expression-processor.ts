@@ -19,7 +19,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     //########## public methods
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
-        this.optionalRelations = this.myRels.filter(rel => rel.tipo == 'opcional');
+        this.optionalRelations = this.myRels.filter(rel => !!rel.que_es);
     }
 
     // preProcess(ec:IExpressionContainer[]){
@@ -47,8 +47,8 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
             let varAlias: string;
             [varAlias, rawVarName] = varName.split('.');
 
-            let rel = this.getAliasIfOptionalRelation(varName);
-            varAlias = rel ? rel.tabla_busqueda : varAlias
+            let rel = this.getOptionalRelationForAlias(varName);
+            varAlias = rel ? rel.tabla_relacionada : varAlias
 
             varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
         }
@@ -77,7 +77,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         });
     }
     protected getValidAliases(): string[]{
-        let validRelationsNames = this.optionalRelations.map(rel => rel.que_busco)
+        let validRelationsNames = this.optionalRelations.map(optRel => optRel.tiene)
         return this.myTDs.map(td => td.tabla_datos).concat(validRelationsNames);
     }
     private validateFunctions(funcNames: string[]) {
@@ -127,11 +127,11 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         return compiler.toCode(parse(expression), pkExpression);
     }
 
-    protected getAliasIfOptionalRelation(varName:string):Relacion|undefined{
+    protected getOptionalRelationForAlias(varName:string):Relacion|undefined{
         let rel:Relacion|undefined;
         if (hasAlias(varName)){
             let varAlias = varName.split('.')[0];
-            rel = this.optionalRelations.find(rel => rel.que_busco == varAlias)
+            rel = this.optionalRelations.find(optRel => optRel.tiene == varAlias)
         }
         return rel
     }
@@ -153,8 +153,8 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     protected buildOptRelationsFromClausule(insumosOptionalRelations: Relacion[]): string {
-        //TODO: en el futuro habría que validar que participe del from la tabla de busqueda 
-        return insumosOptionalRelations.map(r => this.joinRelation(r)).join('\n');
+        //TODO: en el futuro habría que validar que participe del from la tabla relacionada
+        return insumosOptionalRelations.map(r => this.joinOptRelation(r)).join('\n');
     }
 
     protected addAliasesToExpression(ec: IExpressionContainer):string {
@@ -184,13 +184,13 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         //put in constructor
         // TODO: ORDENAR dinamicamente:
         // primero: la td que no tenga ninguna TD en que busco es la principal
-        // segundas: van todas las tds que tengan en "que_busco" a la principal
+        // segundas: van todas las tds que tengan en "relacion>tabla_datos" a la principal
         // terceras: las tds que tengan en "que busco" a las segundas
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
 
         let tdsNeedByExpression = this.addMainTD(ec.tdsNeedByExpression);
-        ec.insumosOptionalRelations = this.optionalRelations.filter(r => ec.insumos.aliases.indexOf(r.que_busco) > -1);
+        ec.insumosOptionalRelations = this.optionalRelations.filter(optRel => ec.insumos.aliases.indexOf(optRel.tiene) > -1);
         let orderedInsumosIngresoTDNames: string[] = OperativoGenerator.orderedIngresoTDNames.filter(orderedTDName => tdsNeedByExpression.indexOf(orderedTDName) > -1);
         let orderedInsumosReferencialesTDNames: string[] = OperativoGenerator.orderedReferencialesTDNames.filter(orderedTDName => tdsNeedByExpression.indexOf(orderedTDName) > -1);
         ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
