@@ -5,7 +5,7 @@ import { IExpressionContainer } from "./expression-container";
 //put these here is good because specifics apps could change/override this options depending on their own needs
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
 export let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce', 'age', 'date_part', 'abs'];
-export let comunSquemaWhiteList = ['informado'];
+export let comunSquemaWhiteList = ['informado','con_dato', 'sin_dato', 'nsnc'];
 
 export abstract class ExpressionProcessor extends OperativoGenerator{
     
