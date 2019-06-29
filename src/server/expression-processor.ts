@@ -9,18 +9,12 @@ export let comunSquemaWhiteList = ['informado','con_dato', 'sin_dato', 'nsnc'];
 
 export abstract class ExpressionProcessor extends OperativoGenerator{
     
-    protected optionalRelations: Relacion[]=[];
-
     //TODO operativo is required, we only support one operativo per app
     constructor(public client:Client, public operativo: string){
         super(client,operativo)
     }
 
     //########## public methods
-    async fetchDataFromDB() {
-        await super.fetchDataFromDB();
-        this.optionalRelations = this.myRels.filter(rel => !!rel.que_es);
-    }
 
     // preProcess(ec:IExpressionContainer[]){
     //     ec.complexExp
@@ -47,8 +41,8 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
             let varAlias: string;
             [varAlias, rawVarName] = varName.split('.');
 
-            let rel = this.getOptionalRelationForAlias(varName);
-            varAlias = rel ? rel.tabla_relacionada : varAlias
+            let optRel = this.getOptionalRelation(varAlias);
+            varAlias = optRel ? optRel.tabla_relacionada : varAlias
 
             varsFound = varsFound.filter(v => v.tabla_datos == varAlias);
         }
@@ -69,30 +63,28 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     private validateAliases(aliases: string[]): any {
-        let validAliases = this.getValidAliases();
         aliases.forEach(alias => {
-            if (validAliases.indexOf(alias) == -1) {
-                throw new Error('El alias "' + alias + '" no se encontró en la lista de alias válidos: ' + validAliases.join(', '));
+            if (this.validAliases.indexOf(alias) == -1) {
+                throw new Error('El alias "' + alias + '" no se encontró en la lista de alias válidos: ' + this.validAliases.join(', '));
             }
         });
     }
-    protected getValidAliases(): string[]{
-        let validRelationsNames = this.optionalRelations.map(optRel => optRel.tiene)
-        return this.myTDs.map(td => td.tabla_datos).concat(validRelationsNames);
-    }
+
     private validateFunctions(funcNames: string[]) {
+        funcNames.forEach(f => hasAlias(f)? this.validateFunctionSquema(f): this.validateFunctionName(f));
+    }
+
+    private validateFunctionName(f: string) {
         let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
-        funcNames.forEach(f => {
-            if (hasAlias(f)) {
-                if (f.split('.')[0] != 'dbo') {
-                    throw new Error('La Función ' + f + ' contiene un alias inválido');
-                }
-            } else {
-                if (functionWhiteList.indexOf(f) == -1) {
-                    throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
-                }
-            }
-        })
+        if (functionWhiteList.indexOf(f) == -1) {
+            throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
+        }
+    }
+
+    private validateFunctionSquema(f: string) {
+        if (f.split('.')[0] != 'dbo') {
+            throw new Error('La Función ' + f + ' contiene un esquema inválido');
+        }
     }
 
     private validateInsumos(ec:IExpressionContainer): void {
@@ -103,7 +95,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     private validateOverwritingNames(insumos: Insumos): void {
-        if (insumos.funciones) {
+        if (insumos.funciones.length) {
             insumos.variables.forEach(varName => {
                 if (insumos.funciones.indexOf(varName) > -1) {
                     throw new Error('La variable "' + varName + '" es también un nombre de función');
@@ -127,14 +119,6 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         return compiler.toCode(parse(expression), pkExpression);
     }
 
-    protected getOptionalRelationForAlias(varName:string):Relacion|undefined{
-        let rel:Relacion|undefined;
-        if (hasAlias(varName)){
-            let varAlias = varName.split('.')[0];
-            rel = this.optionalRelations.find(optRel => optRel.tiene == varAlias)
-        }
-        return rel
-    }
     protected prepareEC(ec: IExpressionContainer): void {
         ec.fusionUserExpressions();
 
@@ -161,17 +145,17 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         let completeExpression = ec.expresionProcesada;
         ec.insumos.variables.forEach(varInsumoName => {
             let definedVarForInsumoVar = <Variable>this.myVars.find(v => v.variable == varInsumoName);
-            //TODO: No usar directamente el alias escrito por el usuario sino el getTableName de dicho TD (cuando sea un TD)
             let [varAlias, insumoVarRawName] = hasAlias(varInsumoName) ?
                 varInsumoName.split('.') : [definedVarForInsumoVar.tabla_datos, varInsumoName];
-
             let td = this.myTDs.find(td => td.tabla_datos == varAlias);
             if (td) {
                 varAlias = td.getTableName();
             }
 
+            // we here replace varInsumoName with alias with the real tableName, for example:
+            // for varInsumoName 'persona.p3' could be replaced with "operativo191_persona"."p3"
             // match all varNames used alone (don't preceded nor followed by "."): 
-            // match: p3 ; (23/p3+1); max(13,p3)
+            // match: p3 ; (23/p3+1); max(13,p3);
             // don't match: alias.p3, p3.column, etc
             let baseRegex = `(?<!\\.)\\b(${varInsumoName})\\b(?!\\.)`;
             let completeVar = quoteIdent(varAlias) + '.' + quoteIdent(insumoVarRawName);
@@ -189,11 +173,14 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         // provisoriamente se ordena fijando un arreglo ordenado
         // TODO: deshardcodear main TD
 
-        let tdsNeedByExpression = this.addMainTD(ec.tdsNeedByExpression);
         ec.insumosOptionalRelations = this.optionalRelations.filter(optRel => ec.insumos.aliases.indexOf(optRel.tiene) > -1);
-        let orderedInsumosIngresoTDNames: string[] = OperativoGenerator.orderedIngresoTDNames.filter(orderedTDName => tdsNeedByExpression.indexOf(orderedTDName) > -1);
-        let orderedInsumosReferencialesTDNames: string[] = OperativoGenerator.orderedReferencialesTDNames.filter(orderedTDName => tdsNeedByExpression.indexOf(orderedTDName) > -1);
+        let tdsNeedByExpression = this.addMainTD(ec.tdsNeedByExpression);
+
+        let orderedInsumosIngresoTDNames: string[] = OperativoGenerator.orderedIngresoTDNames.filter(orderedElem => tdsNeedByExpression.includes(orderedElem));
+        let orderedInsumosReferencialesTDNames: string[] =OperativoGenerator.orderedReferencialesTDNames.filter(orderedElem => tdsNeedByExpression.includes(orderedElem));
+        
         ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
         ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
-    }    
+    }   
+
 }
