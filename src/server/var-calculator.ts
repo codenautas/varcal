@@ -269,7 +269,7 @@ export class VarCalculator extends ExpressionProcessor {
             var [alias, varName] = varInsumosName.split('.')
             //TODO: mejorar: debería chequear que la variable este definida en la TD correspondiente al alias
             // por ej: si el usuario escribe una expresión "referente.edad" chequear si la variable definida 'edad' además pertenece a la tabla "tabla_relacionada"
-            if (definedVars.indexOf(varName) > -1 && this.getValidAliases().indexOf(alias) > -1) {
+            if (definedVars.indexOf(varName) > -1 && this.validAliases.indexOf(alias) > -1) {
                 isDefined = true
             }
         }
