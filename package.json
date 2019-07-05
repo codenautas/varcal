@@ -4,7 +4,9 @@
   "version": "0.7.3",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "contributors": [
-    "Raquel N Salva <raquelzssalva@gmail.com>, Eugenio Arosteguy <eugenio.arosteguy@gmail.com>, Emilio Platzer <emilioplatzer@gmail.com>"
+    "Raquel N Salva <raquelzssalva@gmail.com>", 
+    "Eugenio Arosteguy <eugenio.arosteguy@gmail.com>",
+    "Emilio Platzer <emilioplatzer@gmail.com>"
   ],
   "repository": "codenautas/varcal",
   "license": "MIT",
