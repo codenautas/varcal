@@ -133,7 +133,7 @@ export class VarCalculator extends ExpressionProcessor {
                 ${VarCalculator.txtMargin}   SELECT
                 ${VarCalculator.txtMargin}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n          ' + VarCalculator.txtMargin)}
                 ${VarCalculator.txtMargin}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${involvedTDs.length>1 ? VarCalculator.txtMargin + ' WHERE' + this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1]): ''}
+                ${involvedTDs.length>1 ? VarCalculator.txtMargin + ' WHERE' /*+ this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])*/: ''}
                 ${VarCalculator.txtMargin} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
@@ -141,7 +141,9 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
-        return `\n  ${VarCalculator.txtMargin}WHERE ${this.relVarPKsConditions(bloqueVars.tabla.td_base, bloqueVars.tabla.tabla_datos)}`;
+        const blockTDName = bloqueVars.tabla.tabla_datos;
+        const blockTDRel = <Relacion>this.myRels.find(r=>r.tiene == blockTDName);
+        return `\n  ${VarCalculator.txtMargin}WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)}`;
     }
     private buildSETClausuleForBloque(bloqueVars: BloqueVariablesCalc) {
         return bloqueVars.variablesCalculadas.map(vc => this.buildSETClausuleForVC(vc)).join(`,\n${VarCalculator.txtMargin}`);
