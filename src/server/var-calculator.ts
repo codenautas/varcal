@@ -3,6 +3,7 @@ import { AppVarCalType } from "./app-varcal";
 import { ExpressionProcessor } from "./expression-processor";
 import { BloqueVariablesCalc } from "./types-varcal";
 import { VariableCalculada } from "./variable-calculada";
+import { fullUnIndent } from "./indenter";
 
 export class VarCalculator extends ExpressionProcessor {
 
@@ -50,7 +51,7 @@ export class VarCalculator extends ExpressionProcessor {
         
         //variables blocks
         this.separarEnGruposOrdenados();
-        this.armarFuncionGeneradora();
+        this.funGeneradora = this.armarFuncionGeneradora();
         return this.getFinalSql();
     }
 
@@ -103,14 +104,14 @@ export class VarCalculator extends ExpressionProcessor {
         return this.allSqls.join('\n----\n') + '--- generado: ' + new Date() + '\n';
     }
 
+    @fullUnIndent()
     private armarFuncionGeneradora(): any {
-        this.funGeneradora = `CREATE OR REPLACE FUNCTION ${this.app.config.db.schema}.${this.nombreFuncionGeneradora}() RETURNS TEXT
-          LANGUAGE PLPGSQL
-        AS
+        return `
+        CREATE OR REPLACE FUNCTION ${this.app.config.db.schema}.${this.nombreFuncionGeneradora}() RETURNS TEXT
+          LANGUAGE PLPGSQL AS
         $BODY$
         BEGIN
-        `+
-            this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(bloqueVars) + ';').join('\n') + `
+          ${this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(bloqueVars) + ';').join('\n')}
           RETURN 'OK';
         END;
         $BODY$;`;
@@ -171,9 +172,8 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private sentenciaUpdate(bloque: BloqueVariablesCalc): string {
-        return  `
-    ${VarCalculator.txtMargin}UPDATE ${bloque.tabla.getTableName()}
-        SET 
+        return `${VarCalculator.txtMargin}UPDATE ${bloque.tabla.getTableName()}
+          SET 
             ${this.buildSETClausuleForBloque(bloque)}
             ${this.buildClausulaFrom(bloque)}
             ${this.buildWHEREClausule(bloque)}`

@@ -24,16 +24,30 @@ class Indenter {
     }
 }
 
-// a decorator just for add a \n makes no sense, remove it
-// function newLine() {
-//     return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
-//         var originalMethod = descriptor.value;
-//         descriptor.value = function() {
-//             return '\n'+originalMethod.apply(this, arguments);
-//         };
-//         return descriptor;
-//     }
-// }
+// unindent all lines to left
+// but just trimming to left as many white spaces as the line with less indentation
+export function fullUnIndent() {
+    return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
+        var originalMethod = descriptor.value;
+        descriptor.value = function() {
+            let result:string = originalMethod.apply(this, arguments);
+            if (result){
+                const resultLines = result.split('\n');
+                // const firstLine = resultLines[0];
+                // const firstLineIndentationWidth = firstLine.search(/\S/); //index of the first non white character
+
+                //the min index of the "first non white character" (/\S/) of each line
+                const minIndentation = Math.min(...resultLines.map(line=>line.search(/\S/))); 
+
+                result = resultLines.map(line=> new RegExp('^'+Array(minIndentation+1).join(' ')).test(line)
+                    ? line.substring(minIndentation): line
+                ).join('\n')
+            }
+            return result
+        };
+        return descriptor;
+    }
+}
 
 // Indent text in new Line
 export function indent() {
@@ -44,7 +58,7 @@ export function indent() {
             indenter.indent();
             let result = indenter.mrg + originalMethod.apply(this, arguments);
             indenter.unindent();        
-            return result
+            return result;
         };
         return descriptor;
     }
