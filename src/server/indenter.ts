@@ -24,6 +24,7 @@ class Indenter {
     }
 }
 
+// a decorator just for add a \n makes no sense, remove it
 // function newLine() {
 //     return function (_target: any, _propertyKey: string | symbol, descriptor: PropertyDescriptor) {
 //         var originalMethod = descriptor.value;
@@ -41,7 +42,7 @@ export function indent() {
         descriptor.value = function() {
             let indenter = Indenter.getInstance();
             indenter.indent();
-            let result = '\n' + indenter.mrg + originalMethod.apply(this, arguments);
+            let result = indenter.mrg + originalMethod.apply(this, arguments);
             indenter.unindent();        
             return result
         };
@@ -58,6 +59,12 @@ export function indent() {
 //                     this.gettexto3()+
 //                     "\nmi texto"
 //     }
+//     getTxt2(): string{
+//         return `texto 2:
+//                     ${this.gettexto2()}
+//                     ${this.gettexto3()}
+//                     mi texto`
+//     }
 
 //     @indent()
 //     gettexto2(): string{
@@ -72,4 +79,5 @@ export function indent() {
 // }
 // let tom = new Horse("Tommy the Palomino");
 // console.log(tom.getTxt());
+// console.log(tom.getTxt2());
 
