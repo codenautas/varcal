@@ -33,12 +33,9 @@ export function fullUnIndent() {
             let result:string = originalMethod.apply(this, arguments);
             if (result){
                 const resultLines = result.split('\n').filter(line=>line.trim().length); // removing blank lines
-                // const firstLine = resultLines[0];
-                // const firstLineIndentationWidth = firstLine.search(/\S/); //index of the first non white character
-
+                
                 //the min index of the "first non white character" (/\S/) of each line
                 const minIndentation = Math.min(...resultLines.map(line=> line.search(/\S/)>-1 ? line.search(/\S/): 0)); 
-
                 result = resultLines.map(line=> new RegExp('^'+Array(minIndentation+1).join(' ')).test(line)
                     ? line.substring(minIndentation): line
                 ).join('\n')

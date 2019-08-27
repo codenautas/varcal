@@ -1,9 +1,9 @@
-import {quoteIdent, quoteLiteral, Client, hasAlias, OperativoGenerator, Relacion, tiposTablaDato, Variable } from "operativos";
+import { Client, hasAlias, OperativoGenerator, quoteIdent, quoteLiteral, Relacion, tiposTablaDato, Variable } from "operativos";
 import { AppVarCalType } from "./app-varcal";
 import { ExpressionProcessor } from "./expression-processor";
 import { BloqueVariablesCalc } from "./types-varcal";
 import { VariableCalculada } from "./variable-calculada";
-import { fullUnIndent } from "./indenter";
+import { fullUnIndent, indent } from "./indenter";
 
 export class VarCalculator extends ExpressionProcessor {
 
@@ -16,9 +16,6 @@ export class VarCalculator extends ExpressionProcessor {
     private funGeneradora: string;
     private nombreFuncionGeneradora: string = 'gen_fun_var_calc'
     calcVars: VariableCalculada[] = [];
-
-    static margin = 2;
-    static txtMargin = Array(VarCalculator.margin + 1).join(' ');
 
     //########## public methods
     constructor(public app: AppVarCalType, client: Client, operativo: string) {
@@ -94,14 +91,17 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private getFinalSql(): string {
-        let updateFechaCalculada = `
-        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)};
-        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)} AND tipo=${quoteLiteral(tiposTablaDato.calculada)};`;
-
-        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', updateFechaCalculada, 'end\n$SQL_DUMP$');
+        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', this.getUpdateFechaCalculada(), 'end\n$SQL_DUMP$');
         // sin funcion generadora
         // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, updateFechaCalculada, 'end\n$SQL_DUMP$');
         return this.allSqls.join('\n----\n') + '--- generado: ' + new Date() + '\n';
+    }
+    
+    @fullUnIndent()
+    private getUpdateFechaCalculada(){
+        return `
+        UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)};
+        UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)} AND tipo=${quoteLiteral(tiposTablaDato.calculada)};`;
     }
 
     @fullUnIndent()
@@ -130,12 +130,13 @@ export class VarCalculator extends ExpressionProcessor {
             varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
             let involvedTDs:string[] = [...(new Set(a))] 
             tablesToFromClausule +=
-                `${VarCalculator.txtMargin}, LATERAL (
-                ${VarCalculator.txtMargin}   SELECT
-                ${VarCalculator.txtMargin}       ${varsAgg.map(v => `${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n          ' + VarCalculator.txtMargin)}
-                ${VarCalculator.txtMargin}     ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${involvedTDs.length>1 ? VarCalculator.txtMargin + ' WHERE' /*+ this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])*/: ''}
-                ${VarCalculator.txtMargin} ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
+            `, LATERAL (
+              SELECT
+                ${varsAgg.map(v => `
+                ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
+                ${this.buildInsumosTDsFromClausule(involvedTDs)}
+                ${involvedTDs.length>1 ? 'WHERE' + '/*this dont work*/this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])': ''}
+              ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
         return tablesToFromClausule
@@ -144,18 +145,17 @@ export class VarCalculator extends ExpressionProcessor {
     private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
         const blockTDName = bloqueVars.tabla.tabla_datos;
         const blockTDRel = <Relacion>this.myRels.find(r=>r.tiene == blockTDName);
-        return `\n  ${VarCalculator.txtMargin}WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)}`;
-    }
-    private buildSETClausuleForBloque(bloqueVars: BloqueVariablesCalc) {
-        return bloqueVars.variablesCalculadas.map(vc => this.buildSETClausuleForVC(vc)).join(`,\n${VarCalculator.txtMargin}`);
+        return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)}`;
     }
 
+    @indent()
     private buildSETClausuleForVC(vc: VariableCalculada):string {
         let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
             `${vc.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${vc.variable}` :
             // vc.expresionProcesada;
             this.getWrappedExpression(vc.expresionProcesada, vc.lastTD.getQuotedPKsCSV());
-        return `${vc.variable} = ${expresion}`;
+        return `
+              ${vc.variable} = ${expresion}`;
     }
 
     private async generateSchemaAndLoadTableDefs() {
@@ -172,9 +172,10 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private sentenciaUpdate(bloque: BloqueVariablesCalc): string {
-        return `${VarCalculator.txtMargin}UPDATE ${bloque.tabla.getTableName()}
-          SET 
-            ${this.buildSETClausuleForBloque(bloque)}
+        return `
+          UPDATE ${bloque.tabla.getTableName()}
+            SET 
+              ${bloque.variablesCalculadas.map(vc => this.buildSETClausuleForVC(vc)).join(',\n')}
             ${this.buildClausulaFrom(bloque)}
             ${this.buildWHEREClausule(bloque)}`
     }
