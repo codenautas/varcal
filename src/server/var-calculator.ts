@@ -10,6 +10,7 @@ export class VarCalculator extends ExpressionProcessor {
     private allSqls: string[] = []
     private drops: string[] = []
     private inserts: string[] = []
+    private deletes: string[] = []
 
     private bloquesVariablesACalcular: BloqueVariablesCalc[] = [];
     // @ts-ignore https://github.com/codenautas/operativos/issues/4
@@ -40,7 +41,7 @@ export class VarCalculator extends ExpressionProcessor {
     }
     async calculate(): Promise<string> {
         //for each TD, do SQL generation
-        this.generateTDDropsAndInserts();
+        this.generateTDDropsAndInsertsAndDeletes();
         await this.generateSchemaAndLoadTableDefs();
         
         //Variable Processing
@@ -109,12 +110,48 @@ export class VarCalculator extends ExpressionProcessor {
         return `
         CREATE OR REPLACE FUNCTION ${this.app.config.db.schema}.${this.nombreFuncionGeneradora}() RETURNS TEXT
           LANGUAGE PLPGSQL AS
+        $GENERATOR$
+        declare
+          v_sql text:=$THE_FUN$
+        CREATE OR REPLACE FUNCTION update_varcal_por_encuesta("p_operativo" text, "p_id_caso" text) RETURNS TEXT
+          LANGUAGE PLPGSQL AS
         $BODY$
         BEGIN
+          --Los inserts siguientes tienen que ir acá porque esta funcion es la que se va a correr 
+          -- cuando se ingrese/guarde una encuesta nueva (update_varcal_por_encuesta), ya que cuando se guarda 
+          -- una nueva encuesta se consiste, y el consistir llama a esta función, pero como la encuesta es nueva
+          -- los registros de la tabla "encuesta_calculada" no existen, entonces se deben insertar
+
+          -- TODO: el delete es para poder usar esta misma funcion cuando la encuesta no es nueva, mejorar poniendole
+          -- a los inserts una condición, por ej ON CONFLICT DO NOTHING/UPDATE , para sacar los delete
+
+          -- en update_varcal comentamos inserts y deletes porque se asume que están todas las encuestas
+          -- reflejadas en la tabla calculada, porque al presionar "devolver" en una encuesta la misma se consiste y se
+          -- agrega en calculadas si no existe (ver comentario de mas arriba)
+          -- ojo!! En eder no tenemos la funcionalidad de que toda encuesta se consista automaticamente al salir
+          -- Pero ojo, además, en Eder aveces se borran encuestas viejas y siempre llegan nuevas por lo que habría que dejar estos delete e inserts
+        ${this.deletes.join('\n')}
+        ----
+        ${this.inserts.join('\n')}
           ${this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(bloqueVars) + ';').join('\n')}
           RETURN 'OK';
         END;
-        $BODY$;`;
+        $BODY$;
+        $THE_FUN$;
+        begin 
+          -- TODO: hacer este reemplazo en JS
+          execute v_sql;
+          execute replace(replace(replace(replace(replace(
+            v_sql,
+            $$update_varcal_por_encuesta("p_operativo" text, "p_id_caso" text) RETURNS TEXT$$, $$update_varcal("p_operativo" text) RETURNS TEXT$$),
+            $$${OperativoGenerator.mainTD}.id_caso=p_id_caso$$, $$TRUE$$),
+            $$id_caso=p_id_caso$$, $$TRUE$$),
+            $$DELETE FROM$$, $$--DELETE FROM$$),
+            $$INSERT INTO$$, $$--INSERT INTO$$);
+          return '2GENERATED';
+        end;
+        $GENERATOR$;        
+        `;
     }
     
     @indent()
@@ -161,14 +198,18 @@ export class VarCalculator extends ExpressionProcessor {
 
     private async generateSchemaAndLoadTableDefs() {
         let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {});
-        this.allSqls = this.drops.concat(sqls.mainSql).concat(sqls.enancePart).concat(this.inserts)
+        this.allSqls = [this.drops.join('\n'), sqls.mainSql, sqls.enancePart]
     }
 
-    private generateTDDropsAndInserts() {
+    private generateTDDropsAndInsertsAndDeletes() {
+        const whereClausle = ` WHERE operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso;`;
         this.getTDCalculadas().forEach(td => {
             this.drops.unshift("drop table if exists " + quoteIdent(td.getTableName()) + ";");
-            let insert = `INSERT INTO ${quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.td_base)};` //estParaGenTabla.sourceJoin + ";");
+            let insert = `
+            INSERT INTO ${quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.td_base) + whereClausle}`
             this.inserts.push(insert);
+            this.deletes.push(`
+            DELETE FROM ${quoteIdent(td.getTableName()) + whereClausle}`);
         })
     }
 
