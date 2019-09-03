@@ -173,7 +173,7 @@ export class VarCalculator extends ExpressionProcessor {
                     ${varsAgg.map(v => `
                     ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
                 ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${involvedTDs.length>1 ? 'WHERE' + '/*this dont work -- this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])*/': ''}
+                ${involvedTDs.length>1 ? '--WHERE' + '/*this dont work -- this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])*/': ''}
               ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
