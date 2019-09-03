@@ -117,6 +117,7 @@ export class VarCalculator extends ExpressionProcessor {
         $BODY$;`;
     }
     
+    @indent()
     private buildAggregatedLateralsFromClausule(bloque:BloqueVariablesCalc):string{
         //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
         let tablesToFromClausule:string='';
@@ -129,13 +130,13 @@ export class VarCalculator extends ExpressionProcessor {
             let a:string[] =[];
             varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
             let involvedTDs:string[] = [...(new Set(a))] 
-            tablesToFromClausule +=
-            `, LATERAL (
-              SELECT
-                ${varsAgg.map(v => `
-                ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
+            tablesToFromClausule += `
+              ,LATERAL (
+                SELECT
+                    ${varsAgg.map(v => `
+                    ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
                 ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${involvedTDs.length>1 ? 'WHERE' + '/*this dont work*/this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])': ''}
+                ${involvedTDs.length>1 ? 'WHERE' + '/*this dont work -- this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])*/': ''}
               ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
@@ -295,7 +296,7 @@ export class VarCalculator extends ExpressionProcessor {
     //########## protected methods
     protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
         let { orderedInsumosTDNames, insumosOptionalRelations }: { orderedInsumosTDNames: string[]; insumosOptionalRelations: Relacion[]; } = this.getTDsInBloque(bloque);
-        return this.buildInsumosTDsFromClausule(orderedInsumosTDNames) +
+        return this.buildInsumosTDsFromClausule(orderedInsumosTDNames) + '\n' +
             this.buildAggregatedLateralsFromClausule(bloque) + 
             this.buildOptRelationsFromClausule(insumosOptionalRelations);
     }    
