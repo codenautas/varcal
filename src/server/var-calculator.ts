@@ -166,14 +166,14 @@ export class VarCalculator extends ExpressionProcessor {
             //TODO: improve concatenation, here we are trying to concat all ordered insumos TDNames for all variablesCalculadas of this bloque
             let a:string[] =[];
             varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
-            let involvedTDs:string[] = [...(new Set(a))] 
+            let involvedTDs:string[] = [...(new Set(a))]; // saca repetidos
             tablesToFromClausule += `
               ,LATERAL (
                 SELECT
                     ${varsAgg.map(v => `
                     ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
-                ${this.buildInsumosTDsFromClausule(involvedTDs)}
-                ${involvedTDs.length>1 ? '--WHERE' + '/*this dont work -- this.relVarPKsConditions(involvedTDs[0], involvedTDs[involvedTDs.length-1])*/': ''}
+                FROM ${involvedTDs[involvedTDs.length-1]}
+                ${involvedTDs.length>1 ? 'WHERE' + this.relVarPKsConditions(involvedTDs[involvedTDs.length-2], involvedTDs[involvedTDs.length-1]): ''}
               ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
