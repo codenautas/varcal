@@ -179,11 +179,11 @@ export class VarCalculator extends ExpressionProcessor {
 
         return tablesToFromClausule
     }
-
+    
     private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
         const blockTDName = bloqueVars.tabla.tabla_datos;
         const blockTDRel = <Relacion>this.myRels.find(r=>r.tiene == blockTDName);
-        return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)}`;
+        return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)} AND operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso`;
     }
 
     @indent()
