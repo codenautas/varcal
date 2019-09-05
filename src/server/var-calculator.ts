@@ -172,8 +172,8 @@ export class VarCalculator extends ExpressionProcessor {
                 SELECT
                     ${varsAgg.map(v => `
                     ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
-                FROM ${involvedTDs[involvedTDs.length-1]}
-                ${involvedTDs.length>1 ? 'WHERE' + this.relVarPKsConditions(involvedTDs[involvedTDs.length-2], involvedTDs[involvedTDs.length-1]): ''}
+                FROM ${quoteIdent(involvedTDs[involvedTDs.length-1])}
+                ${involvedTDs.length>1 ? 'WHERE TRUE' /*+ this.relVarPKsConditions(involvedTDs[involvedTDs.length-2], involvedTDs[involvedTDs.length-1])*/: ''}
               ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
@@ -183,7 +183,7 @@ export class VarCalculator extends ExpressionProcessor {
     private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
         const blockTDName = bloqueVars.tabla.tabla_datos;
         const blockTDRel = <Relacion>this.myRels.find(r=>r.tiene == blockTDName);
-        return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)} AND operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso`;
+        return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)} AND ${quoteIdent(OperativoGenerator.mainTD)}.operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTD)}.${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso`;
     }
 
     @indent()
