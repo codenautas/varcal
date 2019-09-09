@@ -186,7 +186,6 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private generateTDDropsAndInserts() {
-        const whereClausule = ` `;
         this.getTDCalculadas().forEach(td => {
             this.drops.unshift("drop table if exists " + quoteIdent(td.getTableName()) + ";");
             let insert = `
