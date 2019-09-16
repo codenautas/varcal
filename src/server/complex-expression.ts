@@ -37,7 +37,6 @@ export class ComplexExpression{
     expresionProcesada!: string
     insumos!: EP.Insumos; 
     
-    orderedInsumosTDNames: string[] = []
     insumosOptionalRelations: Relacion[] = [] 
     lastTD!:TablaDatos
     

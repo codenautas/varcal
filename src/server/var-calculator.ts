@@ -142,23 +142,24 @@ export class VarCalculator extends ExpressionProcessor {
     private buildAggregatedLateralsFromClausule(bloque:BloqueVariablesCalc):string{
         //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
         let tablesToFromClausule:string='';
-        let tablasAgregadas = [...(new Set(bloque.variablesCalculadas.filter(v => v.tabla_agregada).map(v => v.tabla_agregada)))];
-        tablasAgregadas.forEach(tabAgg => {
+        let aggregationCalcVars = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada);
+        let tablasAgregadas = [...(new Set(<string[]>aggregationCalcVars.map(v => v.tabla_agregada)))];
+        tablasAgregadas.forEach(tableAgg => {
             //TODO: when build tablasAgregadas store its variables instead of get here again
-            let varsAgg = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada == tabAgg);
+            let varsAgg = aggregationCalcVars.filter(vc => vc.tabla_agregada == tableAgg);
             
-            //TODO: improve concatenation, here we are trying to concat all ordered insumos TDNames for all variablesCalculadas of this bloque
-            let a:string[] =[];
-            varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
-            let involvedTDs:string[] = [...(new Set(a))]; // saca repetidos
+            // //TODO: improve concatenation, here we are trying to concat all ordered insumos TDNames for all variablesCalculadas of this bloque
+            // let a:string[] =[];
+            // varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
+            // let involvedTDs:string[] = [...(new Set(a))]; // saca repetidos
             tablesToFromClausule += `
               ,LATERAL (
                 SELECT
                     ${varsAgg.map(v => `
                     ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
-                FROM ${quoteIdent(involvedTDs[involvedTDs.length-1])}
-                ${involvedTDs.length>1 ? 'WHERE TRUE' /*+ this.relVarPKsConditions(involvedTDs[involvedTDs.length-2], involvedTDs[involvedTDs.length-1])*/: ''}
-              ) ${tabAgg + OperativoGenerator.sufijo_agregacion}`
+                FROM ${quoteIdent(tableAgg)}
+                WHERE ${this.relVarPKsConditions(bloque.tabla.td_base, tableAgg)}
+              ) ${tableAgg + OperativoGenerator.sufijo_agregacion}`
         });
 
         return tablesToFromClausule
@@ -191,7 +192,7 @@ export class VarCalculator extends ExpressionProcessor {
             let insert = `
             INSERT INTO ${quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) 
               SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.td_base)} WHERE operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso
-            ON CONFLICT DO NOTHING`
+              ON CONFLICT DO NOTHING;`
             this.inserts.push(insert);
         })
     }
@@ -304,23 +305,21 @@ export class VarCalculator extends ExpressionProcessor {
         return isDefined;
     }
 
-    private getTDsInBloque(bloque: BloqueVariablesCalc) {
+    private getOptInsumosInBloque(bloque: BloqueVariablesCalc) {
         let insumosOptionalRelations: Relacion[] = [];
-        let orderedInsumosTDNames: string[] = [];
         bloque.variablesCalculadas.forEach(vc => {
             insumosOptionalRelations.push(...vc.insumosOptionalRelations);
-            orderedInsumosTDNames.push(...vc.orderedInsumosTDNames);
         });
         //removing duplicated
         insumosOptionalRelations = [...(new Set(insumosOptionalRelations))];
-        orderedInsumosTDNames = [...(new Set(orderedInsumosTDNames))];
-        return { orderedInsumosTDNames, insumosOptionalRelations };
+        return insumosOptionalRelations;
     }
 
     //########## protected methods
     protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
-        let { orderedInsumosTDNames, insumosOptionalRelations }: { orderedInsumosTDNames: string[]; insumosOptionalRelations: Relacion[]; } = this.getTDsInBloque(bloque);
-        return this.buildInsumosTDsFromClausule(orderedInsumosTDNames) + '\n' +
+        const insumosOptionalRelations: Relacion[] = this.getOptInsumosInBloque(bloque);
+        //building from clausule upside from the bloque table (not for all TDNames)
+        return 'FROM ' + this.buildEndToEndJoins(bloque.tabla.td_base) +
             this.buildAggregatedLateralsFromClausule(bloque) + 
             this.buildOptRelationsFromClausule(insumosOptionalRelations);
     }    

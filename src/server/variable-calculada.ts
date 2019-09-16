@@ -9,7 +9,6 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     expresionProcesada!: string
     insumos!: EP.Insumos; 
     
-    orderedInsumosTDNames: string[] = []
     insumosOptionalRelations: Relacion[] = []
     lastTD!:TablaDatos
     

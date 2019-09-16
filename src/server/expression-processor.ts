@@ -175,9 +175,9 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
 
         ec.insumosOptionalRelations = this.optionalRelations.filter(optRel => ec.insumos.aliases.indexOf(optRel.tiene) > -1);
         let tdsNeedByExpression = this.addMainTD(ec.tdsNeedByExpression);
+
+        // TODO: !!! orderedInsumosINgresoTDNames se está usando solamente para capturar el último, sacarlo
         let orderedInsumosIngresoTDNames: string[] = OperativoGenerator.orderedIngresoTDNames.filter(orderedElem => tdsNeedByExpression.includes(orderedElem));
-        let orderedInsumosReferencialesTDNames: string[] =OperativoGenerator.orderedReferencialesTDNames.filter(orderedElem => tdsNeedByExpression.includes(orderedElem));
-        ec.orderedInsumosTDNames = orderedInsumosIngresoTDNames.concat(orderedInsumosReferencialesTDNames);
         ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
     }   
 }
