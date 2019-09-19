@@ -18,7 +18,8 @@
   ],
   "dependencies": {
     "expre-parser": "~0.1.22",
-    "operativos": "~0.7.8"
+    "operativos": "~0.7.8",
+    "last-agg": "~1.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^8.0.0",

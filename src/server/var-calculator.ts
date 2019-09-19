@@ -65,6 +65,8 @@ export class VarCalculator extends ExpressionProcessor {
                 return 'count(nullif(' + exp + ',false))';
             case 'promediar':
                 return 'avg(' + exp + ')';
+            case 'ultimo':
+                return 'last_agg(' + exp + ')';
             default:
                 return f + '(' + exp + ')';
         }
