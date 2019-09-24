@@ -154,6 +154,8 @@ export class VarCalculator extends ExpressionProcessor {
             // let a:string[] =[];
             // varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
             // let involvedTDs:string[] = [...(new Set(a))]; // saca repetidos
+
+            //TODO: analice use of filter clausule instead of "case when" for aggregation functions
             tablesToFromClausule += `
               ,LATERAL (
                 SELECT
