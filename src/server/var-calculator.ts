@@ -73,9 +73,7 @@ export class VarCalculator extends ExpressionProcessor {
     }
     
     private preCalculate(): void {
-        this.getVarsCalculadas().forEach(vc=>{
-            this.prepareEC(vc)
-        });
+        this.getVarsCalculadas().forEach(vc=>this.prepareEC(vc));
     }
 
     // override parent method

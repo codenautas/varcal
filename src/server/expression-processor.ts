@@ -4,8 +4,10 @@ import { IExpressionContainer } from "./expression-container";
 
 //put these here is good because specifics apps could change/override this options depending on their own needs
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
-export let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce', 'age', 'date_part', 'abs'];
+export let pgWhiteList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce', 'age', 'date_part', 'abs'];
 export let comunSquemaWhiteList = ['informado','con_dato', 'sin_dato', 'nsnc'];
+export let jsWhiteList = ['completar_valor_con_ultimo'];
+
 
 export abstract class ExpressionProcessor extends OperativoGenerator{
     
@@ -73,9 +75,9 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     private validateFunctions(funcNames: string[]) {
         funcNames.forEach(f => hasAlias(f)? this.validateFunctionSquema(f): this.validateFunctionName(f));
     }
-
+    
     private validateFunctionName(f: string) {
-        let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
+        let functionWhiteList = pgWhiteList.concat(comunSquemaWhiteList).concat(jsWhiteList);
         if (functionWhiteList.indexOf(f) == -1) {
             throw new Error('La Función ' + f + ' no está incluida en la whiteList de funciones: ' + functionWhiteList.toString());
         }
@@ -127,6 +129,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         this.filterOrderedTDs(ec); //tabla mas específicas (hija)
 
         ec.expresionProcesada = this.addAliasesToExpression(ec)
+        ec.replaceJSFunctions();
         // ec.expresionProcesada = this.getWrappedExpression(ec.expresionProcesada, ec.lastTD.getQuotedPKsCSV());
     }
  

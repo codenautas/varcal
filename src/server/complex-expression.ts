@@ -13,9 +13,9 @@ export class ComplexExpression{
     //     }
     // }
     // private validateFunctions(funcNames: string[]) {
-    //     let pgWitheList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
+    //     let pgWhiteList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce'];
     //     let comunSquemaWhiteList = ['informado'];
-    //     let functionWhiteList = pgWitheList.concat(comunSquemaWhiteList);
+    //     let functionWhiteList = pgWhiteList.concat(comunSquemaWhiteList);
     //     funcNames.forEach(f => {
     //         if (hasAlias(f)) {
     //             if (f.split('.')[0] != 'dbo') {
