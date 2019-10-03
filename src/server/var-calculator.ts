@@ -120,7 +120,7 @@ export class VarCalculator extends ExpressionProcessor {
         BEGIN
         -- Cada vez que se actualizan las variables calculadas, previamente se deben insertar los registros que no existan (on conflict do nothing)
         -- de las tablas base (solo los campos pks), sin filtrar por p_id_caso para update_varcal o con dicho filtro para update_varcal_por_encuesta
-        ${this.inserts.join('\n')}
+        ${this.inserts.map(i=>i+ `WHERE operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso ON CONFLICT DO NOTHING;`).join('\n')}
           ${this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(bloqueVars) + ';').join('\n')}
           RETURN 'OK';
         END;
@@ -187,7 +187,7 @@ export class VarCalculator extends ExpressionProcessor {
 
     private async generateSchemaAndLoadTableDefs() {
         let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {});
-        this.allSqls = [this.drops.join('\n'), sqls.mainSql, sqls.enancePart]
+        this.allSqls = [this.drops.join('\n'), sqls.mainSql, sqls.enancePart].concat(this.inserts.map(i=>i+';'))
     }
 
     private generateTDDropsAndInserts() {
@@ -195,8 +195,7 @@ export class VarCalculator extends ExpressionProcessor {
             this.drops.unshift("drop table if exists " + quoteIdent(td.getTableName()) + ";");
             let insert = `
             INSERT INTO ${quoteIdent(td.getTableName())} (${td.getQuotedPKsCSV()}) 
-              SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.td_base)} WHERE operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso
-              ON CONFLICT DO NOTHING;`
+              SELECT ${td.getQuotedPKsCSV()} FROM ${quoteIdent(td.td_base)}`
             this.inserts.push(insert);
         })
     }
