@@ -13,4 +13,5 @@ export interface IExpressionContainer{
     lastTD:TablaDatos
 
     fusionUserExpressions():void;
+    replaceJSFunctions():void;
 }
