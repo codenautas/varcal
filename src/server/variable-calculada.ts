@@ -1,8 +1,7 @@
 import * as EP from "expre-parser";
-import { Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion, OperativoGenerator } from "operativos";
+import { Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
 import { IExpressionContainer } from "./expression-container";
 import { VarCalculator } from "./var-calculator";
-import { jsWhiteList } from "./expression-processor";
 
 export class VariableCalculada extends Variable implements TipoVarDB, IExpressionContainer{
     tdsNeedByExpression: string[]= [];
@@ -41,25 +40,6 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
         if (this.filtro) {
             this.expresionProcesada = 'CASE WHEN ' + this.filtro + ' THEN ' + this.expresionProcesada + ' ELSE NULL END'
         }
-    }
-
-    replaceJSFunctions():void {
-        this.insumos.funciones.filter(fname=>jsWhiteList.includes(fname)).forEach(f=>this.replaceJSFunction(f));
-    }
-
-    replaceJSFunction(fname:string):void{
-        const varTD = OperativoGenerator.instanceObj.getTDFor(this);
-        switch (fname) {
-            case 'completar_valor_con_ultimo':
-                const regex = new RegExp(fname+'\((.+)\)', 'g');
-                this.expresionProcesada = this.expresionProcesada.replace(regex, 
-                    `$1, last_agg($1) OVER 
-                      (PARTITION BY ${varTD.getPKsWitAlias().slice(0,-1).join(',')} 
-                        ORDER BY ${varTD.getPKsWitAlias()[varTD.getPKsWitAlias.length-1]}) ${this.nombre}`)
-                break;
-            default:
-                break;
-        }    
     }
 }
 
