@@ -142,7 +142,7 @@ export class VarCalculator extends ExpressionProcessor {
     private buildAggregatedLateralsFromClausule(bloque:BloqueVariablesCalc):string{
         //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
         let tablesToFromClausule:string='';
-        let aggregationCalcVars = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada);
+        let aggregationCalcVars = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada && vc.tabla_agregada !=bloque.tabla.td_base);
         let tablasAgregadas = [...(new Set(<string[]>aggregationCalcVars.map(v => v.tabla_agregada)))];
         tablasAgregadas.forEach(tableAgg => {
             //TODO: when build tablasAgregadas store its variables instead of get here again
