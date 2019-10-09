@@ -185,7 +185,7 @@ export class VarCalculator extends ExpressionProcessor {
 
     private async generateSchemaAndLoadTableDefs() {
         let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {});
-        this.allSqls = [this.drops.join('\n'), sqls.mainSql].concat(this.inserts.map(i=>i+';'))
+        this.allSqls = [this.drops.join('\n'), sqls.mainSql].concat(this.inserts.map(i=>i+';').join('\n'))
     }
 
     private generateTDDropsAndInserts() {
