@@ -176,12 +176,11 @@ export class VarCalculator extends ExpressionProcessor {
     @indent()
     private buildSETClausuleForVC(vc: VariableCalculada):string {
         let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
-            `${vc.tabla_agregada + OperativoGenerator.sufijo_agregacion}.${vc.variable}` :
+            `${vc.tabla_agregada+(vc.funcion_agregacion != 'completa'? OperativoGenerator.sufijo_agregacion:'')}.${vc.variable}` :
             // vc.expresionProcesada;
             this.getWrappedExpression(vc.expresionProcesada, vc.lastTD.getQuotedPKsCSV());
-        return `
-              ${vc.variable} = ${expresion}`;
-    }
+        return `${vc.variable} = ${expresion}`;
+    }            
 
     private async generateSchemaAndLoadTableDefs() {
         let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {});
