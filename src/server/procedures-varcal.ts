@@ -16,7 +16,7 @@ var procedures = [
             await varCalculator.fetchDataFromDB();
             let todoElScript:string = await varCalculator.calculate();
             
-            fs.writeFileSync('./local-generated-varcal.sql', todoElScript, { encoding: 'utf8' })
+            fs.writeFileSync('./local-varcal-generated.sql', todoElScript, { encoding: 'utf8' })
             await context.client.query(todoElScript).execute();
 
             return 'generado !';
