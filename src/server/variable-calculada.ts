@@ -4,6 +4,7 @@ import { IExpressionContainer } from "./expression-container";
 import { VarCalculator } from "./var-calculator";
 
 export class VariableCalculada extends Variable implements TipoVarDB, IExpressionContainer{
+    
     tdsNeedByExpression: string[]= [];
     
     expresionProcesada!: string
@@ -13,8 +14,31 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     lastTD!:TablaDatos
     
     opciones?: VariableOpcion[]
-    // complexExp!:ComplexExpression
-        
+
+    parseAggregation() {
+        const tdPks = VarCalculator.instanceObj.getUniqueTD(<string>this.tabla_agregada).pks;
+        switch (this.funcion_agregacion) {
+            case 'sumar':
+                return 'sum(' + this.expresionProcesada + ')';
+            case 'min':
+                return 'min(' + this.expresionProcesada + ')';
+            case 'max':
+                return 'max(' + this.expresionProcesada + ')';
+            case 'promediar':
+                return 'avg(' + this.expresionProcesada + ')';
+            case 'contar':
+                return 'count(nullif(' + this.expresionProcesada + ',false))';
+            // case 'primero':
+            //     return 'first_agg(' + exp + ')';
+            case 'ultimo':
+                return `last_agg(${this.expresionProcesada} order by ${tdPks.join(',')})`;
+            case 'completa':
+                return `last_agg(${this.expresionProcesada}) OVER (PARTITION BY ${tdPks.slice(0,-1).join(',')} order by ${tdPks[tdPks.length-1]})`;
+            default:
+                return this.funcion_agregacion + '(' + this.expresionProcesada + ')';
+        }
+    }
+
     validate() {
         if ((!this.opciones || !this.opciones.length) && !this.expresion) {
             throw new Error('La variable ' + this.variable + ' no puede tener expresión y opciones nulas simultaneamente');
@@ -50,5 +74,13 @@ export class BloqueVariablesCalc {
     constructor(vCalc: VariableCalculada) {
         this.tabla = VarCalculator.instanceObj.getUniqueTD(vCalc.tabla_datos);
         this.variablesCalculadas = [vCalc]
+    }
+
+    getOptInsumos() {
+        // flatening nested array
+        let insumosOptionalRelations = ([] as Relacion[]).concat(...(this.variablesCalculadas.map(vc=>vc.insumosOptionalRelations)));
+        //removing duplicated
+        insumosOptionalRelations = [...(new Set(insumosOptionalRelations))];
+        return insumosOptionalRelations;
     }
 }

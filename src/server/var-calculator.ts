@@ -53,24 +53,6 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     //########## private methods
-    private getAggregacion(f: string, exp: string) {
-        switch (f) {
-            case 'sumar':
-                return 'sum(' + exp + ')';
-            case 'min':
-                return 'min(' + exp + ')';
-            case 'max':
-                return 'max(' + exp + ')';
-            case 'contar':
-                return 'count(nullif(' + exp + ',false))';
-            case 'promediar':
-                return 'avg(' + exp + ')';
-            case 'ultimo':
-                return 'last_agg(' + exp + ')';
-            default:
-                return f + '(' + exp + ')';
-        }
-    }
     
     private preCalculate(): void {
         this.getVarsCalculadas().forEach(vc=>this.prepareEC(vc));
@@ -119,6 +101,7 @@ export class VarCalculator extends ExpressionProcessor {
         -- Cada vez que se actualizan las variables calculadas, previamente se deben insertar los registros que no existan (on conflict do nothing)
         -- de las tablas base (solo los campos pks), sin filtrar por p_id_caso para update_varcal o con dicho filtro para update_varcal_por_encuesta
         ${this.inserts.map(i=>i+ `WHERE operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso ON CONFLICT DO NOTHING;`).join('\n')}
+        ----
           ${this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(bloqueVars) + ';').join('\n')}
           RETURN 'OK';
         END;
@@ -142,7 +125,7 @@ export class VarCalculator extends ExpressionProcessor {
     private buildAggregatedLateralsFromClausule(bloque:BloqueVariablesCalc):string{
         //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
         let tablesToFromClausule:string='';
-        let aggregationCalcVars = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada && vc.tabla_agregada !=bloque.tabla.td_base);
+        let aggregationCalcVars = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada);
         let tablasAgregadas = [...(new Set(<string[]>aggregationCalcVars.map(v => v.tabla_agregada)))];
         tablasAgregadas.forEach(tableAgg => {
             //TODO: when build tablasAgregadas store its variables instead of get here again
@@ -157,11 +140,12 @@ export class VarCalculator extends ExpressionProcessor {
             tablesToFromClausule += `
               ,LATERAL (
                 SELECT
-                    ${varsAgg.map(v => `
-                    ${this.getAggregacion(<string>v.funcion_agregacion, v.expresionProcesada)} as ${v.variable}`).join(',\n')}
+                    ${varsAgg.map(v => `${v.parseAggregation()} as ${v.variable}`).join(',\n')}
                 FROM ${quoteIdent(tableAgg)}
-                WHERE ${this.relVarPKsConditions(bloque.tabla.td_base, tableAgg)}
-              ) ${tableAgg + OperativoGenerator.sufijo_agregacion}`
+                ${varsAgg[0].funcion_agregacion != 'completa'? 'WHERE' + this.relVarPKsConditions(bloque.tabla.td_base, tableAgg): ''}}
+              ) ${tableAgg + OperativoGenerator.sufijo_agregacion}
+              ${varsAgg[0].funcion_agregacion == 'completa'? 'WHERE' + this.relVarPKsConditions(tableAgg, bloque.tabla.tabla_datos): ''}}
+              `
         });
 
         return tablesToFromClausule
@@ -176,8 +160,7 @@ export class VarCalculator extends ExpressionProcessor {
     @indent()
     private buildSETClausuleForVC(vc: VariableCalculada):string {
         let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
-            `${vc.tabla_agregada+(vc.funcion_agregacion != 'completa'? OperativoGenerator.sufijo_agregacion:'')}.${vc.variable}` :
-            // vc.expresionProcesada;
+            `${vc.tabla_agregada+OperativoGenerator.sufijo_agregacion}.${vc.variable}` :
             this.getWrappedExpression(vc.expresionProcesada, vc.lastTD.getQuotedPKsCSV());
         return `${vc.variable} = ${expresion}`;
     }            
@@ -305,22 +288,13 @@ export class VarCalculator extends ExpressionProcessor {
         return isDefined;
     }
 
-    private getOptInsumosInBloque(bloque: BloqueVariablesCalc) {
-        let insumosOptionalRelations: Relacion[] = [];
-        bloque.variablesCalculadas.forEach(vc => {
-            insumosOptionalRelations.push(...vc.insumosOptionalRelations);
-        });
-        //removing duplicated
-        insumosOptionalRelations = [...(new Set(insumosOptionalRelations))];
-        return insumosOptionalRelations;
-    }
+  
 
     //########## protected methods
     protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
-        const insumosOptionalRelations: Relacion[] = this.getOptInsumosInBloque(bloque);
         //building from clausule upside from the bloque table (not for all TDNames)
         return 'FROM ' + this.buildEndToEndJoins(bloque.tabla.td_base) +
             this.buildAggregatedLateralsFromClausule(bloque) + 
-            this.buildOptRelationsFromClausule(insumosOptionalRelations);
+            this.buildOptRelationsFromClausule(bloque.getOptInsumos());
     }    
 }
