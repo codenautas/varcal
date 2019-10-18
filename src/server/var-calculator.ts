@@ -122,33 +122,51 @@ export class VarCalculator extends ExpressionProcessor {
     }
     
     @indent()
-    private buildAggregatedLateralsFromClausule(bloque:BloqueVariablesCalc):string{
-        //saca duplicados de las tablas agregadas y devuelve un arreglo con solo el campo tabla_agregada
+    private buildAggLateralFromClausule(bloque:BloqueVariablesCalc):string{
         let tablesToFromClausule:string='';
-        let aggregationCalcVars = bloque.variablesCalculadas.filter(vc => vc.tabla_agregada);
-        let tablasAgregadas = [...(new Set(<string[]>aggregationCalcVars.map(v => v.tabla_agregada)))];
-        tablasAgregadas.forEach(tableAgg => {
-            //TODO: when build tablasAgregadas store its variables instead of get here again
-            let varsAgg = aggregationCalcVars.filter(vc => vc.tabla_agregada == tableAgg);
-            
-            // //TODO: improve concatenation, here we are trying to concat all ordered insumos TDNames for all variablesCalculadas of this bloque
-            // let a:string[] =[];
-            // varsAgg.forEach(vca=>a.push(...vca.orderedInsumosTDNames));
-            // let involvedTDs:string[] = [...(new Set(a))]; // saca repetidos
+        let tablasAgregadas: {[index:string]:VariableCalculada[]} = {};
+        let tablasCompletas: {[index:string]:VariableCalculada[]} = {};
+        bloque.variablesCalculadas.forEach(vc=> {
+            if (vc.tabla_agregada){
+                if (vc.tabla_agregada == bloque.tabla.td_base){
+                    if (!tablasCompletas[vc.tabla_agregada]){
+                        tablasCompletas[vc.tabla_agregada] = [];
+                    }
+                    tablasCompletas[vc.tabla_agregada].push(vc);
+                } else{
+                    if (!tablasAgregadas[vc.tabla_agregada]){
+                        tablasAgregadas[vc.tabla_agregada] = [];
+                    }
+                    tablasAgregadas[vc.tabla_agregada].push(vc);
+                }
+            } 
+        })
 
+        Object.keys(tablasAgregadas).forEach(aggTableName => {
             //TODO: analice use of filter clausule instead of "case when" for aggregation functions
             tablesToFromClausule += `
               ,LATERAL (
                 SELECT
-                    ${varsAgg.map(v => `${v.parseAggregation()} as ${v.variable}`).join(',\n')}
-                FROM ${quoteIdent(tableAgg)}
-                ${varsAgg[0].funcion_agregacion != 'completa'? 'WHERE' + this.relVarPKsConditions(bloque.tabla.td_base, tableAgg): ''}}
-              ) ${tableAgg + OperativoGenerator.sufijo_agregacion}
-              ${varsAgg[0].funcion_agregacion == 'completa'? 'WHERE' + this.relVarPKsConditions(tableAgg, bloque.tabla.tabla_datos): ''}}
+                ${this.getLateralSelectClausule(tablasAgregadas[aggTableName], aggTableName)}
+                WHERE ${this.relVarPKsConditions(bloque.tabla.td_base, aggTableName)}
+              ) as ${aggTableName + OperativoGenerator.sufijo_agregacion}
               `
+        });
+        
+        Object.keys(tablasCompletas).forEach(aggTableName => {
+            //TODO: analice use of filter clausule instead of "case when" for aggregation functions
+            tablesToFromClausule += `
+              ,(SELECT ${this.getUniqueTD(aggTableName).getQuotedPKsCSV()},
+               ${this.getLateralSelectClausule(tablasCompletas[aggTableName], aggTableName)}) as ${aggTableName + OperativoGenerator.sufijo_complete}
+              AND agregar _comp ${this.relVarPKsConditions(aggTableName, bloque.tabla.tabla_datos)}`
         });
 
         return tablesToFromClausule
+    }
+
+    private getLateralSelectClausule(varsAgg:VariableCalculada[], aggTableName:string) {
+        return `${varsAgg.map(v => `${v.parseAggregation()} as ${v.variable}`).join(',\n')}
+                FROM ${quoteIdent(aggTableName)}`
     }
     
     private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
@@ -160,7 +178,7 @@ export class VarCalculator extends ExpressionProcessor {
     @indent()
     private buildSETClausuleForVC(vc: VariableCalculada):string {
         let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
-            `${vc.tabla_agregada+OperativoGenerator.sufijo_agregacion}.${vc.variable}` :
+            `${vc.tabla_agregada+vc.getAggTableSufix()}.${vc.variable}` :
             this.getWrappedExpression(vc.expresionProcesada, vc.lastTD.getQuotedPKsCSV());
         return `${vc.variable} = ${expresion}`;
     }            
@@ -294,7 +312,7 @@ export class VarCalculator extends ExpressionProcessor {
     protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
         //building from clausule upside from the bloque table (not for all TDNames)
         return 'FROM ' + this.buildEndToEndJoins(bloque.tabla.td_base) +
-            this.buildAggregatedLateralsFromClausule(bloque) + 
+            this.buildAggLateralFromClausule(bloque) + 
             this.buildOptRelationsFromClausule(bloque.getOptInsumos());
     }    
 }

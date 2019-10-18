@@ -1,5 +1,5 @@
 import * as EP from "expre-parser";
-import { Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion } from "operativos";
+import { Relacion, TablaDatos, TipoVarDB, Variable, VariableOpcion, OperativoGenerator } from "operativos";
 import { IExpressionContainer } from "./expression-container";
 import { VarCalculator } from "./var-calculator";
 
@@ -14,6 +14,14 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     lastTD!:TablaDatos
     
     opciones?: VariableOpcion[]
+
+    getAggTableSufix() {
+        if (this.funcion_agregacion != 'completar'){
+            return OperativoGenerator.sufijo_agregacion
+        } else {
+            return OperativoGenerator.sufijo_complete
+        }
+    }
 
     parseAggregation() {
         const tdPks = VarCalculator.instanceObj.getUniqueTD(<string>this.tabla_agregada).pks;
@@ -32,7 +40,7 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
             //     return 'first_agg(' + exp + ')';
             case 'ultimo':
                 return `last_agg(${this.expresionProcesada} order by ${tdPks.join(',')})`;
-            case 'completa':
+            case 'completar':
                 return `last_agg(${this.expresionProcesada}) OVER (PARTITION BY ${tdPks.slice(0,-1).join(',')} order by ${tdPks[tdPks.length-1]})`;
             default:
                 return this.funcion_agregacion + '(' + this.expresionProcesada + ')';
