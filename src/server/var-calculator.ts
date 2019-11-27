@@ -100,7 +100,7 @@ export class VarCalculator extends ExpressionProcessor {
         BEGIN
         -- Cada vez que se actualizan las variables calculadas, previamente se deben insertar los registros que no existan (on conflict do nothing)
         -- de las tablas base (solo los campos pks), sin filtrar por p_id_caso para update_varcal o con dicho filtro para update_varcal_por_encuesta
-        ${this.inserts.map(i=>i+ `WHERE operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso ON CONFLICT DO NOTHING;`).join('\n')}
+        ${this.inserts.map(i=>i+ ` WHERE operativo=p_operativo AND ${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso ON CONFLICT DO NOTHING;`).join('\n')}
         ----
           ${this.bloquesVariablesACalcular.map(bloqueVars => this.sentenciaUpdate(bloqueVars) + ';').join('\n')}
           RETURN 'OK';
