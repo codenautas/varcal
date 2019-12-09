@@ -84,6 +84,12 @@ export class BloqueVariablesCalc {
         this.variablesCalculadas = [vCalc]
     }
 
+    getTDsNeeded(){
+        let tdsNeeded:string[] =  this.variablesCalculadas.flatMap(vc=>vc.tdsNeedByExpression)
+        tdsNeeded = [...new Set(tdsNeeded)] // removing duplicated
+        return tdsNeeded
+    }
+
     getOptInsumos() {
         // flatening nested array
         let insumosOptionalRelations = ([] as Relacion[]).concat(...(this.variablesCalculadas.map(vc=>vc.insumosOptionalRelations)));

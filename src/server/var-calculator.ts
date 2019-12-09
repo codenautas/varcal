@@ -161,10 +161,11 @@ export class VarCalculator extends ExpressionProcessor {
                 FROM ${quoteIdent(aggTableName)}`
     }
     
-    private buildWHEREClausule(bloqueVars:BloqueVariablesCalc): string {
-        const blockTDName = bloqueVars.tabla.tabla_datos;
+    private buildWHEREClausule(block:BloqueVariablesCalc): string {
+        const blockTDName = block.tabla.tabla_datos;
         const blockTDRel = <Relacion>this.myRels.find(r=>r.tiene == blockTDName);
-        return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)} AND ${quoteIdent(OperativoGenerator.mainTD)}."operativo"=p_operativo AND ${quoteIdent(OperativoGenerator.mainTD)}.${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso`;
+        const blockFirstTD = this.oldestAncestorIn(block.getTDsNeeded());
+        return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)} AND ${quoteIdent(blockFirstTD)}."operativo"=p_operativo AND ${quoteIdent(blockFirstTD)}.${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso`;
     }
 
     @indent()
@@ -300,9 +301,7 @@ export class VarCalculator extends ExpressionProcessor {
 
     //########## protected methods
     protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
-        let tdsNeededByBloque:string[] =  bloque.variablesCalculadas.flatMap(vc=>vc.tdsNeedByExpression)
-        tdsNeededByBloque = [...new Set(tdsNeededByBloque)] // removing duplicated
-        return 'FROM ' + this.buildEndToEndJoins(tdsNeededByBloque) +
+        return 'FROM ' + this.buildEndToEndJoins(bloque.getTDsNeeded()) +
             this.buildAggLateralFromClausule(bloque) + 
             this.buildOptRelationsFromClausule(bloque.getOptInsumos());
     }    
