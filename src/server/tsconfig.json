@@ -2,8 +2,8 @@
     "compilerOptions": {
         "outDir": "../../dist/server",
         "module": "none",
-        "target": "es2018",
-        "lib":["es2017", "es2015", "es2018"],
+        "target": "ES2018",
+        "lib":["es2017", "es2015", "es2018", "ES2019"],
         "experimentalDecorators": true,
         "baseUrl": ""
     },

@@ -51,13 +51,13 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         return varsFound.filter(v => v.variable == rawVarName);
     }
 
-    private addMainTD(insumosAliases: string[]) {
-        //aliases involved in this consistence expresion
-        if (insumosAliases.indexOf(OperativoGenerator.mainTD) == -1) {
-            insumosAliases.push(OperativoGenerator.mainTD);
-        }
-        return insumosAliases;
-    }
+    // private addMainTD(insumosAliases: string[]) {
+    //     //aliases involved in this consistence expresion
+    //     if (insumosAliases.indexOf(OperativoGenerator.mainTD) == -1) {
+    //         insumosAliases.push(OperativoGenerator.mainTD);
+    //     }
+    //     return insumosAliases;
+    // }
 
     private setInsumos(ec:IExpressionContainer){
         let bn:BaseNode = parse(ec.expresionProcesada); 
@@ -113,6 +113,8 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
                 ec.tdsNeedByExpression.push(foundVar.tabla_datos)
             } 
         })
+        ec.last_td = this.youngerDescendantIn(ec.tdsNeedByExpression);
+        ec.first_td = this.oldestAncestorIn(ec.tdsNeedByExpression);
     }
 
     // protected methods
@@ -126,7 +128,6 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
 
         this.setInsumos(ec)
         this.validateInsumos(ec);
-        this.filterOrderedTDs(ec); //tabla mas específicas (hija)
 
         ec.expresionProcesada = this.addAliasesToExpression(ec)
         // ec.expresionProcesada = this.getWrappedExpression(ec.expresionProcesada, ec.lastTD.getQuotedPKsCSV());
@@ -165,21 +166,12 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         });
         return completeExpression;
     }
+    
+    getFirstTD(ec:IExpressionContainer){
+        return this.getUniqueTD(<string>ec.first_td)
+    }
 
-    protected filterOrderedTDs(ec:IExpressionContainer) {
-        //put in constructor
-        // TODO: ORDENAR dinamicamente:
-        // primero: la td que no tenga ninguna TD en que busco es la principal
-        // segundas: van todas las tds que tengan en "relacion>tabla_datos" a la principal
-        // terceras: las tds que tengan en "que busco" a las segundas
-        // provisoriamente se ordena fijando un arreglo ordenado
-        // TODO: deshardcodear main TD
-
-        ec.insumosOptionalRelations = this.optionalRelations.filter(optRel => ec.insumos.aliases.indexOf(optRel.tiene) > -1);
-        let tdsNeedByExpression = this.addMainTD(ec.tdsNeedByExpression);
-
-        // TODO: !!! orderedInsumosINgresoTDNames se está usando solamente para capturar el último, sacarlo
-        let orderedInsumosIngresoTDNames: string[] = OperativoGenerator.orderedIngresoTDNames.filter(orderedElem => tdsNeedByExpression.includes(orderedElem));
-        ec.lastTD = this.getUniqueTD(orderedInsumosIngresoTDNames[orderedInsumosIngresoTDNames.length - 1]);
-    }   
+    getLastTD(ec:IExpressionContainer){
+        return this.getUniqueTD(<string>ec.last_td)
+    }
 }

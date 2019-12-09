@@ -11,9 +11,9 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     insumos!: EP.Insumos; 
     
     insumosOptionalRelations: Relacion[] = []
-    lastTD!:TablaDatos
-    
     opciones?: VariableOpcion[]
+    first_td!:string
+    last_td!:string    
 
     getAggTableSufix() {
         if (this.funcion_agregacion != 'completar'){

@@ -22,14 +22,6 @@ export class VarCalculator extends ExpressionProcessor {
         super(client, operativo);
     }
 
-    // for future management of insumos with ComplexExpression
-    // preProcess(vcs:VariableCalculada[]){
-    //     vcs.forEach(vc=> {
-    //         this.buildExpression(vc)
-    //     })
-    //     super.preProcess(vcs);
-    // }
-
     async fetchDataFromDB() {
         await super.fetchDataFromDB();
         // changing type of calculated vars // Using assign instead of setPrototypeOf because we need to have initialized properties
@@ -179,7 +171,7 @@ export class VarCalculator extends ExpressionProcessor {
     private buildSETClausuleForVC(vc: VariableCalculada):string {
         let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
             `${vc.tabla_agregada+vc.getAggTableSufix()}.${vc.variable}` :
-            this.getWrappedExpression(vc.expresionProcesada, vc.lastTD.getQuotedPKsCSV());
+            this.getWrappedExpression(vc.expresionProcesada, this.getLastTD(vc).getQuotedPKsCSV());
         return `${vc.variable} = ${expresion}`;
     }            
 
@@ -306,12 +298,11 @@ export class VarCalculator extends ExpressionProcessor {
         return isDefined;
     }
 
-  
-
     //########## protected methods
     protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
-        //building from clausule upside from the bloque table (not for all TDNames)
-        return 'FROM ' + this.buildEndToEndJoins(bloque.tabla.td_base) +
+        let tdsNeededByBloque:string[] =  bloque.variablesCalculadas.flatMap(vc=>vc.tdsNeedByExpression)
+        tdsNeededByBloque = [...new Set(tdsNeededByBloque)] // removing duplicated
+        return 'FROM ' + this.buildEndToEndJoins(tdsNeededByBloque) +
             this.buildAggLateralFromClausule(bloque) + 
             this.buildOptRelationsFromClausule(bloque.getOptInsumos());
     }    
