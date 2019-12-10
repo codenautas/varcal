@@ -40,7 +40,8 @@
     "build-strict": "tsc -p tsconfig-client.json && tsc -p tsconfig-server.json && mixin-patch",
     "build": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
     "watch:buildS": "(tsc -p tsconfig-server.json --watch || echo \"continue w/error\")",
-    "start": "node dist/server/server-varcal.js"
+    "start": "node dist/server/server-varcal.js",
+    "clink": "npm link operativos && npm run build"
   },
   "qa-control": {
     "package-version": "0.3.0",
