@@ -1,6 +1,7 @@
 import { BaseNode, Compiler, CompilerOptions, Insumos, parse } from "expre-parser";
 import { Client, hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } from "operativos";
 import { IExpressionContainer } from "./expression-container";
+import { VariableCalculada } from "variable-calculada";
 
 //put these here is good because specifics apps could change/override this options depending on their own needs
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
@@ -107,6 +108,10 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     private validateVars(ec:IExpressionContainer): void {
+        //TODO: mejorar este chequeo, hacer con herencia
+        if ((<VariableCalculada>ec).tabla_agregada){
+            return;
+        }
         ec.insumos.variables.forEach(vName => {
             let foundVar = this.validateVar(vName);
             if (! ec.tdsNeedByExpression.find(tdName=> tdName == foundVar.tabla_datos)){
