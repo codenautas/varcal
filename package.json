@@ -41,7 +41,8 @@
     "build": "(tsc -p tsconfig-client.json || echo \"continue w/error\") && (tsc -p tsconfig-server.json  || echo \"continue w/error\") && mixin-patch",
     "watch:buildS": "(tsc -p tsconfig-server.json --watch || echo \"continue w/error\")",
     "start": "node dist/server/server-varcal.js",
-    "clink": "npm link operativos && npm run build"
+    "clink": "npm prune && npm run build && npm link operativos && npm run build",
+    "publish-stack": "ncu -u && npm version patch && npm publish"
   },
   "qa-control": {
     "package-version": "0.3.0",
