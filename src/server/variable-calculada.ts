@@ -85,7 +85,8 @@ export class BloqueVariablesCalc {
     }
 
     getTDsNeeded(){
-        let tdsNeeded:string[] =  this.variablesCalculadas.flatMap(vc=>vc.tdsNeedByExpression)
+        let tdsNeeded:string[] = this.variablesCalculadas.flatMap(vc=>vc.tdsNeedByExpression);
+        tdsNeeded.push(this.tabla.td_base);
         tdsNeeded = [...new Set(tdsNeeded)] // removing duplicated
         return tdsNeeded
     }
