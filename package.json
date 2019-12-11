@@ -42,7 +42,8 @@
     "watch:buildS": "(tsc -p tsconfig-server.json --watch || echo \"continue w/error\")",
     "start": "node dist/server/server-varcal.js",
     "clink": "npm prune && npm i && npm run build && npm link operativos && npm run build",
-    "publish-stack": "npm version patch && ncu -u && npm publish"
+    "git-commit": "git add package.json && git commit -m \"upgrading stack dependencies\"",
+    "publish-stack": "npm version patch && ncu -u && (npm run git-commit || true) && npm publish && git push"
   },
   "qa-control": {
     "package-version": "0.3.0",
