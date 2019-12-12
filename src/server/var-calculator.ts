@@ -105,7 +105,7 @@ export class VarCalculator extends ExpressionProcessor {
           execute replace(regexp_replace(replace(
             v_sql,
             $$update_varcal_por_encuesta("p_operativo" text, "p_id_caso" text) RETURNS TEXT$$, $$update_varcal("p_operativo" text) RETURNS TEXT$$),
-            $$(.* )".*"\.${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso(.*)$$, $$\1TRUE\2$$,'gm'),
+            $$(.* )".*"\\.${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso(.*)$$, $$\\1TRUE\\2$$,'gm'),
             $$${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso$$, $$TRUE$$);
           return '2GENERATED';
         end;
