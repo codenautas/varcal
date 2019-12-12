@@ -118,8 +118,16 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
                 ec.tdsNeedByExpression.push(foundVar.tabla_datos)
             } 
         })
-        ec.last_td = this.youngerDescendantIn(ec.tdsNeedByExpression);
+
+        //if the first td is calculated, then adds its base td as first TD
         ec.first_td = this.oldestAncestorIn(ec.tdsNeedByExpression);
+        if (this.getUniqueTD(ec.first_td).esCalculada()){
+            const calculatedTDRel = <Relacion>this.myRels.find(r=>r.tiene==ec.first_td && r.misma_pk);
+            ec.tdsNeedByExpression.push(calculatedTDRel.tabla_datos)
+            ec.first_td = this.oldestAncestorIn(ec.tdsNeedByExpression);
+        }
+
+        ec.last_td = this.youngerDescendantIn(ec.tdsNeedByExpression);
     }
 
     // protected methods
