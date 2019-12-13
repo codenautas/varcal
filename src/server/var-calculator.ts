@@ -164,7 +164,7 @@ export class VarCalculator extends ExpressionProcessor {
     private buildWHEREClausule(block:BloqueVariablesCalc): string {
         const blockTDName = block.tabla.tabla_datos;
         const blockTDRel = <Relacion>this.myRels.find(r=>r.tiene == blockTDName);
-        const blockFirstTD = this.oldestAncestorIn(block.getTDsNeeded());
+        const blockFirstTD = this.oldestAncestorIn(block.getTDsInvolved());
         return `WHERE ${this.relVarPKsConditions(blockTDRel.tabla_datos, blockTDName)} AND ${quoteIdent(blockFirstTD)}."operativo"=p_operativo AND ${quoteIdent(blockFirstTD)}.${quoteIdent(OperativoGenerator.mainTDPK)}=p_id_caso`;
     }
 
@@ -301,7 +301,7 @@ export class VarCalculator extends ExpressionProcessor {
 
     //########## protected methods
     protected buildClausulaFrom(bloque:BloqueVariablesCalc): string {
-        return 'FROM ' + this.buildEndToEndJoins(bloque.getTDsNeeded()) +
+        return 'FROM ' + this.buildEndToEndJoins(bloque.getTDsInvolved()) +
             this.buildAggLateralFromClausule(bloque) + 
             this.buildOptRelationsFromClausule(bloque.getOptInsumos());
     }    
