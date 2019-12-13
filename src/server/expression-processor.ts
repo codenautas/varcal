@@ -114,20 +114,16 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         }
         ec.insumos.variables.forEach(vName => {
             let foundVar = this.validateVar(vName);
-            if (! ec.tdsNeedByExpression.find(tdName=> tdName == foundVar.tabla_datos)){
-                ec.tdsNeedByExpression.push(foundVar.tabla_datos)
-            } 
+            ec.tdsInvolvedInExpr.push(foundVar.tabla_datos)
+            const foundVarTdAsCalcTDRel = this.myRels.find(r=>r.tiene==foundVar.tabla_datos && r.misma_pk)
+            if (foundVarTdAsCalcTDRel){
+                ec.tdsInvolvedInExpr.push(foundVarTdAsCalcTDRel.tabla_datos)
+            }
         })
+        ec.tdsInvolvedInExpr = [... new Set(ec.tdsInvolvedInExpr)] //removing duplicates
 
-        //if the first td is calculated, then adds its base td as first TD
-        ec.first_td = this.oldestAncestorIn(ec.tdsNeedByExpression);
-        if (this.getUniqueTD(ec.first_td).esCalculada()){
-            const calculatedTDRel = <Relacion>this.myRels.find(r=>r.tiene==ec.first_td && r.misma_pk);
-            ec.tdsNeedByExpression.push(calculatedTDRel.tabla_datos)
-            ec.first_td = this.oldestAncestorIn(ec.tdsNeedByExpression);
-        }
-
-        ec.last_td = this.youngerDescendantIn(ec.tdsNeedByExpression);
+        ec.first_td = this.oldestAncestorIn(ec.tdsInvolvedInExpr);
+        ec.last_td = this.youngerDescendantIn(ec.tdsInvolvedInExpr);
     }
 
     // protected methods
