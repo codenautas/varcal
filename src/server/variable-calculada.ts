@@ -5,7 +5,7 @@ import { VarCalculator } from "./var-calculator";
 
 export class VariableCalculada extends Variable implements TipoVarDB, IExpressionContainer{
     
-    tdsNeedByExpression: string[]= [];
+    tdsInvolvedInExpr: string[]= [];
     
     expresionProcesada!: string
     insumos!: EP.Insumos; 
@@ -84,11 +84,11 @@ export class BloqueVariablesCalc {
         this.variablesCalculadas = [vCalc]
     }
 
-    getTDsNeeded(){
-        let tdsNeeded:string[] = this.variablesCalculadas.flatMap(vc=>vc.tdsNeedByExpression);
-        tdsNeeded.push(this.tabla.td_base);
-        tdsNeeded = [...new Set(tdsNeeded)] // removing duplicated
-        return tdsNeeded
+    getTDsInvolved(){
+        let tdsInvolved:string[] = this.variablesCalculadas.flatMap(vc=>vc.tdsInvolvedInExpr);
+        tdsInvolved.push(this.tabla.td_base);
+        tdsInvolved = [...new Set(tdsInvolved)] // removing duplicated
+        return tdsInvolved
     }
 
     getOptInsumos() {

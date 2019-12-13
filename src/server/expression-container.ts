@@ -2,7 +2,7 @@ import * as EP from "expre-parser";
 import { Relacion } from "operativos";
 
 export interface IExpressionContainer{
-    tdsNeedByExpression: string[];
+    tdsInvolvedInExpr: string[];
 
     expresionProcesada: string
     insumos: EP.Insumos; 
