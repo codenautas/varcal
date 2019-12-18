@@ -36,8 +36,8 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
                 return 'avg(' + this.expresionProcesada + ')';
             case 'contar':
                 return 'count(nullif(' + this.expresionProcesada + ',false))';
-            // case 'primero':
-            //     return 'first_agg(' + exp + ')';
+            case 'primero':
+                return `first(${this.expresionProcesada}) filter (where ${this.filtro})`;
             case 'ultimo':
                 return `last_agg(${this.expresionProcesada} order by ${tdPks.join(',')})`;
             case 'completar':
