@@ -110,6 +110,12 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     private validateVars(ec:IExpressionContainer): void {
         //TODO: mejorar este chequeo, hacer con herencia
         if ((<VariableCalculada>ec).tabla_agregada){
+            // TODO: sacar factor común cuando es variable de agregacion
+            // porque el validateVar se repite para ambos
+            // TODO: use for of instead of foreach 
+            ec.insumos.variables.forEach(vName => {
+                this.validateVar(vName);
+            })
             return;
         }
         ec.insumos.variables.forEach(vName => {

@@ -25,6 +25,7 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
 
     parseAggregation() {
         const tdPks = VarCalculator.instanceObj.getUniqueTD(<string>this.tabla_agregada).pks;
+        // TODO: For those which just change the function name extract common factor
         switch (this.funcion_agregacion) {
             case 'sumar':
                 return 'sum(' + this.expresionProcesada + ')';
@@ -34,10 +35,10 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
                 return 'max(' + this.expresionProcesada + ')';
             case 'promediar':
                 return 'avg(' + this.expresionProcesada + ')';
+            case 'primero':
+                return `first(${this.expresionProcesada})`;
             case 'contar':
                 return 'count(nullif(' + this.expresionProcesada + ',false))';
-            case 'primero':
-                return `first(${this.expresionProcesada}) filter (where ${this.filtro})`;
             case 'ultimo':
                 return `last_agg(${this.expresionProcesada} order by ${tdPks.join(',')})`;
             case 'completar':
