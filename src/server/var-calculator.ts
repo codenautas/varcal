@@ -116,6 +116,9 @@ export class VarCalculator extends ExpressionProcessor {
     @indent()
     private buildAggLateralFromClausule(bloque:BloqueVariablesCalc):string{
         let tablesToFromClausule:string='';
+        // all this separated managemente for tablasCompletas and tablasAgregadas is just for
+        // the Eder operative where we need completitud variables
+        // TODO: just override this method in the operative "EderVarCalculator" and restore this method
         let tablasAgregadas: {[index:string]:VariableCalculada[]} = {};
         let tablasCompletas: {[index:string]:VariableCalculada[]} = {};
         bloque.variablesCalculadas.forEach(vc=> {
@@ -157,8 +160,14 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private getLateralSelectClausule(varsAgg:VariableCalculada[], aggTableName:string) {
-        return `${varsAgg.map(v => `${v.parseAggregation()} as ${v.variable}`).join(',\n')}
-                FROM ${quoteIdent(aggTableName)}`
+        let result = `${varsAgg.map(v => `${v.parseAggregation()} as ${v.variable}`).join(',\n')}
+            FROM ${quoteIdent(aggTableName)}` 
+        let aggTDHasCalculated = this.myRels.find(r=> r.tabla_datos==aggTableName && r.misma_pk);
+        if (aggTDHasCalculated) {
+            const calculatedTDOfAggTD =this.getUniqueTD(aggTDHasCalculated.tiene);
+            result += ` LEFT JOIN ${quoteIdent(calculatedTDOfAggTD.getTableName())} using (${calculatedTDOfAggTD.getQuotedPKsCSV()})`;
+        }
+        return result; 
     }
     
     private buildWHEREClausule(block:BloqueVariablesCalc): string {

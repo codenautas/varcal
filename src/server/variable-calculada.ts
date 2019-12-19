@@ -71,6 +71,7 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
             this.expresionProcesada = this.expresion;
         }
         if (this.filtro) {
+            // TODO: analice use filter for aggregated function instead of case when 
             this.expresionProcesada = 'CASE WHEN ' + this.filtro + ' THEN ' + this.expresionProcesada + ' ELSE NULL END'
         }
     }
