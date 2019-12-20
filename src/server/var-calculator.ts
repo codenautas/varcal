@@ -148,6 +148,7 @@ export class VarCalculator extends ExpressionProcessor {
               `
         });
         
+        // this is just for eder
         Object.keys(tablasCompletas).forEach(aggTableName => {
             //TODO: analice use of filter clausule instead of "case when" for aggregation functions
             tablesToFromClausule += `
@@ -163,10 +164,11 @@ export class VarCalculator extends ExpressionProcessor {
     private getLateralSelectClausule(varsAgg:VariableCalculada[], aggTableName:string) {
         let result = `${varsAgg.map(v => `${v.parseAggregation()} as ${v.variable}`).join(',\n')}
             FROM ${quoteIdent(aggTableName)}` 
+        //TODO: add joins dinamically checking the TDs involved in agg expression (filter + expression)
         let aggTDHasCalculated = this.myRels.find(r=> r.tabla_datos==aggTableName && r.misma_pk);
         if (aggTDHasCalculated) {
             const calculatedTDOfAggTD =this.getUniqueTD(aggTDHasCalculated.tiene);
-            result += ` LEFT JOIN ${quoteIdent(calculatedTDOfAggTD.getTableName())} using (${calculatedTDOfAggTD.getQuotedPKsCSV()})`;
+            result += ` JOIN ${quoteIdent(calculatedTDOfAggTD.getTableName())} using (${calculatedTDOfAggTD.getQuotedPKsCSV()})`;
         }
         return result; 
     }
