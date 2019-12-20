@@ -150,6 +150,7 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
  
     protected validateVar(varName: string): Variable {
         let varsFound:Variable[] = this.findValidVars(varName);
+        //TODO: catch error and show the expression container who is checking its vars
         this.checkFoundVarsForErrors(varsFound, varName);
         return varsFound[0];
     }
