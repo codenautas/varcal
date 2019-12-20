@@ -159,6 +159,7 @@ export class VarCalculator extends ExpressionProcessor {
         return tablesToFromClausule
     }
 
+    // TODO: just override this method in the operative "EderVarCalculator" and restore this method
     private getLateralSelectClausule(varsAgg:VariableCalculada[], aggTableName:string) {
         let result = `${varsAgg.map(v => `${v.parseAggregation()} as ${v.variable}`).join(',\n')}
             FROM ${quoteIdent(aggTableName)}` 
