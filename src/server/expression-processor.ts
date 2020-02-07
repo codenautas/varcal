@@ -133,9 +133,9 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
     }
 
     // protected methods
-    protected getWrappedExpression(expression: string | number, pkExpression: string): string {
+    protected getWrappedExpression(expression: string | number, ec:IExpressionContainer): string {
         var compiler = new Compiler(compilerOptions);
-        return compiler.toCode(parse(expression), pkExpression);
+        return compiler.toCode(parse(expression), this.getLastTD(ec).getPKsWitAlias());
     }
 
     protected prepareEC(ec: IExpressionContainer): void {
@@ -145,7 +145,6 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
         this.validateInsumos(ec);
 
         ec.expresionProcesada = this.addAliasesToExpression(ec)
-        // ec.expresionProcesada = this.getWrappedExpression(ec.expresionProcesada, ec.lastTD.getQuotedPKsCSV());
     }
  
     protected validateVar(varName: string): Variable {

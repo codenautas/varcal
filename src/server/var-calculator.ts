@@ -184,7 +184,7 @@ export class VarCalculator extends ExpressionProcessor {
     private buildSETClausuleForVC(vc: VariableCalculada):string {
         let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
             `${vc.tabla_agregada+vc.getAggTableSufix()}.${vc.variable}` :
-            this.getWrappedExpression(vc.expresionProcesada, this.getLastTD(vc).getQuotedPKsCSV());
+            this.getWrappedExpression(vc.expresionProcesada, vc);
         return `${vc.variable} = ${expresion}`;
     }            
 
