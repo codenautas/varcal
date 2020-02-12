@@ -17,16 +17,16 @@
     "install"
   ],
   "dependencies": {
-    "expre-parser": "~0.1.22",
+    "expre-parser": "~0.1.25",
     "operativos": "~0.7.14",
     "last-agg": "~1.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^8.0.1",
-    "@types/mocha": "~5.2.7",
-    "mocha": "^6.2.2",
+    "@types/mocha": "~7.0.1",
+    "mocha": "^7.0.1",
     "discrepances": "~0.2.4",
-    "types.d.ts": "~0.4.10",
+    "types.d.ts": "~0.4.14",
     "mixin-patch": "~0.3.3"
   },
   "engines": {
