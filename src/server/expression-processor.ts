@@ -4,7 +4,7 @@ import { IExpressionContainer } from "./expression-container";
 import { VariableCalculada } from "variable-calculada";
 
 //put these here is good because specifics apps could change/override this options depending on their own needs
-export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'lanzar_error' };
+export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'incomplete_else_error' };
 export let pgWhiteList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce', 'age', 'date_part', 'abs', 'to_number'];
 export let comunSquemaWhiteList = ['informado','con_dato', 'sin_dato', 'nsnc'];
 export let jsWhiteList = ['completar_valor_con_ultimo'];

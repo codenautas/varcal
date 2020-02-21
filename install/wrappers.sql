@@ -50,6 +50,16 @@ begin
 end;
 $sql$;
 
+drop function if exists incomplete_else_error(variadic pk text[]);
+create or replace function incomplete_else_error(variadic pk text[]) returns decimal
+  language plpgsql immutable
+as  
+$sql$
+begin
+  raise 'ERROR: para alguna variable calculada de opciones, falta definir el campo expresion (valor por defecto), ya que la siguiente encuesta no cumple con ninguna opción definida %', pk;
+end;
+$sql$;
+
 -- select null2zero(2), null2zero(3::bigint), null2zero(null), null2zero(4.0);
 -- select 3/2, div0err(3,2,'aca');
 -- select div0err(3,0,'aca','hay','un','error');
