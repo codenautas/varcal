@@ -65,7 +65,7 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
         if (this.opciones && this.opciones.length) {
             this.expresionProcesada = 'CASE ' + this.opciones.map(opcion => {
                 return '\n          WHEN ' + opcion.expresion_condicion +
-                    ' THEN ' + opcion.expresion_valor || opcion.opcion
+                    ' THEN ' + (opcion.expresion_valor || opcion.opcion)
             }).join('') + (this.expresion ? '\n          ELSE ' + this.expresion : '') + ' END'
         } else {
             this.expresionProcesada = this.expresion;
