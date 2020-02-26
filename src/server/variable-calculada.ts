@@ -16,15 +16,16 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     last_td!:string    
 
     getAggTableSufix() {
-        if (this.funcion_agregacion != 'completar'){
-            return OperativoGenerator.sufijo_agregacion
-        } else {
+        if (this.funcion_agregacion?.includes('completar')){
             return OperativoGenerator.sufijo_complete
+        } else {
+            return OperativoGenerator.sufijo_agregacion
         }
     }
 
     parseAggregation() {
         const tdPks = VarCalculator.instanceObj.getUniqueTD(<string>this.tabla_agregada).pks;
+        const lastPk = tdPks[tdPks.length-1];
         // TODO: For those which just change the function name extract common factor
         switch (this.funcion_agregacion) {
             case 'sumar':
@@ -42,7 +43,12 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
             case 'ultimo':
                 return `last_agg(${this.expresionProcesada} order by ${tdPks.join(',')})`;
             case 'completar':
-                return `last_agg(${this.expresionProcesada}) OVER (PARTITION BY ${tdPks.slice(0,-1).join(',')} order by ${tdPks[tdPks.length-1]})`;
+                return `last_agg(CASE WHEN ${this.expresionProcesada} is null and ${lastPk} = 0 THEN 0 ELSE ${this.expresionProcesada} END) 
+                        OVER (PARTITION BY ${tdPks.slice(0,-1).join(',')} order by ${lastPk})`;
+            case 'completar_dinamico':
+                return `CASE
+                    WHEN ${this.filtro} THEN last_agg(${this.expresionProcesada}) OVER (PARTITION BY ${tdPks.slice(0,-1).join(',')} order by ${lastPk})
+                    ELSE 0 END`;
             default:
                 return this.funcion_agregacion + '(' + this.expresionProcesada + ')';
         }
