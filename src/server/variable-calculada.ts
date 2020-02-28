@@ -26,6 +26,11 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
     parseAggregation() {
         const tdPks = VarCalculator.instanceObj.getUniqueTD(<string>this.tabla_agregada).pks;
         const lastPk = tdPks[tdPks.length-1];
+        let defaultElseValue;
+        switch (this.tipovar) {
+            case 'numero': defaultElseValue = '0'; break;
+            default: defaultElseValue = 'null'; break;
+        } 
         // TODO: For those which just change the function name extract common factor
         switch (this.funcion_agregacion) {
             case 'sumar':
@@ -48,7 +53,7 @@ export class VariableCalculada extends Variable implements TipoVarDB, IExpressio
             case 'completar_dinamico':
                 return `CASE
                     WHEN ${this.filtro} THEN last_agg(${this.expresionProcesada}) OVER (PARTITION BY ${tdPks.slice(0,-1).join(',')} order by ${lastPk})
-                    ELSE 0 END`;
+                    ELSE ${defaultElseValue} END`;
             default:
                 return this.funcion_agregacion + '(' + this.expresionProcesada + ')';
         }
