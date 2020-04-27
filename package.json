@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "0.7.20",
+  "version": "1.0.0",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "contributors": [
     "Raquel N Salva <raquelzssalva@gmail.com>",
@@ -18,13 +18,13 @@
   ],
   "dependencies": {
     "expre-parser": "~0.1.25",
-    "operativos": "~0.7.20",
+    "operativos": "^1.0.1",
     "last-agg": "~1.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^8.1.0",
-    "@types/mocha": "~7.0.2",
-    "mocha": "^7.1.1",
+    "@types/mocha": "^7.0.2",
+    "mocha": "^7.1.2",
     "discrepances": "~0.2.4",
     "types.d.ts": "~0.4.15",
     "mixin-patch": "~0.3.3"
