@@ -1,3 +1,4 @@
 {
-    "window.title": "𝐕𝐂 ${dirty}${separator}${rootName}${separator}${activeEditorShort}"
+    "window.title": "𝐕𝐂 ${dirty}${separator}${rootName}${separator}${activeEditorShort}",
+    "typescript.tsdk": "node_modules/typescript/lib"
 }

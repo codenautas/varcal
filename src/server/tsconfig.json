@@ -2,6 +2,7 @@
     "compilerOptions": {
         "outDir": "../../dist/server",
         "target": "es2019",
+        "lib": ["ES2019"],
         "experimentalDecorators": true
     },
     "include":[
