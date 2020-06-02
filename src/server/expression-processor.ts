@@ -1,7 +1,7 @@
 import { BaseNode, Compiler, CompilerOptions, Insumos, parse } from "expre-parser";
 import { Client, hasAlias, OperativoGenerator, quoteIdent, Relacion, Variable } from "operativos";
 import { IExpressionContainer } from "./expression-container";
-import { VariableCalculada } from "variable-calculada";
+import { VariableCalculada } from "./variable-calculada";
 
 //put these here is good because specifics apps could change/override this options depending on their own needs
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'incomplete_else_error' };
