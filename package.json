@@ -18,15 +18,15 @@
   ],
   "dependencies": {
     "expre-parser": "~0.1.25",
-    "operativos": "^1.0.1",
+    "operativos": "^1.1.6",
     "last-agg": "~1.0.0"
   },
   "devDependencies": {
-    "@types/fs-extra": "^8.1.0",
-    "@types/mocha": "^7.0.2",
-    "mocha": "^7.1.2",
+    "@types/fs-extra": "^9.0.4",
+    "@types/mocha": "^8.0.4",
+    "mocha": "^8.2.1",
     "discrepances": "~0.2.4",
-    "types.d.ts": "~0.4.15",
+    "types.d.ts": "~0.5.0",
     "mixin-patch": "~0.3.3"
   },
   "engines": {
