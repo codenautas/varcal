@@ -61,7 +61,5 @@ typings/
 local-*
 *-local.*
 
-package-lock.json
-
 #don't version generated files
 /dist
