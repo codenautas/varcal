@@ -18,16 +18,16 @@
   ],
   "dependencies": {
     "expre-parser": "~0.2.1",
-    "operativos": "^1.3.12",
+    "operativos": "^1.3.13",
     "last-agg": "^1.0.0"
   },
   "devDependencies": {
-    "@types/fs-extra": "^9.0.13",
-    "@types/mocha": "^9.1.1",
-    "mocha": "^10.0.0",
-    "discrepances": "~0.2.6",
-    "types.d.ts": "~0.6.7",
-    "mixin-patch": "~0.4.0"
+    "@types/fs-extra": "^11.0.1",
+    "@types/mocha": "^10.0.1",
+    "mocha": "^10.2.0",
+    "discrepances": "~0.2.8",
+    "types.d.ts": "~0.6.15",
+    "mixin-patch": "~0.4.1"
   },
   "engines": {
     "node": ">= 14.0.0"
