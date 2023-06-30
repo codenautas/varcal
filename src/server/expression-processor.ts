@@ -6,7 +6,7 @@ import { VariableCalculada } from "./variable-calculada";
 //put these here is good because specifics apps could change/override this options depending on their own needs
 export let compilerOptions: CompilerOptions = { language: 'sql', varWrapper: 'null2zero', divWrapper: 'div0err', elseWrapper: 'incomplete_else_error' };
 export let pgWhiteList = ['div', 'avg', 'count', 'max', 'min', 'sum', 'coalesce', 'age', 'date_part', 'abs', 'to_number'];
-export let comunSquemaWhiteList = ['informado','con_dato', 'sin_dato', 'nsnc'];
+export let comunSquemaWhiteList = ['informado','con_dato', 'sin_dato', 'nsnc', 'blanco'];
 export let jsWhiteList = ['completar_valor_con_ultimo'];
 
 
@@ -188,5 +188,12 @@ export abstract class ExpressionProcessor extends OperativoGenerator{
 
     getLastTD(ec:IExpressionContainer){
         return this.getUniqueTD(<string>ec.last_td)
+    }
+
+    removeNull2ZeroWrapper(exp:string) {
+        var regexSingleParamFunctions = /\b(informado|con_dato|sin_dato|nsnc|blanco)\(null2zero\(([^()]+)\)\)/gi;
+        exp = exp.replace(regexSingleParamFunctions,'$1($2)')
+        var regexCoalesce = /\b(coalesce)\(null2zero\(([^()]+)\) *, *null2zero\(([^()]+)\)\)/gi;
+        return exp.replace(regexCoalesce,'$1($2,$3)');
     }
 }
