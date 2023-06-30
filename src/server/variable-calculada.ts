@@ -101,6 +101,7 @@ export class BloqueVariablesCalc {
         let tdsInvolved:string[] = this.variablesCalculadas.flatMap(vc=>vc.tdsInvolvedInExpr);
         tdsInvolved.push(this.tabla.td_base);
         tdsInvolved = [...new Set(tdsInvolved)] // removing duplicated
+        tdsInvolved = tdsInvolved.filter(tdName=>tdName !== this.tabla.tabla_datos) // removing bloque td to update, for avoid join with this updated table
         return tdsInvolved
     }
 
