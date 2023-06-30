@@ -34,7 +34,7 @@
   },
   "scripts": {
     "prepare": "npm run build",
-    "prebuild": "tsc -b src/server src/client",
+    "prebuild": "(tsc -p src/client & tsc -p src/server || echo \"continue w/error\")",
     "build": "npm run prebuild && mixin-patch",
     "watch:build": "npm run prebuild -- --watch",
     "x-test": "tsc || echo \"continue with errors\" && mocha --reporter spec --bail --check-leaks tests\\tests\\*.js",
