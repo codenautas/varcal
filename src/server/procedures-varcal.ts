@@ -3,7 +3,7 @@
 import * as fs from "fs-extra";
 import { AppVarCalType } from "./app-varcal";
 import { ProcedureContext, VarCalculator } from "./types-varcal";
-import { coreFunctionParameters } from "operativos";
+import { CoreFunctionParameters } from "operativos";
 
 var procedures = [
     {
@@ -11,7 +11,7 @@ var procedures = [
         parameters: [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
-        coreFunction: async function (context: ProcedureContext, parameters: coreFunctionParameters) {
+        coreFunction: async function (context: ProcedureContext, parameters: CoreFunctionParameters) {
             let varCalculator = new VarCalculator(context.be as AppVarCalType, context.client, parameters.operativo);
             await varCalculator.fetchDataFromDB();
             let todoElScript:string = await varCalculator.calculate();
