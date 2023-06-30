@@ -65,7 +65,7 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private getFinalSql(): string {
-        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', this.getUpdateFechaCalculada(), 'end\n$SQL_DUMP$');
+        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', this.getPerformUpdateVarcal(), this.getUpdateFechaCalculada(), 'end\n$SQL_DUMP$');
         // sin funcion generadora
         // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, updateFechaCalculada, 'end\n$SQL_DUMP$');
         return this.allSqls.join('\n----\n') + '--- generado: ' + new Date() + '\n';
@@ -76,6 +76,11 @@ export class VarCalculator extends ExpressionProcessor {
         return `
         UPDATE operativos SET calculada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)};
         UPDATE tabla_datos SET generada=now()::timestamp(0) WHERE operativo=${quoteLiteral(this.operativo)} AND tipo=${quoteLiteral(tiposTablaDato.calculada)};`;
+    }
+    
+    @fullUnIndent()
+    private getPerformUpdateVarcal(){
+        return `PERFORM update_varcal(${quoteLiteral(this.operativo)});`;
     }
 
     @fullUnIndent()
@@ -185,11 +190,12 @@ export class VarCalculator extends ExpressionProcessor {
         let expresion = (vc.tabla_agregada && vc.funcion_agregacion) ?
             `${vc.tabla_agregada+vc.getAggTableSufix()}.${vc.variable}` :
             this.getWrappedExpression(vc.expresionProcesada, vc);
+        expresion = this.removeNull2ZeroWrapper(expresion)
         return `${vc.variable} = ${expresion}`;
     }            
 
     private async generateSchemaAndLoadTableDefs() {
-        let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {});
+        let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {disableDBFunctions:true});
         this.allSqls = [this.drops.join('\n'), sqls.mainSql].concat(this.inserts.map(i=>i+';').join('\n'))
     }
 
