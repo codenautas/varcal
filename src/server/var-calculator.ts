@@ -191,6 +191,7 @@ export class VarCalculator extends ExpressionProcessor {
             `${vc.tabla_agregada+vc.getAggTableSufix()}.${vc.variable}` :
             this.getWrappedExpression(vc.expresionProcesada, vc);
         expresion = this.removeNull2ZeroWrapper(expresion)
+        if (vc.tipovar == 'texto') expresion = `nullif(${expresion}, '')`
         return `${vc.variable} = ${expresion}`;
     }            
 
