@@ -63,3 +63,5 @@ local-*
 
 #don't version generated files
 /dist
+
+*.bak
