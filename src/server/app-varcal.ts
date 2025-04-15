@@ -63,8 +63,8 @@ export function emergeAppVarCal<T extends Constructor<AppOperativosType>>(Base:T
             super.prepareGetTables();
             this.appendToTableDefinition('operativos', function(tableDef){
                 tableDef.fields.push(
-                    {name: "calcular" , typeName: "bigint"  , editable:false, clientSide:'generarCalculadas'},
-                    {name: 'calculada' , typeName:'timestamp', editable:true},
+                    {name: "calcular" , typeName: "bigint"  , editable:false, clientSide:'generarCalculadas', title:'re-generar var-cals', label:'si se modificó la definición de alguna var-cal'},
+                    {name: 'calculada' , typeName:'timestamp', editable:true, title:'fecha calculo var-cals'},
                 );
             });
         }
