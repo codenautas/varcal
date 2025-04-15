@@ -11,7 +11,7 @@ var procedures = [
         parameters: [
             { name: 'operativo', typeName: 'text', references: 'operativos', }
         ],
-        coreFunction: async function (context: ProcedureContext, parameters: CoreFunctionParameters) {
+        coreFunction: async function (context: ProcedureContext, parameters: CoreFunctionParameters<{ operativo: string}>) {
             let varCalculator = new VarCalculator(context.be as AppVarCalType, context.client, parameters.operativo);
             await varCalculator.fetchDataFromDB();
             let todoElScript:string = await varCalculator.calculate();
