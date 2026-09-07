@@ -1,7 +1,7 @@
 {
   "name": "varcal",
   "description": "Módulo de variables calculadas",
-  "version": "1.3.16",
+  "version": "1.3.17",
   "author": "Codenautas <codenautas@googlegroups.com>",
   "contributors": [
     "Raquel N Salva <raquelzssalva@gmail.com>",
@@ -18,7 +18,7 @@
   ],
   "dependencies": {
     "expre-parser": "~0.2.1",
-    "operativos": "^1.3.20",
+    "operativos": "^1.3.23",
     "last-agg": "^1.0.0"
   },
   "devDependencies": {
