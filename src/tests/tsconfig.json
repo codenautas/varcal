@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
-        "outDir": "../../dist/test",
-        "module": "none",
-        "target": "es2018",
-        "lib":["es2017", "es2015", "es2018"],
+        "outDir": "../../compile-for-test",
+        "module": "commonjs",
+        "experimentalDecorators": true,
+        "target": "es2019",
+        "lib":["es2019"],
         "baseUrl": ""
     },
     "include":[

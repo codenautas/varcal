@@ -35,16 +35,11 @@
   },
   "scripts": {
     "prepare": "npm run build",
-    "prebuild": "(tsc -p src/client & tsc -p src/server || echo \"continue w/error\")",
-    "build": "npm run prebuild && mixin-patch",
-    "watch:build": "npm run prebuild -- --watch",
-    "x-test": "tsc || echo \"continue with errors\" && mocha --reporter spec --bail --check-leaks tests\\tests\\*.js",
-    "test": "(npm run build || echo \"continue with errors\") && mocha --reporter spec --bail --check-leaks tests/tests/*.js",
-    "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks tests/tests/",
+    "build": "tsc -p src/client && tsc -p src/server && mixin-patch",
+    "watch:build": "tsc -p src/server --watch",
+    "test": "tsc -p src/tests && mocha --reporter spec --bail --check-leaks compile-for-test/tests/*.js",
     "start": "node dist/server/server-varcal.js",
-    "clink": "npm prune && npm i && npm run build && npm link operativos && npm run build",
-    "git-commit": "git add package.json && (git commit -m \"upgrading stack dependencies\" || true)",
-    "push-publish": "npm version patch && ncu -u && npm run git-commit && npm publish && git push"
+    "clink": "npm prune && npm i && npm run build && npm link operativos && npm run build"
   },
   "qa-control": {
     "package-version": "0.3.0",
