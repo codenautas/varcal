@@ -65,7 +65,7 @@ export class VarCalculator extends ExpressionProcessor {
     }
 
     private getFinalSql(): string {
-        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', this.getPerformUpdateVarcal(), this.getUpdateFechaCalculada(), 'end\n$SQL_DUMP$');
+        this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.searchPath() + ';'].concat(this.allSqls).concat(this.funGeneradora, 'perform ' + this.nombreFuncionGeneradora + '();', this.getPerformUpdateVarcal(), this.getUpdateFechaCalculada(), 'end\n$SQL_DUMP$');
         // sin funcion generadora
         // this.allSqls = ['do $SQL_DUMP$\n begin', "set search_path = " + this.app.config.db.schema + ';'].concat(this.allSqls).concat(this.funGeneradora, updateFechaCalculada, 'end\n$SQL_DUMP$');
         return this.allSqls.join('\n----\n') + '--- generado: ' + new Date() + '\n';
@@ -194,6 +194,17 @@ export class VarCalculator extends ExpressionProcessor {
         if (vc.tipovar == 'texto') expresion = `nullif(${expresion}, '')`
         return `${vc.variable} = ${expresion}`;
     }            
+
+    // El search_path de la app (config.db.search_path, en dmencu base, comun, his) y no solo el esquema: las expresiones
+    // usan funciones de comun (informado, blanco, las de cada operativo) que con search_path = base no se encuentran.
+    private searchPath(): string {
+        // backend-plus lo declara string pero en la configuración es una lista (por defecto [schema, 'public'])
+        const db = this.app.config.db;
+        const searchPath: unknown = db.search_path;
+        if (Array.isArray(searchPath) && searchPath.length) return searchPath.join(', ');
+        if (typeof searchPath === 'string' && searchPath.trim()) return searchPath;
+        return db.schema;
+    }
 
     private async generateSchemaAndLoadTableDefs() {
         let sqls = await this.app.dumpDbSchemaPartial(this.app.generateAndLoadTableDefs(), {disableDBFunctions:true, commonFunsToDisable:['semver_to_decimal-fun.sql']});
