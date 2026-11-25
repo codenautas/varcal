@@ -18,16 +18,16 @@
   ],
   "dependencies": {
     "expre-parser": "~0.2.3",
-    "operativos": "^1.3.23",
-    "last-agg": "^1.0.0"
+    "last-agg": "^1.0.0",
+    "operativos": "^1.4.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/mocha": "^10.0.10",
-    "mocha": "^11.1.0",
     "discrepances": "~0.2.8",
-    "types.d.ts": "~0.6.22",
     "mixin-patch": "~0.4.1",
+    "mocha": "^11.1.0",
+    "types.d.ts": "~0.6.22",
     "typescript": "^5.8.3"
   },
   "engines": {
